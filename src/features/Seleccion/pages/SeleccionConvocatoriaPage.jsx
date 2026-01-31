@@ -60,9 +60,9 @@ export default function SeleccionConvocatoriaPage() {
   ])
 
   return (
-    <div className="flex min-h-screen">
+    <div>
       <Navbar />
-      <main className="flex-1 p-8">
+      <main className="ml-64 min-h-screen bg-gray-50 p-8">
         <div className="mb-6">
           <Link to="/seleccion">
             <Button variant="ghost" size="sm">

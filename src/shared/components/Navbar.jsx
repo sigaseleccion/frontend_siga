@@ -16,7 +16,7 @@ import {
 const navItems = [
   { title: 'Dashboard', href: '/', icon: LayoutDashboard },
   { title: 'Convocatorias', href: '/convocatorias', icon: Users },
-  { title: 'Seleccion', href: '/seleccion', icon: CheckSquare },
+  { title: 'Selección', href: '/seleccion', icon: CheckSquare },
   { title: 'Seguimiento', href: '/seguimiento', icon: TrendingUp },
   { title: 'Roles', href: '/roles', icon: Shield },
   { title: 'Usuarios', href: '/usuarios', icon: UserCog },
@@ -58,8 +58,8 @@ function NotificationsBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:bg-muted">
-          <Bell className="h-5 w-5 text-muted-foreground" />
+        <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
+          <Bell className="h-5 w-5 text-gray-600" />
           {totalNotifications > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
               {totalNotifications}
@@ -125,20 +125,23 @@ export function Navbar() {
   }
 
   return (
-    <div className="flex h-screen w-72 flex-col bg-white border-r border-border/50 shadow-sm">
-      <div className="flex h-20 items-center justify-between px-8 border-b border-border/50">
+    <div className="fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-gray-200 z-50">
+      {/* Header */}
+      <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1100ff] to-[#d300ff] flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
             <span className="text-sm font-bold text-white">MV</span>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">MVM Seleccion</h2>
-            <p className="text-xs text-muted-foreground">Sistema de Aprendices</p>
+            <h2 className="text-base font-bold text-gray-900">MVM Selección</h2>
+            <p className="text-xs text-gray-500">Sistema de Aprendices</p>
           </div>
         </div>
         <NotificationsBell />
       </div>
-      <nav className="flex-1 space-y-1 p-5 overflow-y-auto">
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-4 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
@@ -148,10 +151,10 @@ export function Navbar() {
               key={item.href}
               to={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200',
+                'flex items-center gap-3 px-3 py-2.5 mb-1 text-sm font-medium transition-all duration-200 rounded-lg',
                 isActive
-                  ? 'bg-gradient-to-r from-[#1100ff] to-[#1100ff]/90 text-white shadow-md shadow-[#1100ff]/20'
-                  : 'text-muted-foreground hover:bg-[#1100ff]/5 hover:text-[#1100ff]'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
               <Icon className="h-5 w-5" />
@@ -160,14 +163,16 @@ export function Navbar() {
           )
         })}
       </nav>
-      <div className="p-5 border-t border-border/50">
+
+      {/* Footer */}
+      <div className="px-4 py-4 border-t border-gray-200 flex-shrink-0">
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
         >
           <LogOut className="h-5 w-5" />
-          Cerrar sesion
+          Cerrar sesión
         </Button>
       </div>
     </div>

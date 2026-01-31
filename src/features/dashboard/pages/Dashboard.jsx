@@ -18,15 +18,15 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div>
       <Navbar />
-      <main className="flex-1 p-8">
+      <main className="ml-64 min-h-screen bg-gray-50 p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Main Dashboard</h1>
           <p className="text-muted-foreground">Vista general del sistema de gestion de aprendices</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8 ">
           <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-semibold text-muted-foreground">Convocatorias Activas</CardTitle>

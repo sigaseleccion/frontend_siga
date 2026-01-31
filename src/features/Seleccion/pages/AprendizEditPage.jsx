@@ -140,9 +140,9 @@ export default function AprendizEditPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div>
       <Navbar />
-      <main className="flex-1 p-8">
+      <main className="ml-64 min-h-screen bg-gray-50 p-8">
         <div className="mb-6 flex items-center justify-between">
           <Link to={`/seleccion/${convocatoriaId}`} onClick={handleBack}>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">

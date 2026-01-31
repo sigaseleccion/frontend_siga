@@ -162,9 +162,9 @@ export default function ConvocatoriasPage() {
   const canCreate = programa && nivelFormacion && (programa !== 'Otro' || programaOtro.trim())
 
   return (
-    <div className="flex min-h-screen">
+    <div>
       <Navbar />
-      <main className="flex-1 p-8">
+      <main className="ml-64 min-h-screen bg-gray-50 p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Convocatorias</h1>
