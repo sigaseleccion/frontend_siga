@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import {
@@ -175,59 +175,69 @@ export default function ConvocatoriaDetailPage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Aprendices Registrados</CardTitle>
-            <Badge variant={convocatoriaEstado === 'en proceso' ? 'default' : 'secondary'}>{convocatoriaEstado}</Badge>
-          </CardHeader>
-          <CardContent>
+<Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Aprendices Registrados</h2>
+              <Badge 
+                className={`rounded-full px-3 py-1 text-xs font-medium ${convocatoriaEstado === 'en proceso' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-600' 
+                  : 'bg-pink-500 text-white hover:bg-pink-500'}`}
+              >
+                {convocatoriaEstado}
+              </Badge>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ranking</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nombre</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo Doc.</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">N. Documento</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ciudad</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Programa</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Inicio Lectiva</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Fin Lectiva</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Aprendices Recomendados</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Estado</th>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ranking</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo Doc.</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">N. Documento</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ciudad</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Programa</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Inicio Lectiva</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fin Lectiva</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Inicio Productiva</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fin Productiva</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aprendices Recomendados</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {aprendices.map((aprendiz) => (
-                    <tr key={aprendiz.id} className="border-b border-border last:border-0">
-                      <td className="py-3 px-4 text-sm font-medium">{aprendiz.ranking}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.nombre}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.tipoDocumento}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.documento}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.ciudad}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.programaFormacion}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.fechaInicioLectiva}</td>
-                      <td className="py-3 px-4 text-sm">{aprendiz.fechaFinLectiva}</td>
-                      <td className="py-3 px-4 text-sm">
+                    <tr key={aprendiz.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{aprendiz.ranking}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.nombre}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.tipoDocumento}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.documento}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.ciudad}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.programaFormacion}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.fechaInicioLectiva}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.fechaFinLectiva}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.fechaInicioProductiva}</td>
+<td className="py-4 px-4 text-sm text-gray-600">{aprendiz.fechaFinProductiva}</td>
+                      <td className="py-4 px-4 text-sm">
                         {aprendiz.aprendicesRecomendados.length > 0 ? (
                           <Button
                             variant="link"
-                            className="h-auto p-0 text-primary hover:underline"
+                            className="h-auto p-0 text-blue-600 hover:underline"
                             onClick={() => setSelectedRecomendados(aprendiz.aprendicesRecomendados)}
                           >
                             Ver {aprendiz.aprendicesRecomendados.length} recomendado(s)
                           </Button>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-4">
                         <Select
                           value={aprendiz.estado}
                           onValueChange={(value) => handleEstadoChange(aprendiz.id, value)}
                           disabled={convocatoriaEstado === 'finalizado'}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-[160px] border-gray-200">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -244,17 +254,17 @@ export default function ConvocatoriaDetailPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-          <DialogContent>
+<Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Cerrar Convocatoria</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-gray-900">Cerrar Convocatoria</DialogTitle>
+              <DialogDescription className="text-gray-500">
                 Esta seguro de que desea cerrar esta convocatoria? Los aprendices seleccionados pasaran al modulo de
                 Seleccion y no podra editarla a menos que la reabra.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCloseDialog(false)} className="bg-transparent">
+              <Button variant="outline" onClick={() => setShowCloseDialog(false)} className="bg-transparent border-gray-200">
                 Cancelar
               </Button>
               <Button onClick={handleCloseConvocatoria}>Confirmar</Button>
@@ -262,35 +272,35 @@ export default function ConvocatoriaDetailPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!selectedRecomendados} onOpenChange={() => setSelectedRecomendados(null)}>
+<Dialog open={!!selectedRecomendados} onOpenChange={() => setSelectedRecomendados(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Aprendices Recomendados para Reemplazo</DialogTitle>
+              <DialogTitle className="text-gray-900">Aprendices Recomendados para Reemplazo</DialogTitle>
             </DialogHeader>
             {selectedRecomendados && (
               <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                 {selectedRecomendados.map((aprendiz, index) => (
-                  <div key={aprendiz.id} className="p-4 border border-border rounded-lg">
+                  <div key={aprendiz.id} className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <span className="font-medium">{aprendiz.nombre}</span>
+                      <Badge variant="outline" className="border-gray-300 text-gray-700">{index + 1}</Badge>
+                      <span className="font-medium text-gray-900">{aprendiz.nombre}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Tipo Documento</p>
-                        <p className="font-medium">{aprendiz.tipoDocumento}</p>
+                        <p className="text-gray-500">Tipo Documento</p>
+                        <p className="font-medium text-gray-900">{aprendiz.tipoDocumento}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Documento</p>
-                        <p className="font-medium">{aprendiz.documento}</p>
+                        <p className="text-gray-500">Documento</p>
+                        <p className="font-medium text-gray-900">{aprendiz.documento}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Fecha Fin Lectiva</p>
-                        <p className="font-medium">{new Date(aprendiz.fechaFinLectiva).toLocaleDateString('es-ES')}</p>
+                        <p className="text-gray-500">Fecha Fin Lectiva</p>
+                        <p className="font-medium text-gray-900">{new Date(aprendiz.fechaFinLectiva).toLocaleDateString('es-ES')}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Fecha Fin Contrato</p>
-                        <p className="font-medium">{new Date(aprendiz.fechaFinContrato).toLocaleDateString('es-ES')}</p>
+                        <p className="text-gray-500">Fecha Fin Contrato</p>
+                        <p className="font-medium text-gray-900">{new Date(aprendiz.fechaFinContrato).toLocaleDateString('es-ES')}</p>
                       </div>
                     </div>
                   </div>
@@ -298,24 +308,24 @@ export default function ConvocatoriaDetailPage() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedRecomendados(null)} className="bg-transparent">
+              <Button variant="outline" onClick={() => setSelectedRecomendados(null)} className="bg-transparent border-gray-200">
                 Cerrar
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showExcelModal} onOpenChange={setShowExcelModal}>
+<Dialog open={showExcelModal} onOpenChange={setShowExcelModal}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Cargar Excel Adicional</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-gray-900">Cargar Excel Adicional</DialogTitle>
+              <DialogDescription className="text-gray-500">
                 Adjunte un archivo Excel con aprendices adicionales para agregar a esta convocatoria.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <div className="rounded-full bg-primary/10 p-6">
-                <FileUp className="h-12 w-12 text-primary" />
+              <div className="rounded-full bg-blue-100 p-6">
+                <FileUp className="h-12 w-12 text-blue-600" />
               </div>
               <input
                 type="file"
@@ -325,7 +335,7 @@ export default function ConvocatoriaDetailPage() {
                 onChange={handleExcelUpload}
               />
               <label htmlFor="excel-upload-additional">
-                <Button type="button" variant="outline" asChild className="bg-transparent">
+                <Button type="button" variant="outline" asChild className="bg-transparent border-gray-200">
                   <span className="cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     Seleccionar archivo Excel
@@ -333,8 +343,8 @@ export default function ConvocatoriaDetailPage() {
                 </Button>
               </label>
             </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setShowExcelModal(false)}>
+            <DialogFooter className="justify-end">
+              <Button variant="ghost" onClick={() => setShowExcelModal(false)} className="text-gray-600">
                 Cancelar
               </Button>
             </DialogFooter>

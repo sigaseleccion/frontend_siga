@@ -4,11 +4,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
-import { Upload, PenBoxIcon, FileUp, Search } from 'lucide-react'
+import { Upload, PenBoxIcon, FileUp, Search, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -199,43 +199,47 @@ export default function ConvocatoriasPage() {
           </Select>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Listado de Convocatorias</CardTitle>
-          </CardHeader>
-          <CardContent>
+<Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Listado de Convocatorias</h2>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID Convocatoria</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nombre Convocatoria</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Programa</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nivel Formacion</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Fecha Creacion</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Total Aprendices</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Estado</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Acciones</th>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID Convocatoria</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre Convocatoria</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Programa</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nivel Formacion</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha Creacion</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Aprendices</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredConvocatorias.map((conv) => (
-                    <tr key={conv.id} className="border-b border-border last:border-0">
-                      <td className="py-3 px-4 text-sm font-medium">{conv.id}</td>
-                      <td className="py-3 px-4 text-sm">{conv.nombreConvocatoria}</td>
-                      <td className="py-3 px-4 text-sm max-w-[200px] truncate" title={conv.programa}>{conv.programa}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline">{getNivelFormacionLabel(conv.nivelFormacion)}</Badge>
+                    <tr key={conv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{conv.id}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{conv.nombreConvocatoria}</td>
+<td className="py-4 px-4 text-sm text-gray-600 max-w-[200px] truncate" title={conv.programa}>{conv.programa}</td>
+                      <td className="py-4 px-4">
+                        <Badge variant="outline" className="border-gray-300 bg-transparent text-gray-700 hover:bg-transparent rounded-full px-3 py-1 text-xs font-medium">{getNivelFormacionLabel(conv.nivelFormacion)}</Badge>
                       </td>
-                      <td className="py-3 px-4 text-sm">{new Date(conv.fechaCreacion).toLocaleDateString('es-ES')}</td>
-                      <td className="py-3 px-4 text-sm">{conv.totalAprendices}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={conv.estado === 'en proceso' ? 'default' : 'secondary'}>{conv.estado}</Badge>
+                      <td className="py-4 px-4 text-sm text-gray-600">{new Date(conv.fechaCreacion).toLocaleDateString('es-ES')}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{conv.totalAprendices}</td>
+                      <td className="py-4 px-4">
+                        <Badge 
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${conv.estado === 'en proceso' 
+                            ? 'bg-blue-600 text-white hover:bg-blue-600' 
+                            : 'bg-pink-500 text-white hover:bg-pink-500'}`}
+                        >
+                          {conv.estado}
+                        </Badge>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-4">
                         <Link to={`/convocatorias/${conv.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <PenBoxIcon className="h-4 w-4 mr-2" />
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                            <PenBoxIcon className="h-4 w-4 mr-1" />
                             Editar
                           </Button>
                         </Link>
@@ -248,18 +252,24 @@ export default function ConvocatoriasPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="w-[98vw] max-h-[90vh] overflow-y-auto [&>button]:hidden">
+<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-md [&>button]:hidden">
+            <button
+              type="button"
+              onClick={handleCancelModal}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar</span>
+            </button>
             <DialogHeader>
               <DialogTitle>Crear Nueva Convocatoria</DialogTitle>
               <DialogDescription>
-                {aprendicesFiltrados.length === 0
-                  ? 'Complete los datos y adjunte el excel con el listado de aprendices'
-                  : 'Previsualizacion de aprendices filtrados'}
+                Complete los datos y adjunte el excel con el listado de aprendices
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="programa">Programa</Label>
                 <Select value={programa} onValueChange={(v) => setPrograma(v)}>
@@ -273,17 +283,6 @@ export default function ConvocatoriasPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {programa === 'Otro' && (
-                <div className="space-y-2">
-                  <Label htmlFor="programa-otro">Nombre del Programa</Label>
-                  <Input
-                    id="programa-otro"
-                    placeholder="Ingrese el nombre del programa"
-                    value={programaOtro}
-                    onChange={(e) => setProgramaOtro(e.target.value)}
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="nivel-formacion">Nivel de Formacion</Label>
                 <Select value={nivelFormacion} onValueChange={(v) => setNivelFormacion(v)}>
@@ -299,88 +298,33 @@ export default function ConvocatoriasPage() {
               </div>
             </div>
 
-            {programa && (
-              <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Nombre de convocatoria (generado automaticamente)</p>
-                <p className="text-sm font-medium">
-                  {generateNombreConvocatoria(programa === 'Otro' ? programaOtro || 'Programa Personalizado' : programa)}
-                </p>
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <div className="rounded-full bg-blue-100 p-6">
+                <FileUp className="h-12 w-12 text-blue-600" />
               </div>
-            )}
+              <p className="text-muted-foreground text-center text-sm">No se ha adjuntado ningun archivo aun</p>
+            </div>
 
-            {aprendicesFiltrados.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <div className="rounded-full bg-primary/10 p-6">
-                  <FileUp className="h-12 w-12 text-primary" />
-                </div>
-                <p className="text-muted-foreground text-center">No se ha adjuntado ningun archivo aun</p>
-                <input
-                  type="file"
-                  id="excel-upload"
-                  className="hidden"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="excel-upload">
-                  <Button type="button" variant="outline" asChild className="bg-transparent">
-                    <span className="cursor-pointer">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Seleccionar archivo Excel
-                    </span>
-                  </Button>
-                </label>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-border overflow-x-auto">
-                  <table className="w-full min-w-max">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">Nombre</th>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">Tipo Doc.</th>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">N. Documento</th>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">Inicio Lectiva</th>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">Fin Lectiva</th>
-                        <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground whitespace-nowrap">Recomendados Reemplazo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {aprendicesFiltrados.map((aprendiz, idx) => (
-                        <tr key={idx} className="border-t border-border">
-                          <td className="py-3 px-4 text-sm whitespace-nowrap">{aprendiz.nombre}</td>
-                          <td className="py-3 px-4 text-sm whitespace-nowrap">{aprendiz.tipoDocumento}</td>
-                          <td className="py-3 px-4 text-sm whitespace-nowrap">{aprendiz.documento}</td>
-                          <td className="py-3 px-4 text-sm whitespace-nowrap">{aprendiz.fechaInicioLectiva}</td>
-                          <td className="py-3 px-4 text-sm whitespace-nowrap">{aprendiz.fechaFinLectiva}</td>
-                          <td className="py-3 px-4 text-sm">
-                            {aprendiz.aprendicesRecomendados.length > 0 ? (
-                              <Button
-                                variant="link"
-                                className="h-auto p-0 text-primary hover:underline"
-                                onClick={() => handleShowReemplazDetails(aprendiz.aprendicesRecomendados)}
-                              >
-                                Ver {aprendiz.aprendicesRecomendados.length} recomendado(s)
-                              </Button>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={handleCancelModal} className="bg-transparent">
+            <div className="flex items-center justify-between mt-2">
+              <input
+                type="file"
+                id="excel-upload"
+                className="hidden"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+              />
+              <label htmlFor="excel-upload">
+                <Button type="button" variant="outline" asChild className="bg-transparent">
+                  <span className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Adjuntar excel
+                  </span>
+                </Button>
+              </label>
+              <Button variant="ghost" onClick={handleCancelModal}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateConvocatoria} disabled={!canCreate || aprendicesFiltrados.length === 0}>
-                Crear Convocatoria
-              </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 
