@@ -75,8 +75,8 @@ export default function AprendizEditPage() {
   }, [hasUnsavedChanges])
 
   const todasPruebasAprobadas =
-    pruebas.psicologica === 'aprobado' && 
-    aprendiz.pruebaTecnica === 'aprobado' && 
+    pruebas.psicologica === 'aprobado' &&
+    aprendiz.pruebaTecnica === 'aprobado' &&
     pruebas.medica === 'aprobado'
 
   const puedeAprobar = fechaInicioContrato !== '' && fechaFinContrato !== ''
@@ -142,7 +142,7 @@ export default function AprendizEditPage() {
   return (
     <div>
       <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50 p-8">
+      <main className="ml-72 min-h-screen bg-gray-50 p-8">
         <div className="mb-6 flex items-center justify-between">
           <Link to={`/seleccion/${convocatoriaId}`} onClick={handleBack}>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">

@@ -81,13 +81,12 @@ function NotificationsBell() {
                 <div className="w-full p-4">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        notification.type === 'urgent'
+                      className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${notification.type === 'urgent'
                           ? 'bg-red-500'
                           : notification.type === 'important'
                             ? 'bg-primary'
                             : 'bg-secondary'
-                      }`}
+                        }`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -125,23 +124,23 @@ export function Navbar() {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-gray-200 z-50">
+    <div className="fixed left-0 top-0 h-screen w-72 flex flex-col bg-white border-r border-border/50 shadow-sm z-50">
       {/* Header */}
-      <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
+      <div className="flex h-20 items-center justify-between px-8 border-b border-border/50 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1100ff] to-[#d300ff] flex items-center justify-center shadow-md">
             <span className="text-sm font-bold text-white">MV</span>
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900">MVM Selección</h2>
-            <p className="text-xs text-gray-500">Sistema de Aprendices</p>
+            <h2 className="text-lg font-bold text-foreground">MVM Selección</h2>
+            <p className="text-xs text-muted-foreground">Sistema de Aprendices</p>
           </div>
         </div>
         <NotificationsBell />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 overflow-y-auto">
+      <nav className="flex-1 space-y-1 p-5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
@@ -151,10 +150,10 @@ export function Navbar() {
               key={item.href}
               to={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 mb-1 text-sm font-medium transition-all duration-200 rounded-lg',
+                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? "bg-gradient-to-r from-[#1100ff] to-[#1100ff]/90 text-white shadow-md shadow-[#1100ff]/20"
+                  : "text-muted-foreground hover:bg-[#1100ff]/5 hover:text-[#1100ff]",
               )}
             >
               <Icon className="h-5 w-5" />
@@ -165,11 +164,11 @@ export function Navbar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-200 flex-shrink-0">
+      <div className="p-5 border-t border-border/50 flex-shrink-0">
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <LogOut className="h-5 w-5" />
           Cerrar sesión

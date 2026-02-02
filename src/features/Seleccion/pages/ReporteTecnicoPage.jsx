@@ -14,7 +14,7 @@ export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams()
 
   const [reporteFile, setReporteFile] = useState(null)
-  
+
   const convocatoriaInfo = {
     id: convocatoriaId,
     nombreConvocatoria: 'Convocatoria Desarrollo Web 2024',
@@ -68,7 +68,7 @@ export default function ReporteTecnicoPage() {
   return (
     <div>
       <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50 p-8">
+      <main className="ml-72 min-h-screen bg-gray-50 p-8">
         <div className="mb-6">
           <Link to={`/seleccion/${convocatoriaId}`}>
             <Button variant="ghost" size="sm">
