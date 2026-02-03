@@ -25,13 +25,25 @@ const END_ROW = 31; // Última fila permitida
 
 // Función para parsear fecha de Excel
 const parseExcelDate = (value) => {
-  if (!value) return null;
+  if (!value && value !== 0) return null;
   
   // Si es un número (formato de fecha de Excel)
   if (typeof value === 'number') {
-    const date = XLSX.SSF.parse_date_code(value);
-    if (date) {
-      return new Date(date.y, date.m - 1, date.d).toISOString().split('T')[0];
+    try {
+      // Excel comienza a contar desde 1 de enero de 1900
+      // Número 1 = 1 de enero de 1900
+      // Número 44197 = 16 de diciembre de 2020
+      const excelDate = value;
+      const date = new Date((excelDate - 25569) * 86400 * 1000); // 25569 es el offset entre epoch de Excel y Unix
+      
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (err) {
+      console.warn('Error parseando fecha Excel:', err);
+      return null;
     }
   }
   
@@ -47,6 +59,20 @@ const parseExcelDate = (value) => {
     const ymdMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (ymdMatch) {
       return dateStr;
+    }
+    // Formato MM/DD/YYYY (a veces Excel lo interpreta así)
+    const altDmyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (altDmyMatch) {
+      // Intentar determinar si es DD/MM o MM/DD
+      const day = parseInt(altDmyMatch[1], 10);
+      const month = parseInt(altDmyMatch[2], 10);
+      if (day > 12 && month <= 12) {
+        // Es DD/MM
+        return `${altDmyMatch[3]}-${altDmyMatch[2].padStart(2, '0')}-${altDmyMatch[1].padStart(2, '0')}`;
+      } else if (month > 12 && day <= 12) {
+        // Es MM/DD
+        return `${altDmyMatch[3]}-${altDmyMatch[1].padStart(2, '0')}-${altDmyMatch[2].padStart(2, '0')}`;
+      }
     }
   }
   
@@ -74,7 +100,8 @@ export const useExcelParser = () => {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          // cellDates: true preserva las fechas como números de Excel
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellFormula: false });
           
           // Obtener la primera hoja
           const sheetName = workbook.SheetNames[0];
@@ -93,11 +120,15 @@ export const useExcelParser = () => {
               const cell = worksheet[cellAddress];
               let value = cell ? cell.v : null;
 
-              // Procesar según el tipo de campo
-              if (field === 'tipoDocumento') {
-                value = validarTipoDocumento(value);
+              // Si la celda tiene formato de fecha, intentar parsear
+              if (field.includes('fecha') && cell && cell.t === 'd') {
+                // Es una fecha (type 'd')
+                value = cell.v instanceof Date ? cell.v.toISOString().split('T')[0] : parseExcelDate(cell.v);
               } else if (field.includes('fecha')) {
+                // Parsear como fecha en cualquier caso
                 value = parseExcelDate(value);
+              } else if (field === 'tipoDocumento') {
+                value = validarTipoDocumento(value);
               } else if (value !== null && value !== undefined) {
                 value = String(value).trim();
               }
