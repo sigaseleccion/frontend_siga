@@ -1,68 +1,59 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { ArrowLeft, Eye, Edit, FileText } from 'lucide-react'
+import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
 
 export default function SeleccionConvocatoriaPage() {
   const { id: convocatoriaId } = useParams()
 
-  const convocatoriaInfo = {
+  const [convocatoriaInfo, setConvocatoriaInfo] = useState({
     id: convocatoriaId,
-    nombreConvocatoria: 'Convocatoria Desarrollo Web 2024',
-    nivelFormacion: 'Tecnologia',
-  }
+    idConvocatoria: '',
+    nombreConvocatoria: '',
+    nivelFormacion: '',
+  })
 
-  const [aprendices] = useState([
-    {
-      id: '1',
-      nombre: 'Maria Gonzalez Lopez',
-      tipoDocumento: 'CC',
-      documento: '9876543210',
-      convocatoria: convocatoriaId,
-      ciudad: 'Bogota',
-      programaFormacion: 'Desarrollo de Software',
-      fechaInicioLectiva: '2024-02-01',
-      fechaFinLectiva: '2024-07-01',
-      fechaInicioProductiva: '2024-07-02',
-      fechaFinProductiva: '2025-01-01',
-    },
-    {
-      id: '2',
-      nombre: 'Ana Martinez Silva',
-      tipoDocumento: 'TI',
-      documento: '1111111111',
-      convocatoria: convocatoriaId,
-      ciudad: 'Medellin',
-      programaFormacion: 'Administracion de Empresas',
-      fechaInicioLectiva: '2024-01-15',
-      fechaFinLectiva: '2024-06-15',
-      fechaInicioProductiva: '2024-06-16',
-      fechaFinProductiva: '2024-12-15',
-    },
-    {
-      id: '3',
-      nombre: 'Luis Castro Gomez',
-      tipoDocumento: 'CE',
-      documento: '2222222222',
-      convocatoria: convocatoriaId,
-      ciudad: 'Cali',
-      programaFormacion: 'Contabilidad',
-      fechaInicioLectiva: '2024-01-20',
-      fechaFinLectiva: '2024-06-20',
-      fechaInicioProductiva: '2024-06-21',
-      fechaFinProductiva: '2024-12-20',
-    },
-  ])
+  const [aprendices, setAprendices] = useState([])
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setError(null)
+        const conv = await convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId)
+        setConvocatoriaInfo({
+          id: convocatoriaId,
+          idConvocatoria: conv.idConvocatoria || '',
+          nombreConvocatoria: conv.nombreConvocatoria,
+          nivelFormacion: conv.nivelFormacion,
+        })
+        const aps = await aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId)
+        setAprendices(aps.filter((a) => a.etapaActual === 'seleccion2'))
+      } catch (e) {
+        setError(e.message)
+      }
+    }
+    loadData()
+  }, [convocatoriaId])
 
   return (
     <div>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50 p-8">
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
         <div className="mb-6">
           <Link to="/seleccion">
             <Button variant="ghost" size="sm">
@@ -77,7 +68,7 @@ export default function SeleccionConvocatoriaPage() {
             <h1 className="text-3xl font-bold text-foreground">{convocatoriaInfo.nombreConvocatoria}</h1>
             <div className="flex items-center gap-3 mt-2">
               <Badge variant="outline">{convocatoriaInfo.nivelFormacion}</Badge>
-              <span className="text-muted-foreground">{convocatoriaId}</span>
+              <span className="text-muted-foreground">{convocatoriaInfo.idConvocatoria || convocatoriaId}</span>
             </div>
           </div>
           <Link to={`/seleccion/${convocatoriaId}/reporte-tecnico`}>
@@ -111,33 +102,33 @@ export default function SeleccionConvocatoriaPage() {
                 </thead>
                 <tbody>
                   {aprendices.map((aprendiz) => (
-                    <tr key={aprendiz.id} className="border-b border-border last:border-0">
+                    <tr key={aprendiz._id} className="border-b border-border last:border-0">
                       <td className="py-3 px-4 text-sm font-medium">{aprendiz.nombre}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.tipoDocumento}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.documento}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.ciudad}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.programaFormacion}</td>
                       <td className="py-3 px-4 text-sm">
-                        {new Date(aprendiz.fechaInicioLectiva).toLocaleDateString('es-ES')}
+                        {aprendiz.fechaInicioLectiva ? new Date(aprendiz.fechaInicioLectiva).toLocaleDateString('es-ES') : '-'}
                       </td>
                       <td className="py-3 px-4 text-sm">
-                        {new Date(aprendiz.fechaFinLectiva).toLocaleDateString('es-ES')}
+                        {aprendiz.fechaFinLectiva ? new Date(aprendiz.fechaFinLectiva).toLocaleDateString('es-ES') : '-'}
                       </td>
                       <td className="py-3 px-4 text-sm">
-                        {new Date(aprendiz.fechaInicioProductiva).toLocaleDateString('es-ES')}
+                        {aprendiz.fechaInicioProductiva ? new Date(aprendiz.fechaInicioProductiva).toLocaleDateString('es-ES') : '-'}
                       </td>
                       <td className="py-3 px-4 text-sm">
-                        {new Date(aprendiz.fechaFinProductiva).toLocaleDateString('es-ES')}
+                        {aprendiz.fechaFinProductiva ? new Date(aprendiz.fechaFinProductiva).toLocaleDateString('es-ES') : '-'}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
-                          <Link to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz.id}`}>
+                          <Link to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz._id}`}>
                             <Button variant="ghost" size="sm">
                               <Eye className="h-4 w-4 mr-1" />
                               Ver
                             </Button>
                           </Link>
-                          <Link to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz.id}/editar`}>
+                          <Link to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz._id}/editar`}>
                             <Button variant="ghost" size="sm">
                               <Edit className="h-4 w-4 mr-1" />
                               Editar

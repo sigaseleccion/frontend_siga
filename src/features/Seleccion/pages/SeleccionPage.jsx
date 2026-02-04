@@ -17,6 +17,9 @@ import {
 } from '@/shared/components/ui/dialog'
 import { Eye, Search, Users, Archive, History } from 'lucide-react'
 import { useToast } from '@/shared/hooks/useToast'
+import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
 
 export default function SeleccionPage() {
   const [searchParams] = useSearchParams()
@@ -25,35 +28,9 @@ export default function SeleccionPage() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [selectedConvocatoria, setSelectedConvocatoria] = useState(null)
 
-  const [convocatorias, setConvocatorias] = useState([
-    {
-      id: 'CONV-2024-001',
-      nombreConvocatoria: 'Convocatoria Desarrollo Web 2024',
-      programa: 'Desarrollo de Software',
-      nivelFormacion: 'tecnologia',
-      totalAprendices: 15,
-      aprendicesConPruebasCompletas: 8,
-      fechaCreacion: '2024-01-15',
-    },
-    {
-      id: 'CONV-2024-002',
-      nombreConvocatoria: 'Convocatoria Administracion Empresarial',
-      programa: 'Gestion Administrativa',
-      nivelFormacion: 'profesional',
-      totalAprendices: 10,
-      aprendicesConPruebasCompletas: 6,
-      fechaCreacion: '2024-01-20',
-    },
-    {
-      id: 'CONV-2023-012',
-      nombreConvocatoria: 'Convocatoria Tecnica Contable',
-      programa: 'Contabilidad y Finanzas',
-      nivelFormacion: 'tecnica',
-      totalAprendices: 8,
-      aprendicesConPruebasCompletas: 8,
-      fechaCreacion: '2023-12-10',
-    },
-  ])
+  const [convocatorias, setConvocatorias] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (searchParams.get('aprobado') === 'true') {
@@ -67,6 +44,59 @@ export default function SeleccionPage() {
       window.history.replaceState({}, '', '/seleccion')
     }
   }, [searchParams, toast])
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const convs = await convocatoriaService.obtenerConvocatorias()
+        const enriched = await Promise.all(
+          convs.map(async (conv) => {
+            const aprendices = await aprendizService.obtenerAprendicesPorConvocatoria(conv._id)
+            const seleccionados = aprendices.filter((a) => a.etapaActual === 'seleccion2')
+            let aprobadas = 0
+            let totalPruebasPendientes = 0
+            for (const a of seleccionados) {
+              if (a.pruebaSeleccionId) {
+                try {
+                  const pruebas = await pruebaSeleccionService.obtenerPorAprendiz(a._id)
+                  const ps = Array.isArray(pruebas) ? pruebas[0] : null
+                  if (ps) {
+                    totalPruebasPendientes += ['pruebaPsicologica', 'pruebaTecnica', 'examenesMedicos'].filter(
+                      (k) => ps[k] === 'pendiente'
+                    ).length
+                    aprobadas += ['pruebaPsicologica', 'pruebaTecnica', 'examenesMedicos'].filter(
+                      (k) => ps[k] === 'aprobado'
+                    ).length
+                  }
+                } catch (e) {
+                  console.error(e)
+                }
+              }
+            }
+            return {
+              id: conv._id,
+            idConvocatoria: conv.idConvocatoria,
+              nombreConvocatoria: conv.nombreConvocatoria,
+              programa: conv.programa,
+              nivelFormacion: conv.nivelFormacion,
+              fechaCreacion: conv.fechaCreacion,
+              totalAprendices: seleccionados.length,
+              aprendicesConPruebasCompletas: aprobadas,
+              totalPruebasPendientes,
+            }
+          })
+        )
+        setConvocatorias(enriched)
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const getNivelFormacionLabel = (nivel) => {
     const labels = { tecnica: 'Tecnica', tecnologia: 'Tecnologia', profesional: 'Profesional' }
@@ -98,13 +128,27 @@ export default function SeleccionPage() {
   }
 
   const isPruebasCompletas = (conv) => {
-    return conv.aprendicesConPruebasCompletas === conv.totalAprendices
+    return conv.aprendicesConPruebasCompletas > 0 && conv.totalAprendices > 0
   }
 
   return (
     <div>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50 p-8">
+        {loading && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-muted-foreground bg-muted/30 border border-border">
+              Cargando...
+            </CardContent>
+          </Card>
+        )}
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Seleccion</h1>
@@ -138,7 +182,7 @@ export default function SeleccionPage() {
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant="outline">{getNivelFormacionLabel(convocatoria.nivelFormacion)}</Badge>
-                  <span className="text-xs text-muted-foreground">{convocatoria.id}</span>
+                  <span className="text-xs text-muted-foreground">{convocatoria.idConvocatoria || convocatoria.id}</span>
                 </div>
                 <CardTitle className="text-lg">{convocatoria.nombreConvocatoria}</CardTitle>
               </CardHeader>
@@ -147,19 +191,14 @@ export default function SeleccionPage() {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {convocatoria.totalAprendices} aprendices en seleccion
+                      {convocatoria.totalAprendices} aprendices en seleccion2
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isPruebasCompletas(convocatoria) ? (
-                      <Badge variant="default" className="bg-green-600">
-                        Todas las pruebas completas
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        {convocatoria.aprendicesConPruebasCompletas}/{convocatoria.totalAprendices} pruebas completas
-                      </Badge>
-                    )}
+                    <Badge variant="secondary">
+                      {convocatoria.aprendicesConPruebasCompletas}/
+                      {convocatoria.totalAprendices * 3 || 0} pruebas aprobadas
+                    </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Creada: {new Date(convocatoria.fechaCreacion).toLocaleDateString('es-ES')}

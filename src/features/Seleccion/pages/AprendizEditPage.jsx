@@ -18,49 +18,37 @@ import {
 } from '@/shared/components/ui/dialog'
 import { useToast } from '@/shared/hooks/useToast'
 import { ArrowLeft, CheckCircle, XCircle, Save, Clock, Lock } from 'lucide-react'
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
 
 export default function AprendizEditPage() {
-  const { id: convocatoriaId } = useParams()
+  const { id: convocatoriaId, aprendizId } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
 
   const [showAprobarDialog, setShowAprobarDialog] = useState(false)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [error, setError] = useState(null)
 
-  const [aprendiz] = useState({
-    nombre: 'Maria Gonzalez Lopez',
-    tipoDocumento: 'CC',
-    documento: '9876543210',
-    correo: 'maria.gonzalez@example.com',
-    telefono: '+57 310 9876543',
-    fechaInicioLectiva: '2024-02-01',
-    fechaFinLectiva: '2024-07-01',
-    fechaInicioProductiva: '2024-07-02',
-    fechaFinProductiva: '2025-01-01',
-    pruebaTecnica: 'aprobado',
-  })
+  const [aprendiz, setAprendiz] = useState(null)
+  const [pruebaSeleccionId, setPruebaSeleccionId] = useState(null)
+  const [pruebaTecnica, setPruebaTecnica] = useState('pendiente')
 
-  const [initialState] = useState({
-    pruebas: { psicologica: 'aprobado', medica: 'aprobado' },
-    fechaInicioContrato: '2024-06-16',
-    fechaFinContrato: '2024-12-15',
+  const [initialState, setInitialState] = useState({
+    pruebas: { psicologica: 'pendiente', medica: 'pendiente' },
+    fechaInicioContrato: '',
+    fechaFinContrato: '',
   })
 
   const [pruebas, setPruebas] = useState(initialState.pruebas)
   const [fechaInicioContrato, setFechaInicioContrato] = useState(initialState.fechaInicioContrato)
   const [fechaFinContrato, setFechaFinContrato] = useState(initialState.fechaFinContrato)
 
-  useEffect(() => {
-    const pruebasChanged =
-      pruebas.psicologica !== initialState.pruebas.psicologica ||
-      pruebas.medica !== initialState.pruebas.medica
-
-    const fechasChanged =
-      fechaInicioContrato !== initialState.fechaInicioContrato || fechaFinContrato !== initialState.fechaFinContrato
-
-    setHasUnsavedChanges(pruebasChanged || fechasChanged)
-  }, [pruebas, fechaInicioContrato, fechaFinContrato, initialState])
+  const hasUnsavedChanges =
+    pruebas.psicologica !== initialState.pruebas.psicologica ||
+    pruebas.medica !== initialState.pruebas.medica ||
+    fechaInicioContrato !== initialState.fechaInicioContrato ||
+    fechaFinContrato !== initialState.fechaFinContrato
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -74,23 +62,81 @@ export default function AprendizEditPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges])
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setError(null)
+        const a = await aprendizService.obtenerAprendizPorId(aprendizId)
+        setAprendiz(a)
+        setPruebaSeleccionId(a.pruebaSeleccionId || null)
+        const inicioC = a.fechaInicioContrato ? new Date(a.fechaInicioContrato).toISOString().slice(0, 10) : ''
+        const finC = a.fechaFinContrato ? new Date(a.fechaFinContrato).toISOString().slice(0, 10) : ''
+        setInitialState((prev) => ({
+          ...prev,
+          fechaInicioContrato: inicioC,
+          fechaFinContrato: finC,
+        }))
+        setFechaInicioContrato(inicioC)
+        setFechaFinContrato(finC)
+        if (a.pruebaSeleccionId) {
+          try {
+            const ps = await pruebaSeleccionService.obtenerPorId(a.pruebaSeleccionId)
+            setPruebas({
+              psicologica: ps.pruebaPsicologica || 'pendiente',
+              medica: ps.examenesMedicos || 'pendiente',
+            })
+            setPruebaTecnica(ps.pruebaTecnica || 'pendiente')
+          } catch (e) {
+            setError(e.message)
+          }
+        }
+      } catch (e) {
+        setError(e.message)
+      }
+    }
+    if (aprendizId) loadData()
+  }, [aprendizId])
+
   const todasPruebasAprobadas =
     pruebas.psicologica === 'aprobado' &&
-    aprendiz.pruebaTecnica === 'aprobado' &&
+    pruebaTecnica === 'aprobado' &&
     pruebas.medica === 'aprobado'
 
-  const puedeAprobar = fechaInicioContrato !== '' && fechaFinContrato !== ''
+  const puedeAprobar = todasPruebasAprobadas && fechaInicioContrato !== '' && fechaFinContrato !== ''
 
-  const handlePruebaChange = (prueba, estado) => {
+  const handlePruebaChange = async (prueba, estado) => {
     setPruebas((prev) => ({ ...prev, [prueba]: estado }))
+    if (pruebaSeleccionId) {
+      try {
+        if (prueba === 'psicologica') {
+          await pruebaSeleccionService.actualizarPrueba(pruebaSeleccionId, { pruebaPsicologica: estado })
+        } else if (prueba === 'medica') {
+          await pruebaSeleccionService.actualizarPrueba(pruebaSeleccionId, { examenesMedicos: estado })
+        }
+      } catch (e) {
+        setError(e.message)
+      }
+    }
   }
 
-  const handleGuardar = () => {
-    toast({
-      title: 'Cambios Guardados',
-      description: 'Los cambios se han guardado correctamente',
-    })
-    setHasUnsavedChanges(false)
+  const handleGuardar = async () => {
+    try {
+      await aprendizService.actualizarAprendiz(aprendizId, {
+        fechaInicioContrato: fechaInicioContrato || null,
+        fechaFinContrato: fechaFinContrato || null,
+      })
+      setInitialState({
+        pruebas,
+        fechaInicioContrato,
+        fechaFinContrato,
+      })
+      toast({
+        title: 'Cambios Guardados',
+        description: 'Los cambios se han guardado correctamente',
+      })
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleAprobar = () => {
@@ -98,10 +144,18 @@ export default function AprendizEditPage() {
     setShowAprobarDialog(true)
   }
 
-  const confirmarAprobar = () => {
+  const confirmarAprobar = async () => {
     setShowAprobarDialog(false)
-    setHasUnsavedChanges(false)
-    navigate(`/seleccion/${convocatoriaId}?aprobado=true&nombre=${encodeURIComponent(aprendiz.nombre)}`)
+    try {
+      await aprendizService.actualizarAprendiz(aprendizId, {
+        etapaActual: 'lectiva',
+        fechaInicioContrato: fechaInicioContrato || null,
+        fechaFinContrato: fechaFinContrato || null,
+      })
+      navigate(`/seleccion/${convocatoriaId}?aprobado=true&nombre=${encodeURIComponent(aprendiz?.nombre || '')}`)
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleBack = (e) => {
@@ -112,7 +166,6 @@ export default function AprendizEditPage() {
   }
 
   const confirmarSalir = () => {
-    setHasUnsavedChanges(false)
     setShowUnsavedDialog(false)
     navigate(`/seleccion/${convocatoriaId}`)
   }
@@ -143,6 +196,13 @@ export default function AprendizEditPage() {
     <div>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50 p-8">
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
         <div className="mb-6 flex items-center justify-between">
           <Link to={`/seleccion/${convocatoriaId}`} onClick={handleBack}>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -166,21 +226,21 @@ export default function AprendizEditPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 bg-muted/50 rounded-lg break-words">
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Nombre</p>
-                  <p className="text-sm font-medium text-foreground break-words">{aprendiz.nombre}</p>
+                  <p className="text-sm font-medium text-foreground break-words">{aprendiz?.nombre || '-'}</p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg break-words">
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Documento</p>
                   <p className="text-sm font-medium text-foreground break-words">
-                    {aprendiz.tipoDocumento} {aprendiz.documento}
+                    {aprendiz?.tipoDocumento || '-'} {aprendiz?.documento || ''}
                   </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg break-all overflow-hidden">
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Correo</p>
-                  <p className="text-sm font-medium text-foreground break-all">{aprendiz.correo}</p>
+                  <p className="text-sm font-medium text-foreground break-all">{aprendiz?.correo || '-'}</p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg break-words">
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Telefono</p>
-                  <p className="text-sm font-medium text-foreground break-words">{aprendiz.telefono}</p>
+                  <p className="text-sm font-medium text-foreground break-words">{aprendiz?.telefono || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -259,8 +319,8 @@ export default function AprendizEditPage() {
                 </div>
 
                 <div className="relative flex items-start gap-4 pl-10">
-                  <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(aprendiz.pruebaTecnica)}`}>
-                    {getEstadoIcon(aprendiz.pruebaTecnica)}
+                  <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebaTecnica)}`}>
+                    {getEstadoIcon(pruebaTecnica)}
                   </div>
                   <div className="flex-1 space-y-3 min-w-0">
                     <div className="flex items-center gap-2">
@@ -269,7 +329,7 @@ export default function AprendizEditPage() {
                     </div>
                     <div className="flex gap-3 items-center flex-wrap">
                       <div className="px-3 py-2 bg-muted/50 rounded-md border border-border">
-                        <span className="text-sm capitalize">{aprendiz.pruebaTecnica}</span>
+                        <span className="text-sm capitalize">{pruebaTecnica}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Este campo se modifica desde Reporte Tecnico
@@ -332,7 +392,7 @@ export default function AprendizEditPage() {
             <DialogHeader>
               <DialogTitle>Confirmar Aprobacion</DialogTitle>
               <DialogDescription>
-                Estas seguro de que deseas que el aprendiz <strong>{aprendiz.nombre}</strong>, pase a estado "en
+                Estas seguro de que deseas que el aprendiz <strong>{aprendiz?.nombre || ''}</strong>, pase a estado "en
                 seguimiento"?
               </DialogDescription>
             </DialogHeader>

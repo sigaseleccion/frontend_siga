@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -16,33 +16,34 @@ import {
 import { ArrowLeft, Archive, Eye } from 'lucide-react'
 
 export default function HistoricoConvocatoriasPage() {
-  const [archivedConvocatorias, setArchivedConvocatorias] = useState([])
-
-  useEffect(() => {
-    const stored = localStorage.getItem('archivedConvocatorias')
+  const [archivedConvocatorias] = useState(() => {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('archivedConvocatorias') : null
     if (stored) {
-      setArchivedConvocatorias(JSON.parse(stored))
-    } else {
-      setArchivedConvocatorias([
-        {
-          id: 'CONV-2023-008',
-          nombreConvocatoria: 'Convocatoria Sistemas 2023',
-          programa: 'Analisis y Desarrollo de Sistemas',
-          nivelFormacion: 'tecnologia',
-          totalAprendices: 12,
-          fechaArchivado: '2023-11-15',
-        },
-        {
-          id: 'CONV-2023-005',
-          nombreConvocatoria: 'Convocatoria Mercadeo Digital',
-          programa: 'Marketing Digital',
-          nivelFormacion: 'tecnica',
-          totalAprendices: 8,
-          fechaArchivado: '2023-10-20',
-        },
-      ])
+      try {
+        return JSON.parse(stored)
+      } catch {
+        return []
+      }
     }
-  }, [])
+    return [
+      {
+        id: 'CONV-2023-008',
+        nombreConvocatoria: 'Convocatoria Sistemas 2023',
+        programa: 'Analisis y Desarrollo de Sistemas',
+        nivelFormacion: 'tecnologia',
+        totalAprendices: 12,
+        fechaArchivado: '2023-11-15',
+      },
+      {
+        id: 'CONV-2023-005',
+        nombreConvocatoria: 'Convocatoria Mercadeo Digital',
+        programa: 'Marketing Digital',
+        nivelFormacion: 'tecnica',
+        totalAprendices: 8,
+        fechaArchivado: '2023-10-20',
+      },
+    ]
+  })
 
   const getNivelFormacionLabel = (nivel) => {
     const labels = { tecnica: 'Tecnica', tecnologia: 'Tecnologia', profesional: 'Profesional' }

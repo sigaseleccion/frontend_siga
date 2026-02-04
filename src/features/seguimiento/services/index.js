@@ -1,0 +1,1 @@
+export { seguimientoService } from './seguimientoService';

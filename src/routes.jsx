@@ -22,7 +22,7 @@ import HistoricoConvocatoriaDetailPage from './features/Seleccion/pages/Historic
 import HistoricoAprendizDetailPage from './features/Seleccion/pages/HistoricoAprendizDetailPage'
 
 // Seguimiento
-import SeguimientoPage from './features/Seguimiento/pages/SeguimientoPage'
+import SeguimientoPage from './features/seguimiento/pages/SeguimientoPage'
 import HistoricoAprendicesPage from './features/Seguimiento/pages/HistoricoAprendicesPage'
 
 // Roles
