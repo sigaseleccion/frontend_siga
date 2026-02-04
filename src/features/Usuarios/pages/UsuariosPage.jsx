@@ -34,9 +34,18 @@ const UsuariosPage = () => {
     refetch();
   };
 
-  const getRolBadgeStyle = (rolId) => {
-    const rol = roles.find(r => r._id === rolId);
-    const rolName = rol?.nombre || 'Sin rol';
+  const getRolBadgeStyle = (rolData) => {
+    // rolData puede ser un objeto { _id, nombre } o un string con el ID
+    let rolName = 'Sin rol';
+    
+    if (typeof rolData === 'object' && rolData?.nombre) {
+      // Si es un objeto con nombre (populate)
+      rolName = rolData.nombre;
+    } else if (typeof rolData === 'string') {
+      // Si es solo el ID, buscar en la lista de roles
+      const rol = roles.find(r => r._id === rolData);
+      rolName = rol?.nombre || 'Sin rol';
+    }
     
     switch (rolName.toLowerCase()) {
       case 'administrador':
@@ -56,8 +65,14 @@ const UsuariosPage = () => {
       : 'bg-red-100 text-red-700 hover:bg-red-100';
   };
 
-  const getRolNombre = (rolId) => {
-    return roles.find(r => r._id === rolId)?.nombre || 'Sin rol';
+  const getRolNombre = (rolData) => {
+    // rolData puede ser un objeto { _id, nombre } o un string con el ID
+    if (typeof rolData === 'object' && rolData?.nombre) {
+      return rolData.nombre;
+    } else if (typeof rolData === 'string') {
+      return roles.find(r => r._id === rolData)?.nombre || 'Sin rol';
+    }
+    return 'Sin rol';
   };
 
   const totalUsuarios = usuarios.length;
