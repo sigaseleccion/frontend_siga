@@ -13,6 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/shared/components/ui/dialog';
 import { ArrowLeft, Lock, Unlock, Upload, Loader2 } from 'lucide-react';
 
 import { useConvocatoriaDetail } from '../hooks/useConvocatoriaDetail';
@@ -37,12 +45,29 @@ export default function ConvocatoriaDetailPage() {
   const [selectedRecomendados, setSelectedRecomendados] = useState(null);
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmSeleccionadoOpen, setConfirmSeleccionadoOpen] = useState(false);
+  const [pendingAprendizId, setPendingAprendizId] = useState(null);
+  const [pendingAprendizName, setPendingAprendizName] = useState('');
 
-  const handleEstadoChange = async (aprendizId, nuevoEstado) => {
+  const handleEstadoChange = async (aprendizId, nuevoEstado, nombreAprendiz = '') => {
+    if (nuevoEstado === 'seleccionado') {
+      setPendingAprendizId(aprendizId);
+      setPendingAprendizName(nombreAprendiz || '');
+      setConfirmSeleccionadoOpen(true);
+      return;
+    }
+    await actualizarEstadoAprendiz(aprendizId, nuevoEstado);
+  };
+
+  const handleConfirmSeleccionado = async () => {
+    if (!pendingAprendizId) return;
+    setActionLoading(true);
     try {
-      await actualizarEstadoAprendiz(aprendizId, nuevoEstado);
-    } catch (err) {
-      // Error manejado en el hook
+      await actualizarEstadoAprendiz(pendingAprendizId, 'seleccionado', { setSeleccion2: true });
+      setConfirmSeleccionadoOpen(false);
+      setPendingAprendizId(null);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -313,7 +338,7 @@ export default function ConvocatoriaDetailPage() {
                           ) : (
                             <Select
                               value={aprendiz.estadoConvocatoria}
-                              onValueChange={(value) => handleEstadoChange(aprendiz._id, value)}
+                              onValueChange={(value) => handleEstadoChange(aprendiz._id, value, aprendiz.nombre)}
                               disabled={!canEditAprendiz(aprendiz)}
                             >
                               <SelectTrigger className="w-[160px] border-gray-200">
@@ -334,6 +359,33 @@ export default function ConvocatoriaDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={confirmSeleccionadoOpen} onOpenChange={setConfirmSeleccionadoOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar selección</DialogTitle>
+              <DialogDescription>
+                Al marcar al aprendiz {pendingAprendizName || 'seleccionado'} como seleccionado se
+                actualizará su etapa a "seleccion2". ¿Desea continuar?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPendingAprendizId(null);
+                  setPendingAprendizName('');
+                  setConfirmSeleccionadoOpen(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmSeleccionado} disabled={actionLoading}>
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <CloseConvocatoriaDialog
           open={showCloseDialog}
