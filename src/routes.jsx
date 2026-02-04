@@ -27,9 +27,12 @@ import HistoricoAprendicesPage from './features/Seguimiento/pages/HistoricoApren
 
 // Roles
 import RolesPage from './features/Roles/pages/RolesPage'
+import CrearRol from './features/Roles/components/crearRol'
+import EditarRol from './features/Roles/components/EditarRol'
 
 // Usuarios
 import UsuariosPage from './features/Usuarios/pages/UsuariosPage'
+
 
 export default function AppRoutes() {
   return (
@@ -61,6 +64,8 @@ export default function AppRoutes() {
       
       {/* Roles */}
       <Route path="/roles" element={<RolesPage />} />
+      <Route path="/roles/crear" element={<CrearRol />} />
+      <Route path="/roles/editar/:id" element={<EditarRol />} />
       
       {/* Usuarios */}
       <Route path="/usuarios" element={<UsuariosPage />} />
