@@ -3,7 +3,7 @@ import { Shield, Plus, Edit2, Trash2 } from "lucide-react";
 import { Navbar } from '@/shared/components/Navbar'
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState([
+  const [roles] = useState([
     {
       id: 1,
       name: "Administrador",

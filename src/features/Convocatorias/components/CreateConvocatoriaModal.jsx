@@ -48,6 +48,7 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
       } catch (err) {
         setAprendicesParsed([]);
         setFileName('');
+        console.error(err);
       }
     }
   };
@@ -76,7 +77,7 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
       await onSubmit(convocatoriaData, aprendicesParsed);
       handleCancel();
     } catch (err) {
-      // Error manejado en el hook padre
+      console.error(err);
     }
   };
 

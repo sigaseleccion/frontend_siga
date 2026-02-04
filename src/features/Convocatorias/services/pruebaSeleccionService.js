@@ -24,4 +24,38 @@ export const pruebaSeleccionService = {
     }
     return response.json();
   },
+  async obtenerPorAprendiz(aprendizId) {
+    const response = await fetch(`${API_URL}/api/pruebas-seleccion/aprendiz/${aprendizId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener pruebas del aprendiz');
+    }
+    return response.json();
+  },
+  async obtenerPorId(id) {
+    const response = await fetch(`${API_URL}/api/pruebas-seleccion/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener prueba de selección');
+    }
+    return response.json();
+  },
+  async actualizarPrueba(id, data) {
+    const response = await fetch(`${API_URL}/api/pruebas-seleccion/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al actualizar prueba de selección');
+    }
+    return response.json();
+  },
 };

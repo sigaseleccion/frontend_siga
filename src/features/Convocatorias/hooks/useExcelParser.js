@@ -152,6 +152,7 @@ export const useExcelParser = () => {
           setParsing(false);
           const errorMsg = 'Error al procesar el archivo Excel';
           setError(errorMsg);
+          console.warn(err);
           reject(new Error(errorMsg));
         }
       };

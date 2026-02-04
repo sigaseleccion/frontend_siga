@@ -63,7 +63,8 @@ export const useConvocatoriaDetail = (convocatoriaId) => {
                 )
               );
             }
-          } catch {
+          } catch (e) {
+            console.error(e);
           }
         }
         return actualizado;

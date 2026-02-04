@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Button } from '@/shared/components/ui/button'
@@ -9,6 +9,8 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ArrowLeft, Upload, FileUp, FileText, X, File } from 'lucide-react'
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams()
@@ -21,13 +23,44 @@ export default function ReporteTecnicoPage() {
     nivelFormacion: 'Tecnologia',
   }
 
-  const [aprendices, setAprendices] = useState([
-    { id: '1', nombre: 'Maria Gonzalez Lopez', tipoDocumento: 'CC', documento: '9876543210', pruebaTecnica: 'aprobado' },
-    { id: '2', nombre: 'Ana Martinez Silva', tipoDocumento: 'TI', documento: '1111111111', pruebaTecnica: 'pendiente' },
-    { id: '3', nombre: 'Luis Castro Gomez', tipoDocumento: 'CE', documento: '2222222222', pruebaTecnica: 'aprobado' },
-    { id: '4', nombre: 'Carlos Rodriguez Diaz', tipoDocumento: 'CC', documento: '3333333333', pruebaTecnica: 'no aprobado' },
-    { id: '5', nombre: 'Sandra Torres Perez', tipoDocumento: 'CC', documento: '4444444444', pruebaTecnica: 'pendiente' },
-  ])
+  const [aprendices, setAprendices] = useState([])
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setError(null)
+        const aps = await aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId)
+        const seleccionados = aps.filter((a) => a.etapaActual === 'seleccion2')
+        const base = seleccionados.map((a) => ({
+          id: a._id,
+          _id: a._id,
+          nombre: a.nombre,
+          tipoDocumento: a.tipoDocumento,
+          documento: a.documento,
+          pruebaTecnica: 'pendiente',
+          pruebaSeleccionId: a.pruebaSeleccionId || null,
+        }))
+        const withEstados = await Promise.all(
+          base.map(async (a) => {
+            if (a.pruebaSeleccionId) {
+              try {
+                const ps = await pruebaSeleccionService.obtenerPorId(a.pruebaSeleccionId)
+                return { ...a, pruebaTecnica: ps.pruebaTecnica || 'pendiente' }
+              } catch {
+                return a
+              }
+            }
+            return a
+          })
+        )
+        setAprendices(withEstados)
+      } catch (e) {
+        setError(e.message)
+      }
+    }
+    loadData()
+  }, [convocatoriaId])
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0]
@@ -49,12 +82,22 @@ export default function ReporteTecnicoPage() {
     setReporteFile(null)
   }
 
-  const handlePruebaTecnicaChange = (aprendizId, estado) => {
-    setAprendices((prev) =>
-      prev.map((a) =>
-        a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a
+  const handlePruebaTecnicaChange = async (aprendizId, estado) => {
+    const target = aprendices.find((a) => a.id === aprendizId)
+    if (target && target.pruebaSeleccionId) {
+      try {
+        await pruebaSeleccionService.actualizarPrueba(target.pruebaSeleccionId, { pruebaTecnica: estado })
+        setAprendices((prev) =>
+          prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
+        )
+      } catch (e) {
+        setError(e.message)
+      }
+    } else {
+      setAprendices((prev) =>
+        prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
       )
-    )
+    }
   }
 
   const getFileIcon = () => {
@@ -69,6 +112,13 @@ export default function ReporteTecnicoPage() {
     <div>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50 p-8">
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
         <div className="mb-6">
           <Link to={`/seleccion/${convocatoriaId}`}>
             <Button variant="ghost" size="sm">

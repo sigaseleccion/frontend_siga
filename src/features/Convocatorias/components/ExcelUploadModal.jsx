@@ -28,6 +28,7 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
       } catch (err) {
         setAprendicesParsed([]);
         setFileName('');
+        console.error(err);
       }
     }
   };
@@ -37,7 +38,7 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
       await onSubmit(aprendicesParsed);
       handleCancel();
     } catch (err) {
-      // Error manejado en el componente padre
+        console.error(err);
     }
   };
 
