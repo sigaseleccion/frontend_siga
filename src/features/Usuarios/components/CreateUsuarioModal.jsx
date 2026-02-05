@@ -19,11 +19,10 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Button } from '@/shared/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
+import { PasswordInput } from './PasswordInput';
 import { crearUsuario } from '../services/usuarioService.js';
 
 export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => {
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -31,6 +30,9 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
     contrasena: '',
     rol: ''
   });
+
+  // Filtrar solo roles activos
+  const rolesActivos = roles.filter(rol => rol.activo !== false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,9 +49,32 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
     }));
   };
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return minLength && hasUpperCase && hasLowerCase && hasNumber;
+  };
+
   const handleSubmit = async () => {
     if (!formData.nombre || !formData.correo || !formData.contrasena || !formData.rol) {
       alert('Por favor complete todos los campos');
+      return;
+    }
+
+    if (!validateEmail(formData.correo)) {
+      alert('Por favor ingrese un correo electrónico válido');
+      return;
+    }
+
+    if (!validatePassword(formData.contrasena)) {
+      alert('La contraseña no cumple con los requisitos de seguridad');
       return;
     }
 
@@ -98,7 +123,7 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correo">Correo</Label>
+            <Label htmlFor="correo">Correo <span className="text-red-500">*</span></Label>
             <Input
               id="correo"
               name="correo"
@@ -106,17 +131,18 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
               placeholder="correo@empresa.com"
               value={formData.correo}
               onChange={handleChange}
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rol">Rol</Label>
+            <Label htmlFor="rol">Rol <span className="text-red-500">*</span></Label>
             <Select value={formData.rol} onValueChange={handleRolChange}>
               <SelectTrigger id="rol">
                 <SelectValue placeholder="Seleccionar rol" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map(rol => (
+                {rolesActivos.map(rol => (
                   <SelectItem key={rol._id} value={rol._id}>
                     {rol.nombre}
                   </SelectItem>
@@ -125,26 +151,14 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="contrasena"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Contraseña"
-                value={formData.contrasena}
-                onChange={handleChange}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            value={formData.contrasena}
+            onChange={handleChange}
+            label="Contraseña"
+            placeholder="Ingrese contraseña segura"
+            showValidation={true}
+            required={true}
+          />
         </div>
 
         <DialogFooter>

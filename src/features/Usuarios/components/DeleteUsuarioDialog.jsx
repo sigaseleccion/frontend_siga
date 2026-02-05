@@ -32,11 +32,13 @@ export const DeleteUsuarioDialog = ({ open, onOpenChange, usuario, onSuccess }) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Eliminar Usuario
+          <DialogTitle className="text-xl font-semibold text-red-600">
+            Eliminar Usuario Permanentemente
           </DialogTitle>
           <DialogDescription>
-            Esta seguro que desea desactivar este usuario? {usuario?.nombre}
+            ¿Está seguro que desea eliminar permanentemente a {usuario?.nombre}?
+            <br />
+            <span className="text-red-600 font-semibold">Esta acción NO se puede deshacer.</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -54,7 +56,7 @@ export const DeleteUsuarioDialog = ({ open, onOpenChange, usuario, onSuccess }) 
             className="bg-red-600 hover:bg-red-700 text-white"
             disabled={loading}
           >
-            {loading ? 'Eliminando...' : 'Desactivar Usuario'}
+            {loading ? 'Eliminando...' : 'Eliminar Permanentemente'}
           </Button>
         </DialogFooter>
       </DialogContent>
