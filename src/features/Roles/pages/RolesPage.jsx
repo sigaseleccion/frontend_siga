@@ -1,11 +1,21 @@
 import React, { useState } from "react";
-import { Shield, Plus, Edit2, Trash2 } from "lucide-react";
+import { Shield, Plus, Edit2, Trash2, PlusCircle, Users, Check, ShieldCheck } from "lucide-react";
 import { Navbar } from "@/shared/components/Navbar";
 import { useListRole } from "../hooks/useListRole";
 import { useNavigate } from "react-router-dom";
 import { roleService } from "../services/roleService";
+import {
+  confirmAlert,
+  errorAlert,
+  successAlert,
+  warningAlert,
+} from "../../../shared/components/ui/SweetAlert";
+import { tienePermiso } from "../../../shared/utils/auth/permissions";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext";
+import Header from "../../../shared/components/Header";
 
 export default function RolesPage() {
+  const { auth } = useAuth();
   const { roles, loading, error, recargar } = useListRole();
   const navigate = useNavigate();
 
@@ -14,18 +24,36 @@ export default function RolesPage() {
   };
 
   const handleDelete = async (roleId) => {
-    const confirmar = window.confirm(
-      "¿Estás segura de eliminar este rol?\n\nEsta acción es irreversible.",
-    );
+    const result = await confirmAlert({
+      title: "¿Estás seguro de eliminar este rol?",
+      text: "Esta acción es irreversible.",
+      confirmText: "Sí, eliminar",
+    });
 
-    if (!confirmar) return;
+    if (!result.isConfirmed) return;
 
     try {
       await roleService.deleteRole(roleId);
-      recargar(); // 🔁 vuelve a cargar la lista
+
+      await successAlert({
+        title: "Rol eliminado",
+        text: "El rol se eliminó correctamente.",
+        confirmButtonText: "Aceptar",
+      });
+
+      recargar(); // recargar la lista
     } catch (error) {
-      // ⛔ mensaje de negocio del backend
-      alert(error.message);
+      if (error.status === 409) {
+        warningAlert({
+          title: "Acción no permitida",
+          text: "No se puede eliminar el rol porque tiene usuarios activos asociados.",
+        });
+      } else {
+        errorAlert({
+          title: "Error del sistema",
+          text: error.message || "Ocurrió un problema inesperado.",
+        });
+      }
     }
   };
 
@@ -37,9 +65,17 @@ export default function RolesPage() {
     <>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50">
+      <Header
+            title="Roles"
+            subtitle="Gestión de roles y permisos del sistema"
+            actions={
+              <></>
+            }
+          />
         <div className="p-8">
+          
           {/* Header */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Roles</h1>
@@ -55,7 +91,7 @@ export default function RolesPage() {
                 Crear Rol
               </button>
             </div>
-          </div>
+          </div> */}
 
           {/* Roles Grid */}
           <div className="relative">
@@ -103,13 +139,15 @@ export default function RolesPage() {
                       <Edit2 size={16} />
                       Editar
                     </button>
-                    <button
-                      onClick={() => handleDelete(role._id)}
-                      disabled={loading}
-                      className={`p-2 text-red-600 rounded-lg transition-colors duration-200 ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50"}`}
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {tienePermiso(auth, "roles", "eliminar") && (
+                      <button
+                        onClick={() => handleDelete(role._id)}
+                        disabled={loading}
+                        className={`p-2 text-red-600 rounded-lg transition-colors duration-200 ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50"}`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
