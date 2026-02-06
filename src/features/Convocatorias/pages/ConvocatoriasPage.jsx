@@ -1,31 +1,38 @@
-'use client';
-
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Navbar } from '@/shared/components/Navbar';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
-import { Input } from '@/shared/components/ui/input';
-import { Upload, PenBoxIcon, Search, Loader2 } from 'lucide-react';
+"use client";
+import {
+  confirmAlert,
+  errorAlert,
+  successAlert,
+  warningAlert,
+} from "../../../shared/components/ui/SweetAlert";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Navbar } from "@/shared/components/Navbar";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Upload, PenBoxIcon, Search, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/shared/components/ui/select';
+} from "@/shared/components/ui/select";
 
-import { useConvocatorias } from '../hooks/useConvocatorias';
-import { CreateConvocatoriaModal } from '../components/CreateConvocatoriaModal';
+import { useConvocatorias } from "../hooks/useConvocatorias";
+import { CreateConvocatoriaModal } from "../components/CreateConvocatoriaModal";
+import Header from "../../../shared/components/Header";
 
 export default function ConvocatoriasPage() {
-  const { convocatorias, loading, error, crearConvocatoria } = useConvocatorias();
+  const { convocatorias, loading, error, crearConvocatoria } =
+    useConvocatorias();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const [searchNombre, setSearchNombre] = useState('');
-  const [filterNivel, setFilterNivel] = useState('todas');
+  const [searchNombre, setSearchNombre] = useState("");
+  const [filterNivel, setFilterNivel] = useState("todas");
 
   const handleCreateConvocatoria = async (convocatoriaData, aprendices) => {
     setCreating(true);
@@ -39,17 +46,17 @@ export default function ConvocatoriasPage() {
 
   const getNivelFormacionLabel = (nivel) => {
     const labels = {
-      tecnica: 'Tecnica',
-      tecnologia: 'Tecnologia',
-      profesional: 'Profesional',
+      tecnica: "Tecnica",
+      tecnologia: "Tecnologia",
+      profesional: "Profesional",
     };
     return labels[nivel] || nivel;
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return "-";
     try {
-      return new Date(dateStr).toLocaleDateString('es-ES');
+      return new Date(dateStr).toLocaleDateString("es-ES");
     } catch {
       return dateStr;
     }
@@ -59,21 +66,22 @@ export default function ConvocatoriasPage() {
     const matchesNombre = conv.nombreConvocatoria
       .toLowerCase()
       .includes(searchNombre.toLowerCase());
-    const matchesNivel = filterNivel === 'todas' || conv.nivelFormacion === filterNivel;
+    const matchesNivel =
+      filterNivel === "todas" || conv.nivelFormacion === filterNivel;
     return matchesNombre && matchesNivel;
   });
 
   return (
     <div>
       <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50 p-8">
+      <main className="ml-72 min-h-screen bg-gray-50 p-1">
+        <Header
+          title="Convocatorias"
+          subtitle="Gestión de convocatorias"
+          actions={<></>}
+        />
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Convocatorias</h1>
-            <p className="text-muted-foreground mt-2">
-              Gestion de candidatos y procesos de convocatoria
-            </p>
-          </div>
+          <div></div>
           <Button onClick={() => setIsModalOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Crear convocatoria
@@ -111,7 +119,9 @@ export default function ConvocatoriasPage() {
 
         <Card className="border border-gray-200">
           <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Listado de Convocatorias</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Listado de Convocatorias
+            </h2>
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -150,7 +160,10 @@ export default function ConvocatoriasPage() {
                   <tbody>
                     {filteredConvocatorias.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan={8}
+                          className="py-8 text-center text-gray-500"
+                        >
                           No hay convocatorias registradas
                         </td>
                       </tr>
@@ -183,13 +196,15 @@ export default function ConvocatoriasPage() {
                           <td className="py-4 px-4 text-sm text-gray-600">
                             {formatDate(conv.fechaCreacion)}
                           </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">{conv.totalAprendices}</td>
+                          <td className="py-4 px-4 text-sm text-gray-600">
+                            {conv.totalAprendices}
+                          </td>
                           <td className="py-4 px-4">
                             <Badge
                               className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                conv.estado === 'en proceso'
-                                  ? 'bg-blue-600 text-white hover:bg-blue-600'
-                                  : 'bg-pink-500 text-white hover:bg-pink-500'
+                                conv.estado === "en proceso"
+                                  ? "bg-blue-600 text-white hover:bg-blue-600"
+                                  : "bg-pink-500 text-white hover:bg-pink-500"
                               }`}
                             >
                               {conv.estado}
