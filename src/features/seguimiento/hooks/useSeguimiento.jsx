@@ -20,7 +20,9 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
       setLoading(true);
       setError(null);
       const response = await seguimientoService.obtenerAprendices(filtros);
-      setAprendices(response.data || []);
+      // El backend devuelve el array directamente, no envuelto en { data: ... }
+      const data = Array.isArray(response) ? response : (response.data || []);
+      setAprendices(data);
     } catch (err) {
       setError(err.message);
       console.error('Error cargando aprendices:', err);
@@ -32,11 +34,16 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
   const cargarEstadisticas = useCallback(async () => {
     try {
       const response = await seguimientoService.obtenerEstadisticas();
-      setEstadisticas(response.data || {
-        enEtapaLectiva: 0,
-        enEtapaProductiva: 0,
-        cuota: { actual: 0, maximo: 150 },
-        aprendicesIncompletos: 0,
+      // El backend devuelve: { enLectiva, enProductiva, totalActivos, cuota (numero), aprendicesIncompletos }
+      // El frontend espera: { enEtapaLectiva, enEtapaProductiva, cuota: { actual, maximo }, aprendicesIncompletos }
+      const stats = response.data || response;
+      setEstadisticas({
+        enEtapaLectiva: stats.enLectiva ?? stats.enEtapaLectiva ?? 0,
+        enEtapaProductiva: stats.enProductiva ?? stats.enEtapaProductiva ?? 0,
+        cuota: typeof stats.cuota === 'number'
+          ? { actual: stats.totalActivos || 0, maximo: stats.cuota }
+          : (stats.cuota || { actual: 0, maximo: 150 }),
+        aprendicesIncompletos: stats.aprendicesIncompletos ?? 0,
       });
     } catch (err) {
       console.error('Error cargando estadisticas:', err);
