@@ -35,17 +35,17 @@ export const roleService = {
     return response.json();
   },
 
-  // Crear rol 
+  // Crear rol
   async createRole(data) {
     const response = await fetch(`${API_URL}/api/roles`, {
-      method: 'POST',
+      method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.mensaje || 'Error al crear el rol');
+      throw new Error(error.mensaje || "Error al crear el rol");
     }
 
     return response.json();
@@ -54,14 +54,14 @@ export const roleService = {
   // Actualizar rol
   async updateRole(id, data) {
     const response = await fetch(`${API_URL}/api/roles/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.mensaje || 'Error al actualizar el rol');
+      throw new Error(error.mensaje || "Error al actualizar el rol");
     }
 
     return response.json();
@@ -70,15 +70,18 @@ export const roleService = {
   // Eliminar (desactivar) rol
   async deleteRole(id) {
     const response = await fetch(`${API_URL}/api/roles/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: getAuthHeaders(),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.mensaje || 'Error al eliminar el rol');
+      const error = new Error(data.mensaje || "Error al eliminar rol");
+      error.status = response.status;
+      throw error;
     }
 
-    return response.json();
+    return data;
   },
 };

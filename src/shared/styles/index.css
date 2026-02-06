@@ -17,7 +17,7 @@
     --popover-foreground: oklch(0.15 0 0);
 
     /* Primary color: #1100ff (vibrant blue) */
-    --primary: oklch(0.45 0.31 264);
+    --primary: oklch(45.333% 0.31241 264.094);
     --primary-foreground: oklch(1 0 0);
 
     /* Secondary color: #d300ff (magenta/purple) */

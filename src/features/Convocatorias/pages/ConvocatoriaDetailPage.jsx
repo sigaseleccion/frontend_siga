@@ -1,18 +1,23 @@
-'use client';
-
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Navbar } from '@/shared/components/Navbar';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
+"use client";
+import {
+  confirmAlert,
+  errorAlert,
+  successAlert,
+  warningAlert,
+} from "../../../shared/components/ui/SweetAlert";
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Navbar } from "@/shared/components/Navbar";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/shared/components/ui/select';
+} from "@/shared/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -20,13 +25,14 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/shared/components/ui/dialog';
-import { ArrowLeft, Lock, Unlock, Upload, Loader2 } from 'lucide-react';
+} from "@/shared/components/ui/dialog";
+import { ArrowLeft, Lock, Unlock, Upload, Loader2 } from "lucide-react";
 
-import { useConvocatoriaDetail } from '../hooks/useConvocatoriaDetail';
-import { RecomendadosModal } from '../components/RecomendadosModal';
-import { CloseConvocatoriaDialog } from '../components/CloseConvocatoriaDialog';
-import { ExcelUploadModal } from '../components/ExcelUploadModal';
+import { useConvocatoriaDetail } from "../hooks/useConvocatoriaDetail";
+import { RecomendadosModal } from "../components/RecomendadosModal";
+import { CloseConvocatoriaDialog } from "../components/CloseConvocatoriaDialog";
+import { ExcelUploadModal } from "../components/ExcelUploadModal";
+import Header from "../../../shared/components/Header";
 
 export default function ConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
@@ -47,12 +53,16 @@ export default function ConvocatoriaDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmSeleccionadoOpen, setConfirmSeleccionadoOpen] = useState(false);
   const [pendingAprendizId, setPendingAprendizId] = useState(null);
-  const [pendingAprendizName, setPendingAprendizName] = useState('');
+  const [pendingAprendizName, setPendingAprendizName] = useState("");
 
-  const handleEstadoChange = async (aprendizId, nuevoEstado, nombreAprendiz = '') => {
-    if (nuevoEstado === 'seleccionado') {
+  const handleEstadoChange = async (
+    aprendizId,
+    nuevoEstado,
+    nombreAprendiz = "",
+  ) => {
+    if (nuevoEstado === "seleccionado") {
       setPendingAprendizId(aprendizId);
-      setPendingAprendizName(nombreAprendiz || '');
+      setPendingAprendizName(nombreAprendiz || "");
       setConfirmSeleccionadoOpen(true);
       return;
     }
@@ -63,7 +73,9 @@ export default function ConvocatoriaDetailPage() {
     if (!pendingAprendizId) return;
     setActionLoading(true);
     try {
-      await actualizarEstadoAprendiz(pendingAprendizId, 'seleccionado', { setSeleccion2: true });
+      await actualizarEstadoAprendiz(pendingAprendizId, "seleccionado", {
+        setSeleccion2: true,
+      });
       setConfirmSeleccionadoOpen(false);
       setPendingAprendizId(null);
     } finally {
@@ -101,9 +113,9 @@ export default function ConvocatoriaDetailPage() {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return "-";
     try {
-      return new Date(dateStr).toLocaleDateString('es-ES');
+      return new Date(dateStr).toLocaleDateString("es-ES");
     } catch {
       return dateStr;
     }
@@ -113,9 +125,9 @@ export default function ConvocatoriaDetailPage() {
   const canEditAprendiz = (aprendiz) => {
     if (!convocatoria) return false;
     // Si la convocatoria está finalizada, no se puede editar ninguno
-    if (convocatoria.estado === 'finalizado') return false;
+    if (convocatoria.estado === "finalizado") return false;
     // Si el aprendiz está en seleccion2, no se puede editar
-    if (aprendiz.etapaActual === 'seleccion2') return false;
+    if (aprendiz.etapaActual === "seleccion2") return false;
     return true;
   };
 
@@ -143,7 +155,9 @@ export default function ConvocatoriaDetailPage() {
               </Button>
             </Link>
           </div>
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
         </main>
       </div>
     );
@@ -162,7 +176,9 @@ export default function ConvocatoriaDetailPage() {
               </Button>
             </Link>
           </div>
-          <div className="text-center py-12 text-gray-500">Convocatoria no encontrada</div>
+          <div className="text-center py-12 text-gray-500">
+            Convocatoria no encontrada
+          </div>
         </main>
       </div>
     );
@@ -171,7 +187,12 @@ export default function ConvocatoriaDetailPage() {
   return (
     <div>
       <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50 p-8">
+      <main className="ml-72 min-h-screen bg-gray-50 p-1">
+        <Header
+          title="Editar convocatoria"
+          subtitle={convocatoria.nombreConvocatoria}
+          actions={<></>}
+        />
         <div className="mb-6">
           <Link to="/convocatorias">
             <Button variant="ghost" size="sm">
@@ -183,11 +204,9 @@ export default function ConvocatoriaDetailPage() {
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Editar Convocatoria</h1>
-            <p className="text-muted-foreground mt-2">{convocatoria.nombreConvocatoria}</p>
           </div>
           <div className="flex gap-2">
-            {convocatoria.estado === 'en proceso' && (
+            {convocatoria.estado === "en proceso" && (
               <Button
                 variant="outline"
                 onClick={() => setShowExcelModal(true)}
@@ -198,7 +217,7 @@ export default function ConvocatoriaDetailPage() {
                 Cargar Excel Adicional
               </Button>
             )}
-            {convocatoria.estado === 'finalizado' && (
+            {convocatoria.estado === "finalizado" && (
               <Button
                 variant="outline"
                 onClick={handleEditConvocatoria}
@@ -209,8 +228,11 @@ export default function ConvocatoriaDetailPage() {
                 Editar
               </Button>
             )}
-            {convocatoria.estado === 'en proceso' && (
-              <Button onClick={() => setShowCloseDialog(true)} disabled={actionLoading}>
+            {convocatoria.estado === "en proceso" && (
+              <Button
+                onClick={() => setShowCloseDialog(true)}
+                disabled={actionLoading}
+              >
                 <Lock className="h-4 w-4 mr-2" />
                 Cerrar Convocatoria
               </Button>
@@ -221,12 +243,14 @@ export default function ConvocatoriaDetailPage() {
         <Card className="border border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Aprendices Registrados</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Aprendices Registrados
+              </h2>
               <Badge
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  convocatoria.estado === 'en proceso'
-                    ? 'bg-blue-600 text-white hover:bg-blue-600'
-                    : 'bg-pink-500 text-white hover:bg-pink-500'
+                  convocatoria.estado === "en proceso"
+                    ? "bg-blue-600 text-white hover:bg-blue-600"
+                    : "bg-pink-500 text-white hover:bg-pink-500"
                 }`}
               >
                 {convocatoria.estado}
@@ -277,7 +301,10 @@ export default function ConvocatoriaDetailPage() {
                 <tbody>
                   {aprendices.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-gray-500">
+                      <td
+                        colSpan={12}
+                        className="py-8 text-center text-gray-500"
+                      >
                         No hay aprendices registrados en esta convocatoria
                       </td>
                     </tr>
@@ -286,16 +313,26 @@ export default function ConvocatoriaDetailPage() {
                       <tr
                         key={aprendiz._id}
                         className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
-                          aprendiz.etapaActual === 'seleccion2' ? 'bg-gray-100' : ''
+                          aprendiz.etapaActual === "seleccion2"
+                            ? "bg-gray-100"
+                            : ""
                         }`}
                       >
                         <td className="py-4 px-4 text-sm font-medium text-gray-900">
                           {aprendiz.ranking}
                         </td>
-                        <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.nombre}</td>
-                        <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.tipoDocumento}</td>
-                        <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.documento}</td>
-                        <td className="py-4 px-4 text-sm text-gray-600">{aprendiz.ciudad}</td>
+                        <td className="py-4 px-4 text-sm text-gray-600">
+                          {aprendiz.nombre}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-600">
+                          {aprendiz.tipoDocumento}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-600">
+                          {aprendiz.documento}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-600">
+                          {aprendiz.ciudad}
+                        </td>
                         <td className="py-4 px-4 text-sm text-gray-600">
                           {aprendiz.programaFormacion}
                         </td>
@@ -318,17 +355,20 @@ export default function ConvocatoriaDetailPage() {
                               variant="link"
                               className="h-auto p-0 text-blue-600 hover:underline"
                               onClick={() =>
-                                setSelectedRecomendados(aprendiz.aprendicesRecomendados)
+                                setSelectedRecomendados(
+                                  aprendiz.aprendicesRecomendados,
+                                )
                               }
                             >
-                              Ver {aprendiz.aprendicesRecomendados.length} recomendado(s)
+                              Ver {aprendiz.aprendicesRecomendados.length}{" "}
+                              recomendado(s)
                             </Button>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
                         <td className="py-4 px-4">
-                          {aprendiz.etapaActual === 'seleccion2' ? (
+                          {aprendiz.etapaActual === "seleccion2" ? (
                             <Badge
                               variant="outline"
                               className="border-gray-300 bg-gray-200 text-gray-600"
@@ -338,15 +378,25 @@ export default function ConvocatoriaDetailPage() {
                           ) : (
                             <Select
                               value={aprendiz.estadoConvocatoria}
-                              onValueChange={(value) => handleEstadoChange(aprendiz._id, value, aprendiz.nombre)}
+                              onValueChange={(value) =>
+                                handleEstadoChange(
+                                  aprendiz._id,
+                                  value,
+                                  aprendiz.nombre,
+                                )
+                              }
                               disabled={!canEditAprendiz(aprendiz)}
                             >
                               <SelectTrigger className="w-[160px] border-gray-200">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="no seleccionado">No Seleccionado</SelectItem>
-                                <SelectItem value="seleccionado">Seleccionado</SelectItem>
+                                <SelectItem value="no seleccionado">
+                                  No Seleccionado
+                                </SelectItem>
+                                <SelectItem value="seleccionado">
+                                  Seleccionado
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           )}
@@ -360,13 +410,17 @@ export default function ConvocatoriaDetailPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={confirmSeleccionadoOpen} onOpenChange={setConfirmSeleccionadoOpen}>
+        <Dialog
+          open={confirmSeleccionadoOpen}
+          onOpenChange={setConfirmSeleccionadoOpen}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirmar selección</DialogTitle>
               <DialogDescription>
-                Al marcar al aprendiz {pendingAprendizName || 'seleccionado'} como seleccionado se
-                actualizará su etapa a "seleccion2". ¿Desea continuar?
+                Al marcar al aprendiz {pendingAprendizName || "seleccionado"}{" "}
+                como seleccionado se actualizará su etapa a "seleccion2". ¿Desea
+                continuar?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -374,13 +428,16 @@ export default function ConvocatoriaDetailPage() {
                 variant="outline"
                 onClick={() => {
                   setPendingAprendizId(null);
-                  setPendingAprendizName('');
+                  setPendingAprendizName("");
                   setConfirmSeleccionadoOpen(false);
                 }}
               >
                 Cancelar
               </Button>
-              <Button onClick={handleConfirmSeleccionado} disabled={actionLoading}>
+              <Button
+                onClick={handleConfirmSeleccionado}
+                disabled={actionLoading}
+              >
                 Confirmar
               </Button>
             </DialogFooter>

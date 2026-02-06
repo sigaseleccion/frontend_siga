@@ -4,9 +4,10 @@ import { useEditRol } from "../hooks/useEditRole";
 import { roleService } from "../services/roleService";
 import { permissionService } from "../services/permissionService";
 import { Navbar } from "@/shared/components/Navbar";
-import { ArrowLeft, Shield, Save, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Shield, Save, Loader2, Edit } from "lucide-react";
+import { confirmAlert, successAlert } from "../../../shared/components/ui/SweetAlert";
 
-const EditarRol = () => {
+const EditRol = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { editarRol, loading, error } = useEditRol();
@@ -18,6 +19,7 @@ const EditarRol = () => {
   const [permisosDisponibles, setPermisosDisponibles] = useState([]);
   const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
   const [cargandoDatos, setCargandoDatos] = useState(true);
+  const [estadoInicial, setEstadoInicial] = useState(null);
 
   // Cargar rol + permisos
   useEffect(() => {
@@ -36,6 +38,13 @@ const EditarRol = () => {
         setPermisosDisponibles(permisos);
         setActivo(rol.activo);
         setTieneUsuariosActivos(tieneUsuariosActivos);
+
+        setEstadoInicial({
+          nombre: rol.nombre,
+          descripcion: rol.descripcion || "",
+          activo: rol.activo,
+          permisos: rol.permisos || [],
+        });
       } catch (err) {
         console.error("Error cargando datos:", err);
       } finally {
@@ -108,6 +117,37 @@ const EditarRol = () => {
       0,
     ) || 0;
 
+  //si hay cambios en el formulario
+  const hayCambios = () => {
+    if (!estadoInicial) return false;
+
+    const estadoActual = {
+      nombre,
+      descripcion,
+      activo,
+      permisos: permisosSeleccionados,
+    };
+
+    return JSON.stringify(estadoActual) !== JSON.stringify(estadoInicial);
+  };
+
+  const handleCancelar = async () => {
+    if (!hayCambios()) {
+      navigate("/roles");
+      return;
+    }
+
+    const result = await confirmAlert({
+          title: "¿Salir sin guardar cambios?",
+          text: "Tienes cambios sin guardar. Si sales ahora, se perderán.",
+          confirmText: "Sí, salir",
+        });
+
+    if (result.isConfirmed) {
+      navigate("/roles");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -121,6 +161,12 @@ const EditarRol = () => {
           (priv) => priv._id || priv,
         ),
       })),
+    });
+
+    await successAlert({
+      title: "Rol actualizado",
+      text: "El rol se actualizó correctamente. Los cambios se aplicarán al volver a iniciar sesión.",
+      confirmButtonText: "Aceptar",
     });
 
     if (success) {
@@ -346,7 +392,7 @@ const EditarRol = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate("/roles")}
+                        onClick={handleCancelar}
                         disabled={loading}
                         className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -361,8 +407,12 @@ const EditarRol = () => {
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-fit flex flex-col max-h-[calc(100vh-200px)]">
                   <div className="p-6 border-b border-gray-200 flex-shrink-0">
-                    <h2 className="text-lg font-semibold text-gray-900">Permisos del Sistema</h2>
-                    <p className="text-sm text-gray-600 mt-1">Selecciona los privilegios que tendrá este rol</p>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Permisos del Sistema
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Selecciona los privilegios que tendrá este rol
+                    </p>
                   </div>
                   <div className="p-6 overflow-y-auto flex-1">
                     <div className="space-y-6">
@@ -467,4 +517,4 @@ const EditarRol = () => {
   );
 };
 
-export default EditarRol;
+export default EditRol;

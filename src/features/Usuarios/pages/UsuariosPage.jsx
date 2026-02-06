@@ -1,24 +1,34 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Navbar } from '@/shared/components/Navbar';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
-import { Input } from '@/shared/components/ui/input';
-import { Plus, Search, Users, Edit2, Trash2 } from 'lucide-react';
-import { useUsuarios, useRoles } from '../hooks/index.js';
-import { CreateUsuarioModal, EditUsuarioModal, DeleteUsuarioDialog } from '../components/index.js';
+"use client";
+import {
+  confirmAlert,
+  errorAlert,
+  successAlert,
+  warningAlert,
+} from "../../../shared/components/ui/SweetAlert";
+import Header from "../../../shared/components/Header";
+import React, { useState } from "react";
+import { Navbar } from "@/shared/components/Navbar";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Plus, Search, Users, Edit2, Trash2 } from "lucide-react";
+import { useUsuarios, useRoles } from "../hooks/index.js";
+import {
+  CreateUsuarioModal,
+  EditUsuarioModal,
+  DeleteUsuarioDialog,
+} from "../components/index.js";
 
 const UsuariosPage = () => {
   const { usuarios, loading: usuariosLoading, refetch } = useUsuarios();
   const { roles, loading: rolesLoading } = useRoles();
-  
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleEditClick = (usuario) => {
     setSelectedUsuario(usuario);
@@ -36,60 +46,61 @@ const UsuariosPage = () => {
 
   const getRolBadgeStyle = (rolData) => {
     // rolData puede ser un objeto { _id, nombre } o un string con el ID
-    let rolName = 'Sin rol';
-    
-    if (typeof rolData === 'object' && rolData?.nombre) {
+    let rolName = "Sin rol";
+
+    if (typeof rolData === "object" && rolData?.nombre) {
       // Si es un objeto con nombre (populate)
       rolName = rolData.nombre;
-    } else if (typeof rolData === 'string') {
+    } else if (typeof rolData === "string") {
       // Si es solo el ID, buscar en la lista de roles
-      const rol = roles.find(r => r._id === rolData);
-      rolName = rol?.nombre || 'Sin rol';
+      const rol = roles.find((r) => r._id === rolData);
+      rolName = rol?.nombre || "Sin rol";
     }
-    
+
     switch (rolName.toLowerCase()) {
-      case 'administrador':
-        return 'bg-blue-600 text-white hover:bg-blue-600';
-      case 'coordinador':
-        return 'bg-pink-500 text-white hover:bg-pink-500';
-      case 'analista':
-        return 'border border-gray-300 bg-transparent text-gray-700 hover:bg-transparent';
+      case "administrador":
+        return "bg-blue-600 text-white hover:bg-blue-600";
+      case "coordinador":
+        return "bg-pink-500 text-white hover:bg-pink-500";
+      case "analista":
+        return "border border-gray-300 bg-transparent text-gray-700 hover:bg-transparent";
       default:
-        return 'bg-gray-500 text-white hover:bg-gray-500';
+        return "bg-gray-500 text-white hover:bg-gray-500";
     }
   };
 
   const getEstadoBadgeStyle = (activo) => {
     return activo
-      ? 'bg-green-100 text-green-700 hover:bg-green-100'
-      : 'bg-red-100 text-red-700 hover:bg-red-100';
+      ? "bg-green-100 text-green-700 hover:bg-green-100"
+      : "bg-red-100 text-red-700 hover:bg-red-100";
   };
 
   const getRolNombre = (rolData) => {
     // rolData puede ser un objeto { _id, nombre } o un string con el ID
-    if (typeof rolData === 'object' && rolData?.nombre) {
+    if (typeof rolData === "object" && rolData?.nombre) {
       return rolData.nombre;
-    } else if (typeof rolData === 'string') {
-      return roles.find(r => r._id === rolData)?.nombre || 'Sin rol';
+    } else if (typeof rolData === "string") {
+      return roles.find((r) => r._id === rolData)?.nombre || "Sin rol";
     }
-    return 'Sin rol';
+    return "Sin rol";
   };
 
   const totalUsuarios = usuarios.length;
-  const usuariosActivos = usuarios.filter(u => u.activo).length;
+  const usuariosActivos = usuarios.filter((u) => u.activo).length;
 
-  const filteredUsuarios = usuarios.filter(usuario =>
-    usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    usuario.correo.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsuarios = usuarios.filter(
+    (usuario) =>
+      usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      usuario.correo.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
+    if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
@@ -109,7 +120,12 @@ const UsuariosPage = () => {
   return (
     <>
       <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50">
+      <main className="ml-72 min-h-screen bg-gray-50 p-1">
+        <Header
+          title="Usuarios"
+          subtitle="Gestión de usuarios del sistema"
+          actions={<></>}
+        />
         <div className="p-8">
           {/* Header */}
           <div className="mb-8">
@@ -234,7 +250,7 @@ const UsuariosPage = () => {
                           <td className="py-4 px-4">
                             <Badge
                               className={`${getRolBadgeStyle(
-                                usuario.rol
+                                usuario.rol,
                               )} rounded-full px-3 py-1 text-xs font-medium`}
                             >
                               {getRolNombre(usuario.rol)}
@@ -243,10 +259,10 @@ const UsuariosPage = () => {
                           <td className="py-4 px-4">
                             <Badge
                               className={`${getEstadoBadgeStyle(
-                                usuario.activo
+                                usuario.activo,
                               )} rounded-full px-3 py-1 text-xs font-medium`}
                             >
-                              {usuario.activo ? 'Activo' : 'Inactivo'}
+                              {usuario.activo ? "Activo" : "Inactivo"}
                             </Badge>
                           </td>
                           <td className="py-4 px-4 text-sm text-gray-600">
