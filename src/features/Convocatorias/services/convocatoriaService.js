@@ -7,6 +7,12 @@ const getAuthHeaders = () => {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 };
+const getAuthHeadersForm = () => {
+  const token = localStorage.getItem('token');
+  return {
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 export const convocatoriaService = {
   // Obtener todas las convocatorias
@@ -123,6 +129,20 @@ export const convocatoriaService = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al archivar convocatoria');
+    }
+    return response.json();
+  },
+  async subirReporteTecnico(convocatoriaId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_URL}/api/convocatorias/${convocatoriaId}/reporte`, {
+      method: 'POST',
+      headers: getAuthHeadersForm(),
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Error al subir archivo');
     }
     return response.json();
   },

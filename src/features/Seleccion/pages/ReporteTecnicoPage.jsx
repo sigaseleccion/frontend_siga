@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ArrowLeft, Upload, FileUp, FileText, X, File } from 'lucide-react'
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
 import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
 
 export default function ReporteTecnicoPage() {
@@ -25,11 +26,15 @@ export default function ReporteTecnicoPage() {
 
   const [aprendices, setAprendices] = useState([])
   const [error, setError] = useState(null)
+  const [convocatoria, setConvocatoria] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setError(null)
+        const conv = await convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId)
+        setConvocatoria(conv)
         const aps = await aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId)
         const seleccionados = aps.filter((a) => a.etapaActual === 'seleccion2')
         const base = seleccionados.map((a) => ({
@@ -80,6 +85,21 @@ export default function ReporteTecnicoPage() {
 
   const handleRemoveFile = () => {
     setReporteFile(null)
+  }
+
+  const handleGuardarReporte = async () => {
+    if (!reporteFile) return
+    try {
+      setUploading(true)
+      setError(null)
+      const updated = await convocatoriaService.subirReporteTecnico(convocatoriaId, reporteFile)
+      setConvocatoria(updated)
+      setReporteFile(null)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handlePruebaTecnicaChange = async (aprendizId, estado) => {
@@ -148,7 +168,36 @@ export default function ReporteTecnicoPage() {
                 <CardTitle>Adjuntar Reporte Tecnico</CardTitle>
               </CardHeader>
               <CardContent>
-                {reporteFile ? (
+                {convocatoria?.reporteTecnico && !reporteFile ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
+                      <FileText className="h-8 w-8 text-primary" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">Archivo actual</p>
+                        <a href={convocatoria.reporteTecnico.url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+                          Ver archivo
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        id="reporte-replace"
+                        className="hidden"
+                        accept=".xlsx,.xls,.pdf"
+                        onChange={handleFileUpload}
+                      />
+                      <label htmlFor="reporte-replace">
+                        <Button type="button" variant="outline" asChild className="bg-transparent">
+                          <span className="cursor-pointer">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Reemplazar archivo
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  </div>
+                ) : reporteFile ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
                       {getFileIcon()}
@@ -183,6 +232,9 @@ export default function ReporteTecnicoPage() {
                           </span>
                         </Button>
                       </label>
+                      <Button onClick={handleGuardarReporte} disabled={uploading}>
+                        {uploading ? 'Subiendo...' : 'Guardar'}
+                      </Button>
                     </div>
                   </div>
                 ) : (
