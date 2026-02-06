@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog'
-import { Eye, Search, Users, Archive, History } from 'lucide-react'
+import { Eye, Search, Users, Archive, History, Loader2 } from 'lucide-react'
 import { useToast } from '@/shared/hooks/useToast'
 import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
@@ -32,6 +32,8 @@ export default function SeleccionPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Duración mínima del loader en milisegundos. Aumenta este valor para más segundos.
+  const MIN_LOADER_MS = 300
   useEffect(() => {
     if (searchParams.get('aprobado') === 'true') {
       const nombre = searchParams.get('nombre') || 'el aprendiz'
@@ -47,6 +49,7 @@ export default function SeleccionPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now()
       try {
         setLoading(true)
         setError(null)
@@ -54,7 +57,9 @@ export default function SeleccionPage() {
         const enriched = await Promise.all(
           convs.map(async (conv) => {
             const aprendices = await aprendizService.obtenerAprendicesPorConvocatoria(conv._id)
-            const seleccionados = aprendices.filter((a) => a.etapaActual === 'seleccion2')
+            const seleccionados = aprendices.filter((a) =>
+              ['seleccion2', 'lectiva', 'productiva', 'finalizado'].includes(a.etapaActual)
+            )
             let aprobadas = 0
             let totalPruebasPendientes = 0
             for (const a of seleccionados) {
@@ -92,7 +97,9 @@ export default function SeleccionPage() {
       } catch (e) {
         setError(e.message)
       } finally {
-        setLoading(false)
+        const elapsed = Date.now() - start
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed)
+        setTimeout(() => setLoading(false), remaining)
       }
     }
     loadData()
@@ -114,16 +121,16 @@ export default function SeleccionPage() {
 
   const handleConfirmArchive = () => {
     if (selectedConvocatoria) {
-      const existingArchived = JSON.parse(localStorage.getItem('archivedConvocatorias') || '[]')
-      const archivedConvocatoria = {
-        ...selectedConvocatoria,
-        fechaArchivado: new Date().toISOString().split('T')[0],
-      }
-      existingArchived.push(archivedConvocatoria)
-      localStorage.setItem('archivedConvocatorias', JSON.stringify(existingArchived))
-      setConvocatorias(convocatorias.filter((c) => c.id !== selectedConvocatoria.id))
-      setArchiveDialogOpen(false)
-      setSelectedConvocatoria(null)
+      convocatoriaService
+        .archivarConvocatoria(selectedConvocatoria.id)
+        .then(() => {
+          setConvocatorias(convocatorias.filter((c) => c.id !== selectedConvocatoria.id))
+          setArchiveDialogOpen(false)
+          setSelectedConvocatoria(null)
+        })
+        .catch((e) => {
+          setError(e.message)
+        })
     }
   }
 
@@ -136,11 +143,12 @@ export default function SeleccionPage() {
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50 p-8">
         {loading && (
-          <Card className="mb-4">
-            <CardContent className="p-4 text-muted-foreground bg-muted/30 border border-border">
-              Cargando...
-            </CardContent>
-          </Card>
+          <div className="mb-8 flex items-center justify-center py-16">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Cargando convocatorias...</p>
+            </div>
+          </div>
         )}
         {error && (
           <Card className="mb-4">
@@ -176,6 +184,7 @@ export default function SeleccionPage() {
           </div>
         </div>
 
+        {!loading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredConvocatorias.map((convocatoria) => (
             <Card key={convocatoria.id} className="flex flex-col hover:shadow-lg transition-shadow">
@@ -191,7 +200,7 @@ export default function SeleccionPage() {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {convocatoria.totalAprendices} aprendices en seleccion2
+                      {convocatoria.totalAprendices} aprendices asociados
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -227,8 +236,9 @@ export default function SeleccionPage() {
             </Card>
           ))}
         </div>
+        )}
 
-        {filteredConvocatorias.length === 0 && (
+        {!loading && filteredConvocatorias.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No se encontraron convocatorias con ese nombre</p>

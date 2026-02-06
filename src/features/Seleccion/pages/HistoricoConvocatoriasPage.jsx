@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -14,36 +14,34 @@ import {
   TableRow,
 } from '@/shared/components/ui/table'
 import { ArrowLeft, Archive, Eye } from 'lucide-react'
+import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
 
 export default function HistoricoConvocatoriasPage() {
-  const [archivedConvocatorias] = useState(() => {
-    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('archivedConvocatorias') : null
-    if (stored) {
+  const [archivedConvocatorias, setArchivedConvocatorias] = useState([])
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadArchived = async () => {
       try {
-        return JSON.parse(stored)
-      } catch {
-        return []
+        setError(null)
+        const data = await convocatoriaService.obtenerConvocatoriasArchivadas()
+        setArchivedConvocatorias(
+          data.map((c) => ({
+            id: c._id,
+            idConvocatoria: c.idConvocatoria,
+            nombreConvocatoria: c.nombreConvocatoria,
+            programa: c.programa,
+            nivelFormacion: c.nivelFormacion,
+            totalAprendices: c.totalAprendices,
+            fechaArchivado: c.fechaArchivado,
+          }))
+        )
+      } catch (e) {
+        setError(e.message)
       }
     }
-    return [
-      {
-        id: 'CONV-2023-008',
-        nombreConvocatoria: 'Convocatoria Sistemas 2023',
-        programa: 'Analisis y Desarrollo de Sistemas',
-        nivelFormacion: 'tecnologia',
-        totalAprendices: 12,
-        fechaArchivado: '2023-11-15',
-      },
-      {
-        id: 'CONV-2023-005',
-        nombreConvocatoria: 'Convocatoria Mercadeo Digital',
-        programa: 'Marketing Digital',
-        nivelFormacion: 'tecnica',
-        totalAprendices: 8,
-        fechaArchivado: '2023-10-20',
-      },
-    ]
-  })
+    loadArchived()
+  }, [])
 
   const getNivelFormacionLabel = (nivel) => {
     const labels = { tecnica: 'Tecnica', tecnologia: 'Tecnologia', profesional: 'Profesional' }
@@ -81,6 +79,7 @@ export default function HistoricoConvocatoriasPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID Convocatoria</TableHead>
                     <TableHead>Nombre Convocatoria</TableHead>
                     <TableHead>Programa</TableHead>
                     <TableHead>Nivel Formacion</TableHead>
@@ -92,6 +91,7 @@ export default function HistoricoConvocatoriasPage() {
                 <TableBody>
                   {archivedConvocatorias.map((convocatoria) => (
                     <TableRow key={convocatoria.id}>
+                      <TableCell className="font-medium">{convocatoria.idConvocatoria || convocatoria.id}</TableCell>
                       <TableCell className="font-medium">{convocatoria.nombreConvocatoria}</TableCell>
                       <TableCell>{convocatoria.programa}</TableCell>
                       <TableCell>{getNivelFormacionLabel(convocatoria.nivelFormacion)}</TableCell>

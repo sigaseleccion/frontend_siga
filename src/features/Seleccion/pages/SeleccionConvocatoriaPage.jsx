@@ -35,7 +35,9 @@ export default function SeleccionConvocatoriaPage() {
           nivelFormacion: conv.nivelFormacion,
         })
         const aps = await aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId)
-        setAprendices(aps.filter((a) => a.etapaActual === 'seleccion2'))
+        setAprendices(
+          aps.filter((a) => ['seleccion2', 'lectiva', 'productiva', 'finalizado'].includes(a.etapaActual))
+        )
       } catch (e) {
         setError(e.message)
       }
