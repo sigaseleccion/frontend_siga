@@ -21,10 +21,18 @@ import { Label } from '@/shared/components/ui/label';
 import { Button } from '@/shared/components/ui/button';
 import { PasswordInput } from './PasswordInput';
 import { crearUsuario } from '../services/usuarioService.js';
+import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    nombre: '',
+    correo: '',
+    contrasena: '',
+    rol: ''
+  });
+  
+  const [errors, setErrors] = useState({
     nombre: '',
     correo: '',
     contrasena: '',
@@ -40,6 +48,13 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       ...prev,
       [name]: value
     }));
+    // Limpiar error cuando el usuario escribe
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleRolChange = (value) => {
@@ -47,6 +62,13 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       ...prev,
       rol: value
     }));
+    // Limpiar error de rol
+    if (errors.rol) {
+      setErrors(prev => ({
+        ...prev,
+        rol: ''
+      }));
+    }
   };
 
   const validateEmail = (email) => {
@@ -62,19 +84,48 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
     return minLength && hasUpperCase && hasLowerCase && hasNumber;
   };
 
+  const validateForm = () => {
+    const newErrors = {
+      nombre: '',
+      correo: '',
+      contrasena: '',
+      rol: ''
+    };
+
+    let isValid = true;
+
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = 'El nombre es requerido';
+      isValid = false;
+    }
+
+    if (!formData.correo.trim()) {
+      newErrors.correo = 'El correo es requerido';
+      isValid = false;
+    } else if (!validateEmail(formData.correo)) {
+      newErrors.correo = 'Ingrese un correo electrónico válido';
+      isValid = false;
+    }
+
+    if (!formData.contrasena) {
+      newErrors.contrasena = 'La contraseña es requerida';
+      isValid = false;
+    } else if (!validatePassword(formData.contrasena)) {
+      newErrors.contrasena = 'La contraseña no cumple con los requisitos de seguridad';
+      isValid = false;
+    }
+
+    if (!formData.rol) {
+      newErrors.rol = 'Debe seleccionar un rol';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
-    if (!formData.nombre || !formData.correo || !formData.contrasena || !formData.rol) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-
-    if (!validateEmail(formData.correo)) {
-      alert('Por favor ingrese un correo electrónico válido');
-      return;
-    }
-
-    if (!validatePassword(formData.contrasena)) {
-      alert('La contraseña no cumple con los requisitos de seguridad');
+    if (!validateForm()) {
       return;
     }
 
@@ -88,10 +139,22 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       });
 
       setFormData({ nombre: '', correo: '', contrasena: '', rol: '' });
+      setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
       onOpenChange(false);
-      onSuccess();
+      
+      setTimeout(() => {
+        onSuccess();
+        successAlert({
+          title: 'Usuario creado',
+          text: 'El usuario se ha creado exitosamente'
+        });
+      }, 100);
+      
     } catch (error) {
-      alert('Error al crear usuario: ' + error.message);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al crear usuario: ' + error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -111,15 +174,18 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre</Label>
+            <Label htmlFor="nombre">Nombre <span className="text-red-500">*</span></Label>
             <Input
               id="nombre"
               name="nombre"
               placeholder="Nombre completo"
               value={formData.nombre}
               onChange={handleChange}
-              className="border-blue-500 focus:ring-blue-500"
+              className={errors.nombre ? 'border-red-500' : ''}
             />
+            {errors.nombre && (
+              <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -131,14 +197,17 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
               placeholder="correo@empresa.com"
               value={formData.correo}
               onChange={handleChange}
-              required
+              className={errors.correo ? 'border-red-500' : ''}
             />
+            {errors.correo && (
+              <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="rol">Rol <span className="text-red-500">*</span></Label>
             <Select value={formData.rol} onValueChange={handleRolChange}>
-              <SelectTrigger id="rol">
+              <SelectTrigger id="rol" className={errors.rol ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Seleccionar rol" />
               </SelectTrigger>
               <SelectContent>
@@ -149,6 +218,9 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
                 ))}
               </SelectContent>
             </Select>
+            {errors.rol && (
+              <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
+            )}
           </div>
 
           <PasswordInput
@@ -158,13 +230,18 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
             placeholder="Ingrese contraseña segura"
             showValidation={true}
             required={true}
+            error={errors.contrasena}
           />
         </div>
 
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setFormData({ nombre: '', correo: '', contrasena: '', rol: '' });
+              setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
+              onOpenChange(false);
+            }}
             className="bg-transparent"
             disabled={loading}
           >
