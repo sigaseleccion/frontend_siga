@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useAuth } from "../contexts/auth/AuthContext";
 import { confirmAlert } from "./ui/SweetAlert";
 import NotificationsBell from "./NotificationsBell";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Header Component - Topbar para las páginas
@@ -26,6 +27,7 @@ export const Header = ({
   const { auth, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+  const navigate = useNavigate();
 
   // Cerrar menú al hacer click fuera
   useEffect(() => {
@@ -53,7 +55,7 @@ export const Header = ({
   };
 
   return (
-    <div className="mb-8">
+    <div className="mb-5">
       {/* Breadcrumbs (opcional) */}
       {breadcrumbs.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
@@ -100,7 +102,7 @@ export const Header = ({
         {actions && (
           <div className="flex items-center gap-2 mr-4">
             {/* 🔔 Notificaciones */}
-            <NotificationsBell />
+            <NotificationsBell onNavigate={(href) => navigate(href)} />
 
             {/* 👤 Usuario */}
             <div className="relative" ref={menuRef}>

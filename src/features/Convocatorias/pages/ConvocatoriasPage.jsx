@@ -74,170 +74,172 @@ export default function ConvocatoriasPage() {
   return (
     <div>
       <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50 p-1">
+      <main className="ml-72 min-h-screen bg-gray-50">
         <Header
           title="Convocatorias"
           subtitle="Gestión de convocatorias"
           actions={<></>}
         />
-        <div className="mb-8 flex items-center justify-between">
-          <div></div>
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Crear convocatoria
-          </Button>
-        </div>
+        <div className="p-4">
+          <div className="mb-6 flex gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[250px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre de convocatoria..."
+                value={searchNombre}
+                onChange={(e) => setSearchNombre(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select
+              value={filterNivel}
+              onValueChange={(v) => setFilterNivel(v)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Nivel de formacion" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todos los niveles</SelectItem>
+                <SelectItem value="tecnica">Tecnica</SelectItem>
+                <SelectItem value="tecnologia">Tecnologia</SelectItem>
+                <SelectItem value="profesional">Profesional</SelectItem>
+              </SelectContent>
+            </Select>
 
-        <div className="mb-6 flex gap-4 flex-wrap">
-          <div className="relative flex-1 min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre de convocatoria..."
-              value={searchNombre}
-              onChange={(e) => setSearchNombre(e.target.value)}
-              className="pl-10"
-            />
+            <Button onClick={() => setIsModalOpen(true)} className="ml-auto">
+              <Upload className="mr-2 h-4 w-4" />
+              Crear convocatoria
+            </Button>
           </div>
-          <Select value={filterNivel} onValueChange={(v) => setFilterNivel(v)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Nivel de formacion" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todos los niveles</SelectItem>
-              <SelectItem value="tecnica">Tecnica</SelectItem>
-              <SelectItem value="tecnologia">Tecnologia</SelectItem>
-              <SelectItem value="profesional">Profesional</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
 
-        <Card className="border border-gray-200">
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Listado de Convocatorias
-            </h2>
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        ID Convocatoria
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Nombre Convocatoria
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Programa
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Nivel Formacion
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Fecha Creacion
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Total Aprendices
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredConvocatorias.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={8}
-                          className="py-8 text-center text-gray-500"
-                        >
-                          No hay convocatorias registradas
-                        </td>
+          <Card className="border border-gray-200">
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Listado de Convocatorias
+              </h2>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          ID Convocatoria
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Nombre Convocatoria
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Programa
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Nivel Formacion
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Fecha Creacion
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Total Aprendices
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Estado
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
                       </tr>
-                    ) : (
-                      filteredConvocatorias.map((conv) => (
-                        <tr
-                          key={conv._id || conv.idConvocatoria}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                        >
-                          <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                            {conv.idConvocatoria}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {conv.nombreConvocatoria}
-                          </td>
+                    </thead>
+                    <tbody>
+                      {filteredConvocatorias.length === 0 ? (
+                        <tr>
                           <td
-                            className="py-4 px-4 text-sm text-gray-600 max-w-[200px] truncate"
-                            title={conv.programa}
+                            colSpan={8}
+                            className="py-8 text-center text-gray-500"
                           >
-                            {conv.programa}
-                          </td>
-                          <td className="py-4 px-4">
-                            <Badge
-                              variant="outline"
-                              className="border-gray-300 bg-transparent text-gray-700 hover:bg-transparent rounded-full px-3 py-1 text-xs font-medium"
-                            >
-                              {getNivelFormacionLabel(conv.nivelFormacion)}
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(conv.fechaCreacion)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {conv.totalAprendices}
-                          </td>
-                          <td className="py-4 px-4">
-                            <Badge
-                              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                conv.estado === "en proceso"
-                                  ? "bg-blue-600 text-white hover:bg-blue-600"
-                                  : "bg-pink-500 text-white hover:bg-pink-500"
-                              }`}
-                            >
-                              {conv.estado}
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-4">
-                            <Link to={`/convocatorias/${conv._id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                              >
-                                <PenBoxIcon className="h-4 w-4 mr-1" />
-                                Editar
-                              </Button>
-                            </Link>
+                            No hay convocatorias registradas
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      ) : (
+                        filteredConvocatorias.map((conv) => (
+                          <tr
+                            key={conv._id || conv.idConvocatoria}
+                            className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                          >
+                            <td className="py-4 px-4 text-sm font-medium text-gray-900">
+                              {conv.idConvocatoria}
+                            </td>
+                            <td className="py-4 px-4 text-sm text-gray-600">
+                              {conv.nombreConvocatoria}
+                            </td>
+                            <td
+                              className="py-4 px-4 text-sm text-gray-600 max-w-[200px] truncate"
+                              title={conv.programa}
+                            >
+                              {conv.programa}
+                            </td>
+                            <td className="py-4 px-4">
+                              <Badge
+                                variant="outline"
+                                className="border-gray-300 bg-transparent text-gray-700 hover:bg-transparent rounded-full px-3 py-1 text-xs font-medium"
+                              >
+                                {getNivelFormacionLabel(conv.nivelFormacion)}
+                              </Badge>
+                            </td>
+                            <td className="py-4 px-4 text-sm text-gray-600">
+                              {formatDate(conv.fechaCreacion)}
+                            </td>
+                            <td className="py-4 px-4 text-sm text-gray-600">
+                              {conv.totalAprendices}
+                            </td>
+                            <td className="py-4 px-4">
+                              <Badge
+                                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                  conv.estado === "en proceso"
+                                    ? "bg-blue-600 text-white hover:bg-blue-600"
+                                    : "bg-pink-500 text-white hover:bg-pink-500"
+                                }`}
+                              >
+                                {conv.estado}
+                              </Badge>
+                            </td>
+                            <td className="py-4 px-4">
+                              <Link to={`/convocatorias/${conv._id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                >
+                                  <PenBoxIcon className="h-4 w-4 mr-1" />
+                                  Editar
+                                </Button>
+                              </Link>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <CreateConvocatoriaModal
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
-          onSubmit={handleCreateConvocatoria}
-          loading={creating}
-        />
+          <CreateConvocatoriaModal
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            onSubmit={handleCreateConvocatoria}
+            loading={creating}
+          />
+        </div>
       </main>
     </div>
   );

@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Shield, Plus, Edit2, Trash2, PlusCircle, Users, Check, ShieldCheck } from "lucide-react";
+import {
+  Shield,
+  Plus,
+  Edit2,
+  Trash2,
+  PlusCircle,
+  Users,
+  Check,
+  ShieldCheck,
+} from "lucide-react";
 import { Navbar } from "@/shared/components/Navbar";
 import { useListRole } from "../hooks/useListRole";
 import { useNavigate } from "react-router-dom";
@@ -65,33 +74,21 @@ export default function RolesPage() {
     <>
       <Navbar />
       <main className="ml-72 min-h-screen bg-gray-50">
-      <Header
-            title="Roles"
-            subtitle="Gestión de roles y permisos del sistema"
-            actions={
-              <></>
-            }
-          />
-        <div className="p-8">
-          
-          {/* Header */}
-          {/* <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Roles</h1>
-                <p className="text-gray-600 mt-1">
-                  Gestión de roles y permisos del sistema
-                </p>
-              </div>
-              <button
-                onClick={handleCreateRole}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors duration-200 shadow-sm"
-              >
-                <Plus size={20} />
-                Crear Rol
-              </button>
-            </div>
-          </div> */}
+        <Header
+          title="Roles"
+          subtitle="Gestión de roles y permisos del sistema"
+          actions={<></>}
+        />
+        <div className="p-4">
+          <div className="flex items-center justify-end mb-6 ">
+            <button
+              onClick={handleCreateRole}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors duration-200 shadow-sm"
+            >
+              <Plus size={20} />
+              Crear Rol
+            </button>
+          </div>
 
           {/* Roles Grid */}
           <div className="relative">
