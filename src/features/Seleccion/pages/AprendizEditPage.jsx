@@ -102,7 +102,45 @@ export default function AprendizEditPage() {
     pruebaTecnica === 'aprobado' &&
     pruebas.medica === 'aprobado'
 
-  const puedeAprobar = todasPruebasAprobadas && fechaInicioContrato !== '' && fechaFinContrato !== ''
+  const puedeAprobar =
+    todasPruebasAprobadas &&
+    fechaInicioContrato !== '' &&
+    fechaFinContrato !== '' &&
+    (aprendiz?.etapaActual === 'seleccion2')
+
+  const disablePorEtapa =
+    (aprendiz?.etapaActual !== 'seleccion2') &&
+    todasPruebasAprobadas &&
+    fechaInicioContrato !== '' &&
+    fechaFinContrato !== ''
+
+  const mostrarAprobadoUI =
+    todasPruebasAprobadas &&
+    fechaInicioContrato !== '' &&
+    fechaFinContrato !== '' &&
+    (aprendiz?.etapaActual !== 'lectiva2')
+
+  useEffect(() => {
+    const autoSaveIfNeeded = async () => {
+      if (disablePorEtapa && hasUnsavedChanges) {
+        try {
+          await aprendizService.actualizarAprendiz(aprendizId, {
+            fechaInicioContrato: fechaInicioContrato || null,
+            fechaFinContrato: fechaFinContrato || null,
+          })
+          setInitialState({
+            pruebas,
+            fechaInicioContrato,
+            fechaFinContrato,
+          })
+        } catch (e) {
+          setError(e.message)
+        }
+      }
+    }
+    autoSaveIfNeeded()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disablePorEtapa, hasUnsavedChanges])
 
   const handlePruebaChange = async (prueba, estado) => {
     setPruebas((prev) => ({ ...prev, [prueba]: estado }))
@@ -260,7 +298,7 @@ export default function AprendizEditPage() {
                   type="date"
                   value={fechaInicioContrato}
                   onChange={(e) => setFechaInicioContrato(e.target.value)}
-                  disabled={!todasPruebasAprobadas}
+                  disabled={!todasPruebasAprobadas || disablePorEtapa}
                   className="mt-2"
                 />
               </div>
@@ -273,7 +311,7 @@ export default function AprendizEditPage() {
                   type="date"
                   value={fechaFinContrato}
                   onChange={(e) => setFechaFinContrato(e.target.value)}
-                  disabled={!todasPruebasAprobadas}
+                  disabled={!todasPruebasAprobadas || disablePorEtapa}
                   className="mt-2"
                 />
               </div>
@@ -304,8 +342,8 @@ export default function AprendizEditPage() {
                   <div className="flex-1 space-y-3 min-w-0">
                     <h4 className="font-semibold text-foreground">Prueba Psicologica</h4>
                     <div className="flex gap-3 items-center flex-wrap">
-                      <Select value={pruebas.psicologica} onValueChange={(value) => handlePruebaChange('psicologica', value)}>
-                        <SelectTrigger className="w-[180px]">
+                      <Select value={pruebas.psicologica} onValueChange={(value) => !disablePorEtapa && handlePruebaChange('psicologica', value)}>
+                        <SelectTrigger className="w-[180px]" disabled={disablePorEtapa}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -345,8 +383,8 @@ export default function AprendizEditPage() {
                   <div className="flex-1 space-y-3 min-w-0">
                     <h4 className="font-semibold text-foreground">Examenes Medicos</h4>
                     <div className="flex gap-3 items-center flex-wrap">
-                      <Select value={pruebas.medica} onValueChange={(value) => handlePruebaChange('medica', value)}>
-                        <SelectTrigger className="w-[180px]">
+                      <Select value={pruebas.medica} onValueChange={(value) => !disablePorEtapa && handlePruebaChange('medica', value)}>
+                        <SelectTrigger className="w-[180px]" disabled={disablePorEtapa}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -364,10 +402,12 @@ export default function AprendizEditPage() {
         </Card>
 
         <div className="mt-6 flex gap-4 items-center justify-end flex-wrap">
-          {!puedeAprobar && (
+          {(mostrarAprobadoUI || !puedeAprobar) && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex-1 min-w-[250px]">
               <p className="text-sm text-yellow-800">
-                Complete las fechas de inicio y fin de contrato para habilitar la aprobacion
+                {mostrarAprobadoUI
+                  ? 'Aprendiz aprobado'
+                  : 'Complete las fechas de inicio y fin de contrato para habilitar la aprobacion'}
               </p>
             </div>
           )}
@@ -377,10 +417,14 @@ export default function AprendizEditPage() {
             className="bg-green-600 hover:bg-green-700 text-primary-foreground shadow-md disabled:opacity-50"
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            Aprobar Aprendiz
+            {mostrarAprobadoUI ? 'Aprendiz Aprobado' : 'Aprobar Aprendiz'}
           </Button>
           {hasUnsavedChanges && (
-            <Button onClick={handleGuardar} className="bg-primary hover:bg-primary/90 shadow-md">
+            <Button
+              onClick={handleGuardar}
+              disabled={disablePorEtapa}
+              className="bg-primary hover:bg-primary/90 shadow-md disabled:opacity-50"
+            >
               <Save className="h-4 w-4 mr-2" />
               Guardar Cambios
             </Button>

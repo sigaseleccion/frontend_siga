@@ -9,6 +9,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { ArrowLeft, Eye, Edit, FileText } from 'lucide-react'
 import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
 
 export default function SeleccionConvocatoriaPage() {
   const { id: convocatoriaId } = useParams()
@@ -35,15 +36,43 @@ export default function SeleccionConvocatoriaPage() {
           nivelFormacion: conv.nivelFormacion,
         })
         const aps = await aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId)
-        setAprendices(
-          aps.filter((a) => ['seleccion2', 'lectiva', 'productiva', 'finalizado'].includes(a.etapaActual))
+        const filtrados = aps.filter((a) => ['seleccion2', 'lectiva', 'productiva', 'finalizado'].includes(a.etapaActual))
+        const enriched = await Promise.all(
+          filtrados.map(async (a) => {
+            let pruebas = { psicologica: 'pendiente', tecnica: 'pendiente', medica: 'pendiente' }
+            if (a.pruebaSeleccionId) {
+              try {
+                const ps = await pruebaSeleccionService.obtenerPorId(a.pruebaSeleccionId)
+                pruebas = {
+                  psicologica: ps.pruebaPsicologica || 'pendiente',
+                  tecnica: ps.pruebaTecnica || 'pendiente',
+                  medica: ps.examenesMedicos || 'pendiente',
+                }
+              } catch {}
+            }
+            return { ...a, pruebas }
+          })
         )
+        setAprendices(enriched)
       } catch (e) {
         setError(e.message)
       }
     }
     loadData()
   }, [convocatoriaId])
+
+  const getDotClass = (aprendiz) => {
+    const p = aprendiz.pruebas || {}
+    const vals = [p.psicologica, p.tecnica, p.medica]
+    const approved = vals.filter((v) => v === 'aprobado').length
+    const pending = vals.filter((v) => v === 'pendiente').length
+    const notApproved = vals.filter((v) => v === 'no aprobado').length
+    const hasContract = Boolean(aprendiz.fechaInicioContrato)
+    if (approved === 3 && hasContract) return 'bg-green-500'
+    if (notApproved === 1) return 'bg-blue-400'
+    if (pending >= 1 && !hasContract) return 'bg-yellow-400'
+    return 'bg-muted-foreground/30'
+  }
 
   return (
     <div>
@@ -105,7 +134,10 @@ export default function SeleccionConvocatoriaPage() {
                 <tbody>
                   {aprendices.map((aprendiz) => (
                     <tr key={aprendiz._id} className="border-b border-border last:border-0">
-                      <td className="py-3 px-4 text-sm font-medium">{aprendiz.nombre}</td>
+                      <td className="py-3 px-4 text-sm font-medium">
+                        <span className={`inline-block h-3 w-3 rounded-full mr-2 ${getDotClass(aprendiz)}`} />
+                        {aprendiz.nombre}
+                      </td>
                       <td className="py-3 px-4 text-sm">{aprendiz.tipoDocumento}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.documento}</td>
                       <td className="py-3 px-4 text-sm">{aprendiz.ciudad}</td>
