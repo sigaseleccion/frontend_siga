@@ -18,14 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/shared/components/ui/dialog";
 import { ArrowLeft, Lock, Unlock, Upload, Loader2 } from "lucide-react";
 
 import { useConvocatoriaDetail } from "../hooks/useConvocatoriaDetail";
@@ -51,9 +43,6 @@ export default function ConvocatoriaDetailPage() {
   const [selectedRecomendados, setSelectedRecomendados] = useState(null);
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [confirmSeleccionadoOpen, setConfirmSeleccionadoOpen] = useState(false);
-  const [pendingAprendizId, setPendingAprendizId] = useState(null);
-  const [pendingAprendizName, setPendingAprendizName] = useState("");
 
   const handleEstadoChange = async (
     aprendizId,
@@ -61,26 +50,40 @@ export default function ConvocatoriaDetailPage() {
     nombreAprendiz = "",
   ) => {
     if (nuevoEstado === "seleccionado") {
-      setPendingAprendizId(aprendizId);
-      setPendingAprendizName(nombreAprendiz || "");
-      setConfirmSeleccionadoOpen(true);
+      // Mostrar confirmación con SweetAlert
+      const result = await confirmAlert({
+        title: 'Confirmar selección',
+        text: `Al marcar al aprendiz ${nombreAprendiz || "seleccionado"} como seleccionado se actualizará su etapa a "seleccion2". ¿Desea continuar?`,
+        confirmText: 'Sí, confirmar',
+        cancelText: 'Cancelar',
+        icon: 'question'
+      });
+
+      if (!result.isConfirmed) return;
+
+      // Si confirma, actualizar estado
+      setActionLoading(true);
+      try {
+        await actualizarEstadoAprendiz(aprendizId, "seleccionado", {
+          setSeleccion2: true,
+        });
+        successAlert({
+          title: 'Aprendiz seleccionado',
+          text: 'El aprendiz ha sido marcado como seleccionado exitosamente'
+        });
+      } catch (err) {
+        errorAlert({
+          title: 'Error',
+          text: 'Error al actualizar el estado del aprendiz'
+        });
+      } finally {
+        setActionLoading(false);
+      }
       return;
     }
+    
+    // Para otros estados que no sean "seleccionado"
     await actualizarEstadoAprendiz(aprendizId, nuevoEstado);
-  };
-
-  const handleConfirmSeleccionado = async () => {
-    if (!pendingAprendizId) return;
-    setActionLoading(true);
-    try {
-      await actualizarEstadoAprendiz(pendingAprendizId, "seleccionado", {
-        setSeleccion2: true,
-      });
-      setConfirmSeleccionadoOpen(false);
-      setPendingAprendizId(null);
-    } finally {
-      setActionLoading(false);
-    }
   };
 
   const handleCloseConvocatoria = async () => {
@@ -97,6 +100,15 @@ export default function ConvocatoriaDetailPage() {
     setActionLoading(true);
     try {
       await reabrirConvocatoria();
+      successAlert({
+        title: 'Convocatoria reabierta',
+        text: 'La convocatoria ha sido reabierta para edición'
+      });
+    } catch (err) {
+      errorAlert({
+        title: 'Error',
+        text: 'Error al reabrir la convocatoria'
+      });
     } finally {
       setActionLoading(false);
     }
@@ -214,27 +226,18 @@ export default function ConvocatoriaDetailPage() {
                 disabled={actionLoading}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Cargar Excel Adicional
+                Cargar Excel adicional
               </Button>
             )}
-            {convocatoria.estado === "finalizado" && (
-              <Button
-                variant="outline"
-                onClick={handleEditConvocatoria}
-                className="bg-transparent"
-                disabled={actionLoading}
-              >
-                <Unlock className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            )}
-            {convocatoria.estado === "en proceso" && (
-              <Button
-                onClick={() => setShowCloseDialog(true)}
-                disabled={actionLoading}
-              >
+            {convocatoria.estado === "en proceso" ? (
+              <Button onClick={() => setShowCloseDialog(true)}>
                 <Lock className="h-4 w-4 mr-2" />
-                Cerrar Convocatoria
+                Finalizar Convocatoria
+              </Button>
+            ) : (
+              <Button onClick={handleEditConvocatoria} disabled={actionLoading}>
+                <Unlock className="h-4 w-4 mr-2" />
+                Editar Convocatoria
               </Button>
             )}
           </div>
@@ -242,9 +245,9 @@ export default function ConvocatoriaDetailPage() {
 
         <Card className="border border-gray-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                Aprendices Registrados
+                Aprendices en Convocatoria
               </h2>
               <Badge
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -410,39 +413,7 @@ export default function ConvocatoriaDetailPage() {
           </CardContent>
         </Card>
 
-        <Dialog
-          open={confirmSeleccionadoOpen}
-          onOpenChange={setConfirmSeleccionadoOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar selección</DialogTitle>
-              <DialogDescription>
-                Al marcar al aprendiz {pendingAprendizName || "seleccionado"}{" "}
-                como seleccionado se actualizará su etapa a "seleccion2". ¿Desea
-                continuar?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPendingAprendizId(null);
-                  setPendingAprendizName("");
-                  setConfirmSeleccionadoOpen(false);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmSeleccionado}
-                disabled={actionLoading}
-              >
-                Confirmar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* ELIMINADO: Dialog de confirmación (líneas 413-445) */}
 
         <CloseConvocatoriaDialog
           open={showCloseDialog}
