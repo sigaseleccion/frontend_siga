@@ -50,10 +50,9 @@ export default function ConvocatoriaDetailPage() {
     nombreAprendiz = "",
   ) => {
     if (nuevoEstado === "seleccionado") {
-      // Mostrar confirmación con SweetAlert
       const result = await confirmAlert({
         title: 'Confirmar selección',
-        text: `Al marcar al aprendiz ${nombreAprendiz || "seleccionado"} como seleccionado se actualizará su etapa a "seleccion2". ¿Desea continuar?`,
+        text: `Al marcar al aprendiz ${nombreAprendiz || "seleccionado"} como seleccionado se registrará su estado. El cambio a etapa "seleccion2" se aplicará al finalizar la convocatoria.`,
         confirmText: 'Sí, confirmar',
         cancelText: 'Cancelar',
         icon: 'question'
@@ -61,12 +60,9 @@ export default function ConvocatoriaDetailPage() {
 
       if (!result.isConfirmed) return;
 
-      // Si confirma, actualizar estado
       setActionLoading(true);
       try {
-        await actualizarEstadoAprendiz(aprendizId, "seleccionado", {
-          setSeleccion2: true,
-        });
+        await actualizarEstadoAprendiz(aprendizId, "seleccionado");
         successAlert({
           title: 'Aprendiz seleccionado',
           text: 'El aprendiz ha sido marcado como seleccionado exitosamente'
@@ -82,7 +78,6 @@ export default function ConvocatoriaDetailPage() {
       return;
     }
     
-    // Para otros estados que no sean "seleccionado"
     await actualizarEstadoAprendiz(aprendizId, nuevoEstado);
   };
 
@@ -138,8 +133,8 @@ export default function ConvocatoriaDetailPage() {
     if (!convocatoria) return false;
     // Si la convocatoria está finalizada, no se puede editar ninguno
     if (convocatoria.estado === "finalizado") return false;
-    // Si el aprendiz está en seleccion2, no se puede editar
-    if (aprendiz.etapaActual === "seleccion2") return false;
+    // Si el aprendiz está en etapa avanzada, no se puede editar
+    if (["seleccion2", "lectiva", "productiva", "finalizado"].includes(aprendiz.etapaActual)) return false;
     return true;
   };
 
@@ -371,12 +366,9 @@ export default function ConvocatoriaDetailPage() {
                           )}
                         </td>
                         <td className="py-4 px-4">
-                          {aprendiz.etapaActual === "seleccion2" ? (
-                            <Badge
-                              variant="outline"
-                              className="border-gray-300 bg-gray-200 text-gray-600"
-                            >
-                              {aprendiz.estadoConvocatoria}
+                          {["seleccion2", "lectiva", "productiva", "finalizado"].includes(aprendiz.etapaActual) ? (
+                            <Badge variant="outline" className="border-gray-300 bg-gray-200 text-gray-600">
+                              seleccionado
                             </Badge>
                           ) : (
                             <Select
