@@ -12,11 +12,13 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import { useExcelParser } from '../hooks/useExcelParser';
+import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
   const [aprendicesParsed, setAprendicesParsed] = useState([]);
   const [fileName, setFileName] = useState('');
   const { parseExcel, parsing, error: parseError } = useExcelParser();
+  const [errors, setErrors] = useState({ archivo: '' });
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -25,6 +27,10 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
         setFileName(file.name);
         const aprendices = await parseExcel(file);
         setAprendicesParsed(aprendices);
+        // Limpiar error
+        if (errors.archivo) {
+          setErrors({ archivo: '' });
+        }
       } catch (err) {
         setAprendicesParsed([]);
         setFileName('');
@@ -33,18 +39,43 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
     }
   };
 
+  const validateForm = () => {
+    if (aprendicesParsed.length === 0) {
+      setErrors({ archivo: 'Debe seleccionar un archivo Excel con aprendices' });
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       await onSubmit(aprendicesParsed);
       handleCancel();
+      
+      // Mostrar alerta de éxito
+      setTimeout(() => {
+        successAlert({
+          title: 'Aprendices cargados',
+          text: 'Los aprendices se han agregado exitosamente'
+        });
+      }, 100);
     } catch (err) {
-        console.error(err);
+      console.error(err);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al cargar los aprendices'
+      });
     }
   };
 
   const handleCancel = () => {
     setAprendicesParsed([]);
     setFileName('');
+    setErrors({ archivo: '' });
     onOpenChange(false);
   };
 
@@ -55,7 +86,7 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
           <DialogTitle className="text-gray-900">Cargar Excel Adicional</DialogTitle>
           <DialogDescription className="text-gray-500">
             Adjunte un archivo Excel con aprendices adicionales para agregar a esta convocatoria.
-            Los aprendices duplicados (mismo numero de documento) seran ignorados.
+            Los aprendices duplicados (mismo numero de documento) serán ignorados.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center py-8 space-y-4">
@@ -86,6 +117,9 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
               </p>
             </>
           )}
+          {errors.archivo && (
+            <p className="text-sm text-red-500">{errors.archivo}</p>
+          )}
           <input
             type="file"
             id="excel-upload-additional"
@@ -115,7 +149,7 @@ export function ExcelUploadModal({ open, onOpenChange, onSubmit, loading }) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={aprendicesParsed.length === 0 || loading}
+            disabled={loading}
           >
             {loading ? 'Cargando...' : 'Cargar aprendices'}
           </Button>

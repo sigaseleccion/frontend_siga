@@ -12,7 +12,8 @@ export const PasswordInput = ({
   placeholder = 'Ingrese contraseña',
   showValidation = true,
   required = true,
-  name = 'contrasena'
+  name = 'contrasena',
+  error = '' // Nueva prop para mostrar errores
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [validation, setValidation] = useState({
@@ -69,7 +70,13 @@ export const PasswordInput = ({
           value={value}
           onChange={onChange}
           required={required}
-          className={showValidation && value ? (validation.isValid ? 'border-green-500' : 'border-red-500') : ''}
+          className={
+            error 
+              ? 'border-red-500' 
+              : showValidation && value 
+                ? (validation.isValid ? 'border-green-500' : 'border-red-500') 
+                : ''
+          }
         />
         <button
           type="button"
@@ -80,7 +87,11 @@ export const PasswordInput = ({
         </button>
       </div>
 
-      {showValidation && value && (
+      {error && (
+        <p className="text-sm text-red-500 mt-1">{error}</p>
+      )}
+
+      {showValidation && value && !error && (
         <div className="space-y-1 rounded-md border bg-gray-50 p-3">
           <p className="text-sm font-medium text-gray-700 mb-2">La contraseña debe cumplir:</p>
           <ValidationItem isValid={validation.minLength} text="Mínimo 8 caracteres" />
