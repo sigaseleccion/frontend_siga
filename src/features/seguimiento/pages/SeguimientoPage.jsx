@@ -1,12 +1,4 @@
-// import React from "react";
 
-// const SeguimientoPage = () => {
-//   return (
-//     <h1>Seguimiento</h1>
-//   );
-// };
-
-// export default SeguimientoPage;
 
 
 'use client';
@@ -36,7 +28,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useSeguimiento } from '../hooks/useSeguimiento';
-import { EditCuotaModal, AprendicesIncompletosModal } from '../componentes';
+import { EditCuotaModal, AprendicesIncompletosModal, AprendizDetailModal } from '../componentes';
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();
@@ -53,6 +45,8 @@ const SeguimientoPage = () => {
   const [etapaFilter, setEtapaFilter] = useState('todas');
   const [isEditCuotaOpen, setIsEditCuotaOpen] = useState(false);
   const [isIncompletosOpen, setIsIncompletosOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedAprendiz, setSelectedAprendiz] = useState(null);
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -108,8 +102,8 @@ const SeguimientoPage = () => {
   };
 
   const handleVerAprendiz = (aprendiz) => {
-    // Navegar al detalle del aprendiz
-    navigate(`/seguimiento/aprendiz/${aprendiz._id}`);
+    setSelectedAprendiz(aprendiz);
+    setIsDetailOpen(true);
   };
 
   const handleEditarAprendiz = (aprendiz) => {
@@ -316,7 +310,7 @@ const SeguimientoPage = () => {
                               </Badge>
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.programa || '-'}
+                              {aprendiz.programaFormacion || aprendiz.programa || '-'}
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
                               {aprendiz.ciudad || '-'}
@@ -331,8 +325,8 @@ const SeguimientoPage = () => {
                               {formatDate(aprendiz.fechaFinContrato)}
                             </td>
                             <td className="py-4 px-4 text-sm text-blue-600">
-                              {aprendiz.reemplazo
-                                ? `${aprendiz.reemplazo.nombre} ${aprendiz.reemplazo.apellido}`
+                              {aprendiz.reemplazoId
+                                ? `${aprendiz.reemplazoId.nombre} ${aprendiz.reemplazoId.documento || ''}`
                                 : '-'}
                             </td>
                             <td className="py-4 px-4 text-sm">
@@ -391,6 +385,12 @@ const SeguimientoPage = () => {
       <AprendicesIncompletosModal
         open={isIncompletosOpen}
         onOpenChange={setIsIncompletosOpen}
+      />
+
+      <AprendizDetailModal
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        aprendiz={selectedAprendiz}
       />
     </>
   );

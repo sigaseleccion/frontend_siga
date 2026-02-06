@@ -19,11 +19,11 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Button } from '@/shared/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
+import { PasswordInput } from './PasswordInput';
 import { crearUsuario } from '../services/usuarioService.js';
+import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => {
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -31,6 +31,16 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
     contrasena: '',
     rol: ''
   });
+  
+  const [errors, setErrors] = useState({
+    nombre: '',
+    correo: '',
+    contrasena: '',
+    rol: ''
+  });
+
+  // Filtrar solo roles activos
+  const rolesActivos = roles.filter(rol => rol.activo !== false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,6 +48,13 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       ...prev,
       [name]: value
     }));
+    // Limpiar error cuando el usuario escribe
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleRolChange = (value) => {
@@ -45,11 +62,70 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       ...prev,
       rol: value
     }));
+    // Limpiar error de rol
+    if (errors.rol) {
+      setErrors(prev => ({
+        ...prev,
+        rol: ''
+      }));
+    }
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return minLength && hasUpperCase && hasLowerCase && hasNumber;
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      nombre: '',
+      correo: '',
+      contrasena: '',
+      rol: ''
+    };
+
+    let isValid = true;
+
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = 'El nombre es requerido';
+      isValid = false;
+    }
+
+    if (!formData.correo.trim()) {
+      newErrors.correo = 'El correo es requerido';
+      isValid = false;
+    } else if (!validateEmail(formData.correo)) {
+      newErrors.correo = 'Ingrese un correo electrónico válido';
+      isValid = false;
+    }
+
+    if (!formData.contrasena) {
+      newErrors.contrasena = 'La contraseña es requerida';
+      isValid = false;
+    } else if (!validatePassword(formData.contrasena)) {
+      newErrors.contrasena = 'La contraseña no cumple con los requisitos de seguridad';
+      isValid = false;
+    }
+
+    if (!formData.rol) {
+      newErrors.rol = 'Debe seleccionar un rol';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = async () => {
-    if (!formData.nombre || !formData.correo || !formData.contrasena || !formData.rol) {
-      alert('Por favor complete todos los campos');
+    if (!validateForm()) {
       return;
     }
 
@@ -63,10 +139,22 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
       });
 
       setFormData({ nombre: '', correo: '', contrasena: '', rol: '' });
+      setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
       onOpenChange(false);
-      onSuccess();
+      
+      setTimeout(() => {
+        onSuccess();
+        successAlert({
+          title: 'Usuario creado',
+          text: 'El usuario se ha creado exitosamente'
+        });
+      }, 100);
+      
     } catch (error) {
-      alert('Error al crear usuario: ' + error.message);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al crear usuario: ' + error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -86,19 +174,22 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre</Label>
+            <Label htmlFor="nombre">Nombre <span className="text-red-500">*</span></Label>
             <Input
               id="nombre"
               name="nombre"
               placeholder="Nombre completo"
               value={formData.nombre}
               onChange={handleChange}
-              className="border-blue-500 focus:ring-blue-500"
+              className={errors.nombre ? 'border-red-500' : ''}
             />
+            {errors.nombre && (
+              <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correo">Correo</Label>
+            <Label htmlFor="correo">Correo <span className="text-red-500">*</span></Label>
             <Input
               id="correo"
               name="correo"
@@ -106,51 +197,51 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
               placeholder="correo@empresa.com"
               value={formData.correo}
               onChange={handleChange}
+              className={errors.correo ? 'border-red-500' : ''}
             />
+            {errors.correo && (
+              <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rol">Rol</Label>
+            <Label htmlFor="rol">Rol <span className="text-red-500">*</span></Label>
             <Select value={formData.rol} onValueChange={handleRolChange}>
-              <SelectTrigger id="rol">
+              <SelectTrigger id="rol" className={errors.rol ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Seleccionar rol" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map(rol => (
+                {rolesActivos.map(rol => (
                   <SelectItem key={rol._id} value={rol._id}>
                     {rol.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.rol && (
+              <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="contrasena"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Contraseña"
-                value={formData.contrasena}
-                onChange={handleChange}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            value={formData.contrasena}
+            onChange={handleChange}
+            label="Contraseña"
+            placeholder="Ingrese contraseña segura"
+            showValidation={true}
+            required={true}
+            error={errors.contrasena}
+          />
         </div>
 
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setFormData({ nombre: '', correo: '', contrasena: '', rol: '' });
+              setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
+              onOpenChange(false);
+            }}
             className="bg-transparent"
             disabled={loading}
           >

@@ -19,11 +19,11 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Button } from '@/shared/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
+import { PasswordInput } from './PasswordInput';
 import { actualizarUsuario } from '../services/usuarioService.js';
+import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles }) => {
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -32,6 +32,16 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
     rol: '',
     activo: true
   });
+
+  const [errors, setErrors] = useState({
+    nombre: '',
+    correo: '',
+    contrasena: '',
+    rol: ''
+  });
+
+  // Filtrar solo roles activos
+  const rolesActivos = roles.filter(rol => rol.activo !== false);
 
   useEffect(() => {
     if (usuario) {
@@ -42,6 +52,7 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
         rol: usuario.rol?._id || usuario.rol || '',
         activo: usuario.activo !== false
       });
+      setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
     }
   }, [usuario, open]);
 
@@ -51,6 +62,13 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
       ...prev,
       [name]: value
     }));
+    // Limpiar error cuando el usuario escribe
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleRolChange = (value) => {
@@ -58,6 +76,12 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
       ...prev,
       rol: value
     }));
+    if (errors.rol) {
+      setErrors(prev => ({
+        ...prev,
+        rol: ''
+      }));
+    }
   };
 
   const handleActivoChange = (value) => {
@@ -67,9 +91,59 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
     }));
   };
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password) => {
+    if (!password) return true; // Contraseña es opcional en edición
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return minLength && hasUpperCase && hasLowerCase && hasNumber;
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      nombre: '',
+      correo: '',
+      contrasena: '',
+      rol: ''
+    };
+
+    let isValid = true;
+
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = 'El nombre es requerido';
+      isValid = false;
+    }
+
+    if (!formData.correo.trim()) {
+      newErrors.correo = 'El correo es requerido';
+      isValid = false;
+    } else if (!validateEmail(formData.correo)) {
+      newErrors.correo = 'Ingrese un correo electrónico válido';
+      isValid = false;
+    }
+
+    if (formData.contrasena && !validatePassword(formData.contrasena)) {
+      newErrors.contrasena = 'La contraseña no cumple con los requisitos de seguridad';
+      isValid = false;
+    }
+
+    if (!formData.rol) {
+      newErrors.rol = 'Debe seleccionar un rol';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
-    if (!formData.nombre || !formData.correo || !formData.rol) {
-      alert('Por favor complete los campos requeridos');
+    if (!validateForm()) {
       return;
     }
 
@@ -88,9 +162,20 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
 
       await actualizarUsuario(usuario._id, updateData);
       onOpenChange(false);
-      onSuccess();
+      
+      setTimeout(() => {
+        onSuccess();
+        successAlert({
+          title: 'Usuario actualizado',
+          text: 'El usuario se ha actualizado exitosamente'
+        });
+      }, 100);
+      
     } catch (error) {
-      alert('Error al actualizar usuario: ' + error.message);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al actualizar usuario: ' + error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -110,62 +195,62 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-nombre">Nombre</Label>
+            <Label htmlFor="edit-nombre">Nombre <span className="text-red-500">*</span></Label>
             <Input
               id="edit-nombre"
               name="nombre"
               value={formData.nombre}
               onChange={handleChange}
+              className={errors.nombre ? 'border-red-500' : ''}
             />
+            {errors.nombre && (
+              <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-correo">Correo</Label>
+            <Label htmlFor="edit-correo">Correo <span className="text-red-500">*</span></Label>
             <Input
               id="edit-correo"
               name="correo"
               type="email"
               value={formData.correo}
               onChange={handleChange}
+              className={errors.correo ? 'border-red-500' : ''}
             />
+            {errors.correo && (
+              <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-rol">Rol</Label>
+            <Label htmlFor="edit-rol">Rol <span className="text-red-500">*</span></Label>
             <Select value={formData.rol} onValueChange={handleRolChange}>
-              <SelectTrigger id="edit-rol">
+              <SelectTrigger id="edit-rol" className={errors.rol ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Seleccionar rol" />
               </SelectTrigger>
               <SelectContent>
-                {roles.map(rol => (
+                {rolesActivos.map(rol => (
                   <SelectItem key={rol._id} value={rol._id}>
                     {rol.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.rol && (
+              <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-password">Nueva Contraseña (opcional)</Label>
-            <div className="relative">
-              <Input
-                id="edit-password"
-                name="contrasena"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Dejar vacio para mantener la actual"
-                value={formData.contrasena}
-                onChange={handleChange}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+          <PasswordInput
+            value={formData.contrasena}
+            onChange={handleChange}
+            label="Nueva Contraseña"
+            placeholder="Dejar vacío para mantener la actual"
+            showValidation={!!formData.contrasena}
+            required={false}
+            error={errors.contrasena}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="edit-activo">Estado</Label>
@@ -187,7 +272,10 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
+              onOpenChange(false);
+            }}
             className="bg-transparent"
             disabled={loading}
           >

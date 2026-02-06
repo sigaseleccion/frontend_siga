@@ -20,6 +20,7 @@ import {
 } from '@/shared/components/ui/select';
 import { Input } from '@/shared/components/ui/input';
 import { useExcelParser } from '../hooks/useExcelParser';
+import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 const programaOptions = [
   { value: 'TECNICO EN PROGRAMACION DE SOFTWARE', label: 'Tecnico en Programacion de Software' },
@@ -38,6 +39,13 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
   const [fileName, setFileName] = useState('');
   const { parseExcel, parsing, error: parseError } = useExcelParser();
 
+  const [errors, setErrors] = useState({
+    programa: '',
+    programaOtro: '',
+    nivelFormacion: '',
+    archivo: ''
+  });
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -45,11 +53,42 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
         setFileName(file.name);
         const aprendices = await parseExcel(file);
         setAprendicesParsed(aprendices);
+        // Limpiar error de archivo
+        if (errors.archivo) {
+          setErrors(prev => ({ ...prev, archivo: '' }));
+        }
       } catch (err) {
         setAprendicesParsed([]);
         setFileName('');
         console.error(err);
       }
+    }
+  };
+
+  const handleProgramaChange = (value) => {
+    setPrograma(value);
+    // Limpiar error cuando selecciona
+    if (errors.programa) {
+      setErrors(prev => ({ ...prev, programa: '' }));
+    }
+    // Si cambia de "Otro" a otra opción, limpiar programaOtro y su error
+    if (value !== 'Otro') {
+      setProgramaOtro('');
+      setErrors(prev => ({ ...prev, programaOtro: '' }));
+    }
+  };
+
+  const handleProgramaOtroChange = (e) => {
+    setProgramaOtro(e.target.value);
+    if (errors.programaOtro) {
+      setErrors(prev => ({ ...prev, programaOtro: '' }));
+    }
+  };
+
+  const handleNivelFormacionChange = (value) => {
+    setNivelFormacion(value);
+    if (errors.nivelFormacion) {
+      setErrors(prev => ({ ...prev, nivelFormacion: '' }));
     }
   };
 
@@ -63,7 +102,45 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
     return `${programaName} - ${dateStr}`;
   };
 
+  const validateForm = () => {
+    const newErrors = {
+      programa: '',
+      programaOtro: '',
+      nivelFormacion: '',
+      archivo: ''
+    };
+
+    let isValid = true;
+
+    if (!programa) {
+      newErrors.programa = 'Debe seleccionar un programa';
+      isValid = false;
+    }
+
+    if (programa === 'Otro' && !programaOtro.trim()) {
+      newErrors.programaOtro = 'Debe ingresar el nombre del programa';
+      isValid = false;
+    }
+
+    if (!nivelFormacion) {
+      newErrors.nivelFormacion = 'Debe seleccionar un nivel de formación';
+      isValid = false;
+    }
+
+    if (aprendicesParsed.length === 0) {
+      newErrors.archivo = 'Debe adjuntar un archivo Excel con aprendices';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     const programaFinal = programa === 'Otro' ? programaOtro : programa;
     const nombreConvocatoria = generateNombreConvocatoria(programaFinal);
 
@@ -76,8 +153,20 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
     try {
       await onSubmit(convocatoriaData, aprendicesParsed);
       handleCancel();
+      
+      // Mostrar alerta de éxito
+      setTimeout(() => {
+        successAlert({
+          title: 'Convocatoria creada',
+          text: 'La convocatoria se ha creado exitosamente'
+        });
+      }, 100);
     } catch (err) {
       console.error(err);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al crear la convocatoria'
+      });
     }
   };
 
@@ -87,14 +176,14 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
     setNivelFormacion('');
     setAprendicesParsed([]);
     setFileName('');
+    setErrors({
+      programa: '',
+      programaOtro: '',
+      nivelFormacion: '',
+      archivo: ''
+    });
     onOpenChange(false);
   };
-
-  const canCreate =
-    programa &&
-    nivelFormacion &&
-    (programa !== 'Otro' || programaOtro.trim()) &&
-    aprendicesParsed.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,9 +205,9 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
 
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="programa">Programa</Label>
-            <Select value={programa} onValueChange={(v) => setPrograma(v)}>
-              <SelectTrigger id="programa">
+            <Label htmlFor="programa">Programa <span className="text-red-500">*</span></Label>
+            <Select value={programa} onValueChange={handleProgramaChange}>
+              <SelectTrigger id="programa" className={errors.programa ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Seleccionar programa" />
               </SelectTrigger>
               <SelectContent>
@@ -129,11 +218,14 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
                 ))}
               </SelectContent>
             </Select>
+            {errors.programa && (
+              <p className="text-sm text-red-500 mt-1">{errors.programa}</p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="nivel-formacion">Nivel de Formacion</Label>
-            <Select value={nivelFormacion} onValueChange={(v) => setNivelFormacion(v)}>
-              <SelectTrigger id="nivel-formacion">
+            <Label htmlFor="nivel-formacion">Nivel de Formación <span className="text-red-500">*</span></Label>
+            <Select value={nivelFormacion} onValueChange={handleNivelFormacionChange}>
+              <SelectTrigger id="nivel-formacion" className={errors.nivelFormacion ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Seleccionar nivel" />
               </SelectTrigger>
               <SelectContent>
@@ -142,18 +234,25 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
                 <SelectItem value="profesional">Profesional</SelectItem>
               </SelectContent>
             </Select>
+            {errors.nivelFormacion && (
+              <p className="text-sm text-red-500 mt-1">{errors.nivelFormacion}</p>
+            )}
           </div>
         </div>
 
         {programa === 'Otro' && (
           <div className="space-y-2 mt-4">
-            <Label htmlFor="programa-otro">Nombre del Programa</Label>
+            <Label htmlFor="programa-otro">Nombre del Programa <span className="text-red-500">*</span></Label>
             <Input
               id="programa-otro"
               placeholder="Ingrese el nombre del programa"
               value={programaOtro}
-              onChange={(e) => setProgramaOtro(e.target.value)}
+              onChange={handleProgramaOtroChange}
+              className={errors.programaOtro ? 'border-red-500' : ''}
             />
+            {errors.programaOtro && (
+              <p className="text-sm text-red-500 mt-1">{errors.programaOtro}</p>
+            )}
           </div>
         )}
 
@@ -181,9 +280,12 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
                 <FileUp className="h-12 w-12 text-blue-600" />
               </div>
               <p className="text-muted-foreground text-center text-sm">
-                {parsing ? 'Procesando archivo...' : 'No se ha adjuntado ningun archivo aun'}
+                {parsing ? 'Procesando archivo...' : 'No se ha adjuntado ningún archivo aún'}
               </p>
             </>
+          )}
+          {errors.archivo && (
+            <p className="text-sm text-red-500">{errors.archivo}</p>
           )}
         </div>
 
@@ -214,7 +316,7 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
             <Button variant="ghost" onClick={handleCancel} disabled={loading}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={!canCreate || loading}>
+            <Button onClick={handleSubmit} disabled={loading}>
               {loading ? 'Creando...' : 'Crear'}
             </Button>
           </div>

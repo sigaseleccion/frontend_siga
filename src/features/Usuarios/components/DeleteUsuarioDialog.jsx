@@ -1,63 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/shared/components/ui/dialog';
-import { Button } from '@/shared/components/ui/button';
+import React, { useEffect } from 'react';
+import { confirmAlert, successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 import { eliminarUsuario } from '../services/usuarioService.js';
 
 export const DeleteUsuarioDialog = ({ open, onOpenChange, usuario, onSuccess }) => {
-  const [loading, setLoading] = useState(false);
+  
+  // Ejecutar la confirmación cuando se abre
+  useEffect(() => {
+    if (open && usuario) {
+      handleDelete();
+    }
+  }, [open, usuario]);
 
   const handleDelete = async () => {
+    // Mostrar confirmación con SweetAlert
+    const result = await confirmAlert({
+      title: '¿Está seguro?',
+      text: `¿Desea eliminar permanentemente a ${usuario?.nombre}? Esta acción NO se puede deshacer.`,
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      icon: 'warning'
+    });
+
+    // Cerrar el "modal" (que ya no existe visualmente)
+    onOpenChange(false);
+
+    if (!result.isConfirmed) return;
+
     try {
-      setLoading(true);
       await eliminarUsuario(usuario._id);
-      onOpenChange(false);
       onSuccess();
+      
+      // Mostrar alerta de éxito
+      successAlert({
+        title: 'Eliminado',
+        text: 'Usuario eliminado exitosamente'
+      });
     } catch (error) {
-      alert('Error al eliminar usuario: ' + error.message);
-    } finally {
-      setLoading(false);
+      errorAlert({
+        title: 'Error',
+        text: 'Error al eliminar usuario: ' + error.message
+      });
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Eliminar Usuario
-          </DialogTitle>
-          <DialogDescription>
-            Esta seguro que desea desactivar este usuario? {usuario?.nombre}
-          </DialogDescription>
-        </DialogHeader>
-
-        <DialogFooter className="mt-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="bg-transparent"
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDelete}
-            className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={loading}
-          >
-            {loading ? 'Eliminando...' : 'Desactivar Usuario'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  // No renderizar nada, solo SweetAlert
+  return null;
 };
