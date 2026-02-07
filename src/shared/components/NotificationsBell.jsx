@@ -84,6 +84,54 @@ const writeDismissedMap = (map) => {
   }
 }
 
+const getDateKey = (date = new Date()) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const getMonthKey = (date = new Date()) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}`
+}
+
+const getCurrentQuotaSlot = (date = new Date()) => {
+  const hour = date.getHours()
+  if (hour >= 16) return '16'
+  if (hour >= 8) return '08'
+  return null
+}
+
+const getNextQuotaTriggerAt = (now = new Date()) => {
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const d = now.getDate()
+
+  const todayAt8 = new Date(y, m, d, 8, 0, 0, 0)
+  const todayAt16 = new Date(y, m, d, 16, 0, 0, 0)
+
+  if (now.getTime() < todayAt8.getTime()) return todayAt8
+  if (now.getTime() < todayAt16.getTime()) return todayAt16
+  return new Date(y, m, d + 1, 8, 0, 0, 0)
+}
+
+const formatMonthLabel = (date = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(date)
+  } catch (e) {
+    return getMonthKey(date)
+  }
+}
+
+const getDotClassName = (type) => {
+  if (type === 'urgent') return 'bg-red-500'
+  if (type === 'important') return 'bg-primary'
+  if (type === 'quota') return 'bg-amber-500'
+  return 'bg-secondary'
+}
+
 function NotificationsBell({ onNavigate }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -97,6 +145,7 @@ function NotificationsBell({ onNavigate }) {
     return initial
   })
   const lastLoadedAtRef = useRef(0)
+  const quotaTimerRef = useRef(null)
 
   const previewLimit = 8
 
@@ -110,15 +159,17 @@ function NotificationsBell({ onNavigate }) {
   const groupedNotifications = useMemo(() => {
     const urgent = []
     const important = []
+    const quota = []
     const info = []
 
     for (const n of notifications) {
       if (n.type === 'urgent') urgent.push(n)
       else if (n.type === 'important') important.push(n)
+      else if (n.type === 'quota') quota.push(n)
       else info.push(n)
     }
 
-    return { urgent, important, info }
+    return { urgent, quota, important, info }
   }, [notifications])
 
   const dismissNotification = (id) => {
@@ -138,7 +189,8 @@ function NotificationsBell({ onNavigate }) {
     dismissNotification(notification.id)
     setOpen(false)
     setAllOpen(false)
-    onNavigate(notification.href)
+    if (typeof onNavigate === 'function') onNavigate(notification.href)
+    else navigate(notification.href)
   }
 
   const loadNotifications = async ({ force = false } = {}) => {
@@ -151,18 +203,21 @@ function NotificationsBell({ onNavigate }) {
 
     const headers = getAuthHeaders()
 
-    const [seguimientoResult, incompletosResult, pruebasResult] = await Promise.allSettled([
+    const [seguimientoResult, estadisticasResult, incompletosResult, pruebasResult] = await Promise.allSettled([
       fetchJson(`${API_URL}/api/seguimiento`, { method: 'GET', headers }),
+      fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: 'GET', headers }),
       fetchJson(`${API_URL}/api/seguimiento/incompletos`, { method: 'GET', headers }),
       fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: 'GET', headers }),
     ])
 
     const aprendicesSeguimiento = seguimientoResult.status === 'fulfilled' ? seguimientoResult.value : []
+    const estadisticas = estadisticasResult.status === 'fulfilled' ? (estadisticasResult.value?.data || estadisticasResult.value) : null
     const incompletos = incompletosResult.status === 'fulfilled' ? incompletosResult.value : []
     const pruebas = pruebasResult.status === 'fulfilled' ? pruebasResult.value : []
 
     if (
       seguimientoResult.status === 'rejected' &&
+      estadisticasResult.status === 'rejected' &&
       incompletosResult.status === 'rejected' &&
       pruebasResult.status === 'rejected'
     ) {
@@ -192,6 +247,31 @@ function NotificationsBell({ onNavigate }) {
             priority: 1,
           }))
       : []
+
+    const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
+    const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
+    const cuotaActual = typeof estadisticas?.totalActivos === 'number' ? estadisticas.totalActivos : 0
+    const monthLabel = formatMonthLabel()
+    const todayKey = getDateKey()
+    const currentSlot = getCurrentQuotaSlot()
+    const slotLabel = currentSlot === '16' ? '16:00' : '08:00'
+
+    const quotaNotifications =
+      cuotaActual < cuotaMaxima && currentSlot
+        ? [
+            {
+              id: `quota:${todayKey}:${currentSlot}`,
+              type: 'quota',
+              badge: 'Cuota',
+              badgeVariant: 'secondary',
+              badgeClassName: 'bg-amber-500 text-white hover:bg-amber-500',
+              title: 'Cuota de aprendices no cumplida',
+              description: `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Recordatorio ${slotLabel}`,
+              href: '/seguimiento',
+              priority: 2,
+            },
+          ]
+        : []
 
     const importantNotifications = Array.isArray(pruebas)
       ? pruebas
@@ -245,7 +325,7 @@ function NotificationsBell({ onNavigate }) {
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
     setNotifications(
-      [...urgentNotifications, ...importantNotifications, ...infoNotifications]
+      [...urgentNotifications, ...quotaNotifications, ...importantNotifications, ...infoNotifications]
         .filter((n) => !dismissedSet.has(n.id))
         .sort((a, b) => {
           if (a.priority !== b.priority) return a.priority - b.priority
@@ -255,10 +335,30 @@ function NotificationsBell({ onNavigate }) {
 
     lastLoadedAtRef.current = now
     setIsLoading(false)
+
+    if (quotaTimerRef.current) {
+      clearTimeout(quotaTimerRef.current)
+      quotaTimerRef.current = null
+    }
+
+    const nextTriggerAt = getNextQuotaTriggerAt(new Date())
+    const delayMs = Math.max(1_000, nextTriggerAt.getTime() - Date.now() + 1_000)
+    quotaTimerRef.current = setTimeout(() => {
+      loadNotifications({ force: true })
+    }, delayMs)
   }
 
   useEffect(() => {
     loadNotifications()
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (quotaTimerRef.current) {
+        clearTimeout(quotaTimerRef.current)
+        quotaTimerRef.current = null
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -299,16 +399,14 @@ function NotificationsBell({ onNavigate }) {
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${notification.type === 'urgent'
-                      ? 'bg-red-500'
-                      : notification.type === 'important'
-                        ? 'bg-primary'
-                        : 'bg-secondary'
-                    }`}
+                  className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClassName(notification.type)}`}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={notification.badgeVariant} className="text-xs">
+                    <Badge
+                      variant={notification.badgeVariant}
+                      className={`text-xs ${notification.badgeClassName || ''}`}
+                    >
                       {notification.badge}
                     </Badge>
                   </div>
@@ -336,8 +434,11 @@ function NotificationsBell({ onNavigate }) {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[380px] p-0">
-        <div className="p-4 border-b">
+      <DropdownMenuContent
+        align="end"
+        className="w-[380px] p-0 bg-white rounded-xl shadow-sm border border-gray-200"
+      >
+        <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-foreground">Notificaciones</h3>
           <p className="text-xs text-muted-foreground mt-1">
             {errorMessage
@@ -362,16 +463,14 @@ function NotificationsBell({ onNavigate }) {
                   <div className="w-full p-4">
                     <div className="flex items-start gap-3">
                       <div
-                        className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${notification.type === 'urgent'
-                            ? 'bg-red-500'
-                            : notification.type === 'important'
-                              ? 'bg-primary'
-                              : 'bg-secondary'
-                          }`}
+                        className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClassName(notification.type)}`}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={notification.badgeVariant} className="text-xs">
+                          <Badge
+                            variant={notification.badgeVariant}
+                            className={`text-xs ${notification.badgeClassName || ''}`}
+                          >
                             {notification.badge}
                           </Badge>
                         </div>
@@ -386,7 +485,7 @@ function NotificationsBell({ onNavigate }) {
             ))
           )}
         </div>
-        <div className="p-3 border-t bg-muted/30">
+        <div className="p-3 border-t border-gray-200 bg-muted/30">
           <Button
             variant="ghost"
             size="sm"
@@ -402,7 +501,7 @@ function NotificationsBell({ onNavigate }) {
       </DropdownMenuContent>
       <Dialog open={allOpen} onOpenChange={setAllOpen}>
         <DialogContent className="max-w-2xl p-0">
-          <div className="p-6 border-b">
+          <div className="p-6 border-b border-gray-200">
             <DialogHeader className="space-y-2">
               <DialogTitle>Notificaciones</DialogTitle>
               <DialogDescription>
@@ -432,6 +531,13 @@ function NotificationsBell({ onNavigate }) {
             <NotificationsList
               items={groupedNotifications.urgent}
               emptyText="Sin alertas urgentes"
+            />
+            <div className="px-6 pt-5 pb-2">
+              <p className="text-xs font-semibold text-muted-foreground">Cuota de aprendices</p>
+            </div>
+            <NotificationsList
+              items={groupedNotifications.quota}
+              emptyText="Cuota cumplida"
             />
             <div className="px-6 pt-5 pb-2">
               <p className="text-xs font-semibold text-muted-foreground">Pruebas pendientes</p>
