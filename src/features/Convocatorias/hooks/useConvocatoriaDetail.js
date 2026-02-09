@@ -36,46 +36,29 @@ export const useConvocatoriaDetail = (convocatoriaId) => {
 
   const actualizarEstadoAprendiz = useCallback(async (aprendizId, nuevoEstado, options = {}) => {
     try {
-      if (options.setSeleccion2 && nuevoEstado === 'seleccionado') {
-        const result = await aprendizService.actualizarAprendiz(aprendizId, {
-          estadoConvocatoria: nuevoEstado,
-          etapaActual: 'seleccion2',
-        });
-        const actualizado = result.aprendiz || result;
-        setAprendices((prev) =>
-          prev.map((a) =>
-            a._id === aprendizId
-              ? { ...a, estadoConvocatoria: nuevoEstado, etapaActual: 'seleccion2' }
-              : a
-          )
-        );
-        if (convocatoria && convocatoria._id) {
-          try {
-            const r = await pruebaSeleccionService.crearSiNoExiste({
-              aprendizId: aprendizId,
-              convocatoriaId: convocatoria._id,
-            });
-            const pruebaCreada = r.prueba;
-            if (pruebaCreada && pruebaCreada._id) {
-              setAprendices((prev) =>
-                prev.map((a) =>
-                  a._id === aprendizId ? { ...a, pruebaSeleccionId: pruebaCreada._id } : a
-                )
-              );
-            }
-          } catch (e) {
-            console.error(e);
+      const result = await aprendizService.actualizarEstadoConvocatoria(aprendizId, nuevoEstado);
+      const actualizado = result.aprendiz || result;
+      setAprendices((prev) =>
+        prev.map((a) => (a._id === aprendizId ? { ...a, estadoConvocatoria: nuevoEstado } : a))
+      );
+      if (nuevoEstado === 'seleccionado' && convocatoria && convocatoria._id) {
+        try {
+          const r = await pruebaSeleccionService.crearSiNoExiste({
+            aprendizId: aprendizId,
+            convocatoriaId: convocatoria._id,
+          });
+          const pruebaCreada = r.prueba;
+          if (pruebaCreada && pruebaCreada._id) {
+            setAprendices((prev) =>
+              prev.map((a) =>
+                a._id === aprendizId ? { ...a, pruebaSeleccionId: pruebaCreada._id } : a
+              )
+            );
           }
+        } catch (e) {
         }
-        return actualizado;
-      } else {
-        const result = await aprendizService.actualizarEstadoConvocatoria(aprendizId, nuevoEstado);
-        const actualizado = result.aprendiz || result;
-        setAprendices((prev) =>
-          prev.map((a) => (a._id === aprendizId ? { ...a, estadoConvocatoria: nuevoEstado } : a))
-        );
-        return actualizado;
       }
+      return actualizado;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -84,9 +67,21 @@ export const useConvocatoriaDetail = (convocatoriaId) => {
 
   const cerrarConvocatoria = useCallback(async () => {
     try {
+      const seleccionados = aprendices.filter(
+        (a) => a.estadoConvocatoria === 'seleccionado' && a.etapaActual === 'seleccion1'
+      );
+      for (const a of seleccionados) {
+        try {
+          const r = await aprendizService.actualizarAprendiz(a._id, { etapaActual: 'seleccion2' });
+          const upd = r.aprendiz || r;
+          setAprendices((prev) =>
+            prev.map((x) => (x._id === a._id ? { ...x, etapaActual: 'seleccion2' } : x))
+          );
+        } catch (e) {
+        }
+      }
       const result = await convocatoriaService.cerrarConvocatoria(convocatoriaId);
       setConvocatoria((prev) => ({ ...prev, estado: 'finalizado' }));
-      // Actualizar aprendices que pasaron a seleccion2
       await fetchData();
       return result;
     } catch (err) {
