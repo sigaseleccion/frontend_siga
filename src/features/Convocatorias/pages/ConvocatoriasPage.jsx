@@ -5,14 +5,13 @@ import {
   successAlert,
   warningAlert,
 } from "../../../shared/components/ui/SweetAlert";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Navbar } from "@/shared/components/Navbar";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
-import { Upload, PenBoxIcon, Search, Loader2 } from "lucide-react";
+import { Upload, PenBoxIcon, Search, Loader2, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,6 +23,8 @@ import {
 import { useConvocatorias } from "../hooks/useConvocatorias";
 import { CreateConvocatoriaModal } from "../components/CreateConvocatoriaModal";
 import Header from "../../../shared/components/Header";
+import { useHeader } from "../../../shared/contexts/HeaderContext";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function ConvocatoriasPage() {
   const { convocatorias, loading, error, crearConvocatoria } =
@@ -33,6 +34,15 @@ export default function ConvocatoriasPage() {
 
   const [searchNombre, setSearchNombre] = useState("");
   const [filterNivel, setFilterNivel] = useState("todas");
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Convocatorias",
+      icon: Users,
+      iconBg: "from-blue-600 to-blue-400",
+    });
+  }, []);
 
   const handleCreateConvocatoria = async (convocatoriaData, aprendices) => {
     setCreating(true);
@@ -73,13 +83,7 @@ export default function ConvocatoriasPage() {
 
   return (
     <div>
-      <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50">
-        <Header
-          title="Convocatorias"
-          subtitle="Gestión de convocatorias"
-          actions={<></>}
-        />
+      <main className="min-h-screen bg-gray-50">
         <div className="p-4">
           <div className="mb-6 flex gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[250px]">
@@ -125,7 +129,12 @@ export default function ConvocatoriasPage() {
               </h2>
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                    <Spinner />
+                    <span className="text-gray-700 font-medium">
+                      Cargando...
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="overflow-x-auto">

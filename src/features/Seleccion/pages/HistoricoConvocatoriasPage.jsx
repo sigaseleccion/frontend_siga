@@ -15,6 +15,7 @@ import {
 } from '@/shared/components/ui/table'
 import { ArrowLeft, Archive, Eye } from 'lucide-react'
 import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
 
 export default function HistoricoConvocatoriasPage() {
   const [archivedConvocatorias, setArchivedConvocatorias] = useState([])
@@ -25,17 +26,35 @@ export default function HistoricoConvocatoriasPage() {
       try {
         setError(null)
         const data = await convocatoriaService.obtenerConvocatoriasArchivadas()
-        setArchivedConvocatorias(
-          data.map((c) => ({
-            id: c._id,
-            idConvocatoria: c.idConvocatoria,
-            nombreConvocatoria: c.nombreConvocatoria,
-            programa: c.programa,
-            nivelFormacion: c.nivelFormacion,
-            totalAprendices: c.totalAprendices,
-            fechaArchivado: c.fechaArchivado,
-          }))
+        const enriched = await Promise.all(
+          data.map(async (c) => {
+            try {
+              const aprendices = await aprendizService.obtenerAprendicesPorConvocatoria(c._id)
+              const validStates = ['seleccion2', 'lectiva', 'productiva', 'finalizado']
+              const filtered = aprendices.filter((a) => validStates.includes(a.etapaActual))
+              return {
+                id: c._id,
+                idConvocatoria: c.idConvocatoria,
+                nombreConvocatoria: c.nombreConvocatoria,
+                programa: c.programa,
+                nivelFormacion: c.nivelFormacion,
+                totalAprendices: filtered.length,
+                fechaArchivado: c.fechaArchivado,
+              }
+            } catch {
+              return {
+                id: c._id,
+                idConvocatoria: c.idConvocatoria,
+                nombreConvocatoria: c.nombreConvocatoria,
+                programa: c.programa,
+                nivelFormacion: c.nivelFormacion,
+                totalAprendices: c.totalAprendices || 0,
+                fechaArchivado: c.fechaArchivado,
+              }
+            }
+          })
         )
+        setArchivedConvocatorias(enriched)
       } catch (e) {
         setError(e.message)
       }
@@ -69,6 +88,14 @@ export default function HistoricoConvocatoriasPage() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

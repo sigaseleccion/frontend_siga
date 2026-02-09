@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCreateRol } from "../hooks/useCreateRole";
 import { permissionService } from "../services/permissionService";
-import { Navbar } from "@/shared/components/Navbar";
 import { ArrowLeft, Shield, Check, Loader2 } from "lucide-react";
 import { successAlert } from "../../../shared/components/ui/SweetAlert";
+import { useHeader } from "../../../shared/contexts/HeaderContext";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 const CreateRol = () => {
   const navigate = useNavigate();
@@ -14,6 +15,15 @@ const CreateRol = () => {
   const [descripcion, setDescripcion] = useState("");
   const [permisosDisponibles, setPermisosDisponibles] = useState([]);
   const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Crear Rol",
+      icon: Shield,
+      iconBg: "from-blue-600 to-blue-400",
+    });
+  }, []);
 
   // 🔹 Cargar permisos
   useEffect(() => {
@@ -89,31 +99,8 @@ const CreateRol = () => {
 
   return (
     <>
-      <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50">
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate("/roles")}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Volver a Roles</span>
-            </button>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Shield className="h-7 w-7 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Crear Rol</h1>
-                <p className="text-gray-600 mt-1">
-                  Define permisos y accesos del sistema
-                </p>
-              </div>
-            </div>
-          </div>
-
+      <main className="bg-gray-50">
+        <div className="p-4">
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Columna Izquierda - Información Básica */}
@@ -222,7 +209,7 @@ const CreateRol = () => {
 
               {/* Columna Derecha - Permisos */}
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-fit flex flex-col max-h-[calc(100vh-200px)]">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-fit flex flex-col max-h-[calc(100vh-100px)]">
                   <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <h2 className="text-lg font-semibold text-gray-900">
                       Permisos del Sistema
@@ -235,11 +222,11 @@ const CreateRol = () => {
                     <div className="space-y-6">
                       {permisosDisponibles.length === 0 ? (
                         <div className="flex items-center justify-center py-12">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-500">
-                              Cargando permisos...
-                            </p>
+                          <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                            <Spinner />
+                            <span className="text-gray-700 font-medium">
+                              Cargando...
+                            </span>
                           </div>
                         </div>
                       ) : (

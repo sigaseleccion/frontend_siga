@@ -1,6 +1,10 @@
+'use client';
+
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/auth/AuthContext'
 import { tienePermiso } from '../../utils/auth/permissions'
+import Layout from '../Layout'
+import { HeaderProvider } from '../../contexts/HeaderContext';
 
 export default function ProtectedRoute({ children, modulo, accion }) {
   const { auth, loading } = useAuth()
@@ -19,5 +23,9 @@ export default function ProtectedRoute({ children, modulo, accion }) {
     }
   }
 
-  return children
+   return (
+    <HeaderProvider>
+      <Layout>{children}</Layout>
+    </HeaderProvider>
+  );
 }
