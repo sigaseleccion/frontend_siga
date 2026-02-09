@@ -20,14 +20,10 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
-import { useToast } from "@/shared/hooks/useToast";
+  confirmAlert,
+  errorAlert,
+  successAlert,
+} from "../../../shared/components/ui/SweetAlert";
 import {
   ArrowLeft,
   CheckCircle,
@@ -44,10 +40,7 @@ import { useHeader } from "../../../shared/contexts/HeaderContext";
 export default function AprendizEditPage() {
   const { id: convocatoriaId, aprendizId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  const [showAprobarDialog, setShowAprobarDialog] = useState(false);
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [error, setError] = useState(null);
 
   const [aprendiz, setAprendiz] = useState(null);
@@ -211,47 +204,67 @@ export default function AprendizEditPage() {
         fechaInicioContrato,
         fechaFinContrato,
       });
-      toast({
-        title: "Cambios Guardados",
-        description: "Los cambios se han guardado correctamente",
+      await successAlert({
+        title: "Cambios guardados",
+        text: "Los cambios se han guardado correctamente.",
       });
     } catch (e) {
       setError(e.message);
+      await errorAlert({
+        title: "Error al guardar",
+        text: "No se pudieron guardar los cambios.",
+      });
     }
   };
 
-  const handleAprobar = () => {
+  const handleAprobar = async () => {
     if (!puedeAprobar) return;
-    setShowAprobarDialog(true);
-  };
-
-  const confirmarAprobar = async () => {
-    setShowAprobarDialog(false);
+    const result = await confirmAlert({
+      title: "Aprobar aprendiz",
+      text: `¿Desea aprobar al aprendiz ${aprendiz?.nombre || ""}? Pasará a etapa lectiva.`,
+      confirmText: "Sí, aprobar",
+      cancelText: "Cancelar",
+      icon: "warning",
+    });
+    if (!result.isConfirmed) return;
     try {
       await aprendizService.actualizarAprendiz(aprendizId, {
         etapaActual: "lectiva",
         fechaInicioContrato: fechaInicioContrato || null,
         fechaFinContrato: fechaFinContrato || null,
       });
+      await successAlert({
+        title: "Aprendiz aprobado",
+        text: "El aprendiz ha sido aprobado y pasó a etapa lectiva.",
+      });
       navigate(
         `/seleccion/${convocatoriaId}?aprobado=true&nombre=${encodeURIComponent(aprendiz?.nombre || "")}`,
       );
     } catch (e) {
       setError(e.message);
+      await errorAlert({
+        title: "Error al aprobar",
+        text: "No se pudo aprobar al aprendiz.",
+      });
     }
   };
 
-  const handleBack = (e) => {
+  const handleBack = async (e) => {
     if (hasUnsavedChanges) {
       e.preventDefault();
-      setShowUnsavedDialog(true);
+      const result = await confirmAlert({
+        title: "Cambios sin guardar",
+        text: "Tiene cambios sin guardar. ¿Desea salir sin guardar?",
+        confirmText: "Salir sin guardar",
+        cancelText: "Cancelar",
+        icon: "warning",
+      });
+      if (result.isConfirmed) {
+        navigate(`/seleccion/${convocatoriaId}`);
+      }
     }
   };
 
-  const confirmarSalir = () => {
-    setShowUnsavedDialog(false);
-    navigate(`/seleccion/${convocatoriaId}`);
-  };
 
   const getEstadoIcon = (estado) => {
     switch (estado) {
@@ -304,7 +317,7 @@ export default function AprendizEditPage() {
                   <p className="text-sm text-yellow-800">
                     {mostrarAprobadoUI
                       ? "Aprendiz aprobado"
-                      : "Complete las fechas de inicio y fin de contrato para habilitar la aprobacion"}
+                      : "Complete las fechas de inicio y fin de contrato para habilitar la aprobación"}
                   </p>
                 </div>
               )}
@@ -315,7 +328,7 @@ export default function AprendizEditPage() {
                 className="bg-green-600 hover:bg-green-700 text-primary-foreground shadow-md disabled:opacity-50"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                {mostrarAprobadoUI ? "Aprendiz Aprobado" : "Aprobar Aprendiz"}
+                {mostrarAprobadoUI ? "Aprendiz aprobado" : "Aprobar aprendiz"}
               </Button>
 
               {hasUnsavedChanges && (
@@ -325,7 +338,7 @@ export default function AprendizEditPage() {
                   className="bg-primary hover:bg-primary/90 shadow-md disabled:opacity-50"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar Cambios
+                  Guardar cambios
                 </Button>
               )}
             </div>
@@ -335,7 +348,7 @@ export default function AprendizEditPage() {
             <Card className="border-border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">
-                  Informacion del Aprendiz
+                  Información del aprendiz
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -367,7 +380,7 @@ export default function AprendizEditPage() {
                   </div>
                   <div className="p-3 bg-muted/50 rounded-lg break-words">
                     <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Telefono
+                      Teléfono
                     </p>
                     <p className="text-sm font-medium text-foreground break-words">
                       {aprendiz?.telefono || "-"}
@@ -380,7 +393,7 @@ export default function AprendizEditPage() {
             <Card className="border-border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">
-                  Fechas de Contrato
+                  Fechas de contrato
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -389,7 +402,7 @@ export default function AprendizEditPage() {
                     htmlFor="fecha-inicio"
                     className="text-sm font-semibold"
                   >
-                    Fecha Inicio Contrato
+                    Fecha inicio de contrato
                   </Label>
                   <Input
                     id="fecha-inicio"
@@ -402,7 +415,7 @@ export default function AprendizEditPage() {
                 </div>
                 <div>
                   <Label htmlFor="fecha-fin" className="text-sm font-semibold">
-                    Fecha Fin Contrato
+                    Fecha fin de contrato
                   </Label>
                   <Input
                     id="fecha-fin"
@@ -416,8 +429,8 @@ export default function AprendizEditPage() {
                 {!todasPruebasAprobadas && (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-xs text-yellow-800">
-                      Las fechas se habilitaran cuando todas las pruebas esten
-                      aprobadas
+                      Las fechas se habilitarán cuando todas las pruebas estén
+                      aprobadas.
                     </p>
                   </div>
                 )}
@@ -428,7 +441,7 @@ export default function AprendizEditPage() {
           <Card className="mt-6 border-border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
-                Pruebas de Seleccion
+                Pruebas de selección
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -444,7 +457,7 @@ export default function AprendizEditPage() {
                     </div>
                     <div className="flex-1 space-y-3 min-w-0">
                       <h4 className="font-semibold text-foreground">
-                        Prueba Psicologica
+                        Prueba psicológica
                       </h4>
                       <div className="flex gap-3 items-center flex-wrap">
                         <Select
@@ -464,7 +477,7 @@ export default function AprendizEditPage() {
                             <SelectItem value="pendiente">Pendiente</SelectItem>
                             <SelectItem value="aprobado">Aprobado</SelectItem>
                             <SelectItem value="no aprobado">
-                              No Aprobado
+                              No aprobado
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -481,7 +494,7 @@ export default function AprendizEditPage() {
                     <div className="flex-1 space-y-3 min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-foreground">
-                          Prueba Tecnica
+                          Prueba técnica
                         </h4>
                         <Lock className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -492,7 +505,7 @@ export default function AprendizEditPage() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Este campo se modifica desde Reporte Tecnico
+                          Este campo se modifica desde Reporte técnico
                         </p>
                       </div>
                     </div>
@@ -506,7 +519,7 @@ export default function AprendizEditPage() {
                     </div>
                     <div className="flex-1 space-y-3 min-w-0">
                       <h4 className="font-semibold text-foreground">
-                        Examenes Medicos
+                        Exámenes médicos
                       </h4>
                       <div className="flex gap-3 items-center flex-wrap">
                         <Select
@@ -526,7 +539,7 @@ export default function AprendizEditPage() {
                             <SelectItem value="pendiente">Pendiente</SelectItem>
                             <SelectItem value="aprobado">Aprobado</SelectItem>
                             <SelectItem value="no aprobado">
-                              No Aprobado
+                              No aprobado
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -537,58 +550,6 @@ export default function AprendizEditPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Dialog open={showAprobarDialog} onOpenChange={setShowAprobarDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Confirmar Aprobacion</DialogTitle>
-                <DialogDescription>
-                  Estas seguro de que deseas que el aprendiz{" "}
-                  <strong>{aprendiz?.nombre || ""}</strong>, pase a estado "en
-                  seguimiento"?
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAprobarDialog(false)}
-                  className="bg-transparent"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={confirmarAprobar}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  Confirmar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cambios sin Guardar</DialogTitle>
-                <DialogDescription>
-                  Desea salir sin guardar los cambios realizados? Los cambios se
-                  perderan.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowUnsavedDialog(false)}
-                  className="bg-transparent"
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={confirmarSalir} variant="destructive">
-                  Salir sin Guardar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </main>
     </>

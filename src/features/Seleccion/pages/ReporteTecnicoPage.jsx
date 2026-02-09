@@ -12,11 +12,13 @@ import { ArrowLeft, Upload, FileUp, FileText, X, File } from 'lucide-react'
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
 import { convocatoriaService } from '@/features/Convocatorias/services/convocatoriaService'
 import { pruebaSeleccionService } from '@/features/Convocatorias/services/pruebaSeleccionService'
+import { confirmAlert, errorAlert, successAlert, warningAlert } from '../../../shared/components/ui/SweetAlert'
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams()
 
   const [reporteFile, setReporteFile] = useState(null)
+  const [tab, setTab] = useState('adjuntar')
 
   const convocatoriaInfo = {
     id: convocatoriaId,
@@ -67,7 +69,7 @@ export default function ReporteTecnicoPage() {
     loadData()
   }, [convocatoriaId])
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (file) {
       const validTypes = [
@@ -76,9 +78,23 @@ export default function ReporteTecnicoPage() {
         'application/pdf',
       ]
       if (validTypes.includes(file.type) || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.pdf')) {
+        const isReplacement = Boolean(convocatoria?.reporteTecnico) || Boolean(reporteFile)
+        if (isReplacement) {
+          const result = await confirmAlert({
+            title: 'Reemplazar archivo',
+            text: '¿Desea reemplazar el archivo existente por el nuevo?',
+            confirmText: 'Sí, reemplazar',
+            cancelText: 'Cancelar',
+            icon: 'warning',
+          })
+          if (!result.isConfirmed) return
+        }
         setReporteFile(file)
       } else {
-        alert('Solo se permiten archivos Excel (.xlsx, .xls) o PDF')
+        warningAlert({
+          title: 'Formato inválido',
+          text: 'Solo se permiten archivos Excel (.xlsx, .xls) o PDF.',
+        })
       }
     }
   }
@@ -95,8 +111,16 @@ export default function ReporteTecnicoPage() {
       const updated = await convocatoriaService.subirReporteTecnico(convocatoriaId, reporteFile)
       setConvocatoria(updated)
       setReporteFile(null)
+      await successAlert({
+        title: 'Reporte técnico guardado',
+        text: 'El reporte técnico se ha guardado correctamente.',
+      })
     } catch (e) {
       setError(e.message)
+      await errorAlert({
+        title: 'Error al guardar',
+        text: 'No se pudo guardar el reporte técnico.',
+      })
     } finally {
       setUploading(false)
     }
@@ -110,8 +134,16 @@ export default function ReporteTecnicoPage() {
         setAprendices((prev) =>
           prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
         )
+        await successAlert({
+          title: 'Estado actualizado',
+          text: 'La prueba técnica del aprendiz se actualizó correctamente.',
+        })
       } catch (e) {
         setError(e.message)
+        await errorAlert({
+          title: 'Error al actualizar',
+          text: 'No se pudo actualizar la prueba técnica del aprendiz.',
+        })
       }
     } else {
       setAprendices((prev) =>
@@ -149,14 +181,27 @@ export default function ReporteTecnicoPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Reporte Tecnico</h1>
+          <h1 className="text-3xl font-bold text-foreground">Reporte técnico</h1>
           <div className="flex items-center gap-3 mt-2">
             <span className="text-muted-foreground">{convocatoriaInfo.nombreConvocatoria}</span>
             <Badge variant="outline">{convocatoriaInfo.nivelFormacion}</Badge>
           </div>
         </div>
 
-        <Tabs defaultValue="adjuntar" className="space-y-6">
+        <Tabs
+          value={tab}
+          onValueChange={(value) => {
+            if (value === 'estado' && !(reporteFile || convocatoria?.reporteTecnico)) {
+              warningAlert({
+                title: 'Acceso restringido',
+                text: 'Debe adjuntar un reporte técnico antes de acceder a Estado Aprendices.',
+              })
+              return
+            }
+            setTab(value)
+          }}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="adjuntar">Adjuntar Reporte</TabsTrigger>
             <TabsTrigger value="estado">Estado Aprendices</TabsTrigger>
@@ -165,7 +210,7 @@ export default function ReporteTecnicoPage() {
           <TabsContent value="adjuntar">
             <Card>
               <CardHeader>
-                <CardTitle>Adjuntar Reporte Tecnico</CardTitle>
+                <CardTitle>Adjuntar reporte técnico</CardTitle>
               </CardHeader>
               <CardContent>
                 {convocatoria?.reporteTecnico && !reporteFile ? (
@@ -244,7 +289,7 @@ export default function ReporteTecnicoPage() {
                     </div>
                     <div className="text-center">
                       <p className="text-muted-foreground mb-2">
-                        No se ha adjuntado ningun reporte tecnico
+                        No se ha adjuntado ningún reporte técnico
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Formatos permitidos: Excel (.xlsx, .xls) o PDF
@@ -274,7 +319,7 @@ export default function ReporteTecnicoPage() {
           <TabsContent value="estado">
             <Card>
               <CardHeader>
-                <CardTitle>Estado de Prueba Tecnica por Aprendiz</CardTitle>
+                <CardTitle>Estado de prueba técnica por aprendiz</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -284,7 +329,7 @@ export default function ReporteTecnicoPage() {
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nombre</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo Doc.</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">N. Documento</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">P. Tecnica</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">P. Técnica</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -304,7 +349,7 @@ export default function ReporteTecnicoPage() {
                               <SelectContent>
                                 <SelectItem value="pendiente">Pendiente</SelectItem>
                                 <SelectItem value="aprobado">Aprobado</SelectItem>
-                                <SelectItem value="no aprobado">No Aprobado</SelectItem>
+                                <SelectItem value="no aprobado">No aprobado</SelectItem>
                               </SelectContent>
                             </Select>
                           </td>
@@ -316,7 +361,7 @@ export default function ReporteTecnicoPage() {
 
                 <div className="mt-6 flex justify-end">
                   <Button>
-                    Guardar Cambios
+                    Guardar cambios
                   </Button>
                 </div>
               </CardContent>
