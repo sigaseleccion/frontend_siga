@@ -5,7 +5,7 @@ import { permissionService } from "../services/permissionService";
 import { ArrowLeft, Shield, Check, Loader2 } from "lucide-react";
 import { successAlert } from "../../../shared/components/ui/SweetAlert";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
-
+import Spinner from "../../../shared/components/ui/Spinner";
 
 const CreateRol = () => {
   const navigate = useNavigate();
@@ -16,14 +16,14 @@ const CreateRol = () => {
   const [permisosDisponibles, setPermisosDisponibles] = useState([]);
   const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
   const { setHeaderConfig } = useHeader();
-  
-    useEffect(() => {
-      setHeaderConfig({
-        title: "Crear Rol",
-        icon: Shield,
-        iconBg: "from-blue-600 to-blue-400",
-      });
-    }, []);
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Crear Rol",
+      icon: Shield,
+      iconBg: "from-blue-600 to-blue-400",
+    });
+  }, []);
 
   // 🔹 Cargar permisos
   useEffect(() => {
@@ -222,11 +222,11 @@ const CreateRol = () => {
                     <div className="space-y-6">
                       {permisosDisponibles.length === 0 ? (
                         <div className="flex items-center justify-center py-12">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-500">
-                              Cargando permisos...
-                            </p>
+                          <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                            <Spinner />
+                            <span className="text-gray-700 font-medium">
+                              Cargando...
+                            </span>
                           </div>
                         </div>
                       ) : (

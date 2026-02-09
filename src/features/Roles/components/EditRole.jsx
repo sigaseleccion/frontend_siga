@@ -5,8 +5,12 @@ import { roleService } from "../services/roleService";
 import { permissionService } from "../services/permissionService";
 import { Navbar } from "@/shared/components/Navbar";
 import { ArrowLeft, Shield, Save, Loader2, Edit } from "lucide-react";
-import { confirmAlert, successAlert } from "../../../shared/components/ui/SweetAlert";
+import {
+  confirmAlert,
+  successAlert,
+} from "../../../shared/components/ui/SweetAlert";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 const EditRol = () => {
   const { id } = useParams();
@@ -22,14 +26,14 @@ const EditRol = () => {
   const [cargandoDatos, setCargandoDatos] = useState(true);
   const [estadoInicial, setEstadoInicial] = useState(null);
   const { setHeaderConfig } = useHeader();
-    
-      useEffect(() => {
-        setHeaderConfig({
-          title: "Editar Rol",
-          icon: Edit,
-          iconBg: "from-blue-600 to-blue-400",
-        });
-      }, []);
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Editar Rol",
+      icon: Edit,
+      iconBg: "from-blue-600 to-blue-400",
+    });
+  }, []);
 
   // Cargar rol + permisos
   useEffect(() => {
@@ -148,10 +152,10 @@ const EditRol = () => {
     }
 
     const result = await confirmAlert({
-          title: "¿Salir sin guardar cambios?",
-          text: "Tienes cambios sin guardar. Si sales ahora, se perderán.",
-          confirmText: "Sí, salir",
-        });
+      title: "¿Salir sin guardar cambios?",
+      text: "Tienes cambios sin guardar. Si sales ahora, se perderán.",
+      confirmText: "Sí, salir",
+    });
 
     if (result.isConfirmed) {
       navigate("/roles");
@@ -188,10 +192,10 @@ const EditRol = () => {
     return (
       <>
         <main className="bg-gray-50">
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">Cargando rol...</p>
+          <div className="flex items-center justify-center py-80">
+            <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+              <Spinner />
+              <span className="text-gray-700 font-medium">Cargando...</span>
             </div>
           </div>
         </main>
