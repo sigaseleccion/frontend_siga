@@ -14,15 +14,15 @@ export const seguimientoService = {
     const params = new URLSearchParams();
     if (filtros.etapa) params.append('etapa', filtros.etapa);
     if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
-    
+
     const queryString = params.toString();
     const url = `${API_URL}/api/seguimiento${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al obtener aprendices');
@@ -36,7 +36,7 @@ export const seguimientoService = {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al obtener estadisticas');
@@ -50,7 +50,7 @@ export const seguimientoService = {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al obtener aprendices incompletos');
@@ -64,7 +64,7 @@ export const seguimientoService = {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al obtener aprendiz');
@@ -79,7 +79,7 @@ export const seguimientoService = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ nuevaEtapa }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al cambiar etapa');
@@ -94,10 +94,54 @@ export const seguimientoService = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ reemplazoId }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Error al asignar reemplazo');
+    }
+    return response.json();
+  },
+
+  // Obtener aprendices recomendados para reemplazo
+  async obtenerRecomendadosReemplazo(fechaFinContrato) {
+    const params = new URLSearchParams({ fechaFinContrato });
+    const response = await fetch(`${API_URL}/api/seguimiento/recomendados-reemplazo?${params}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener recomendados');
+    }
+    return response.json();
+  },
+
+  // Actualizar fechas de aprendiz
+  async actualizarFechas(id, fechas) {
+    const response = await fetch(`${API_URL}/api/seguimiento/${id}/fechas`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(fechas),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al actualizar fechas');
+    }
+    return response.json();
+  },
+
+  // Actualizar etapas automáticamente según fechaInicioProductiva
+  async actualizarEtapasAutomaticas() {
+    const response = await fetch(`${API_URL}/api/seguimiento/actualizar-etapas-automaticas`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al actualizar etapas automáticamente');
     }
     return response.json();
   },

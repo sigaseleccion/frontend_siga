@@ -250,7 +250,7 @@ function NotificationsBell({ onNavigate }) {
 
     const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
     const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
-    const cuotaActual = typeof estadisticas?.totalActivos === 'number' ? estadisticas.totalActivos : 0
+    const cuotaActual = typeof estadisticas?.totalEnSeguimiento === 'number' ? estadisticas.totalEnSeguimiento : 0
     const monthLabel = formatMonthLabel()
     const todayKey = getDateKey()
     const currentSlot = getCurrentQuotaSlot()

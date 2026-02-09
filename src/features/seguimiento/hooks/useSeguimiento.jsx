@@ -14,6 +14,7 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filtros, setFiltros] = useState(filtrosIniciales);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const cargarAprendices = useCallback(async () => {
     try {
@@ -29,32 +30,31 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [filtros]);
+  }, [filtros, refreshCounter]);
 
   const cargarEstadisticas = useCallback(async () => {
     try {
       const response = await seguimientoService.obtenerEstadisticas();
-      // El backend devuelve: { enLectiva, enProductiva, totalActivos, cuota (numero), aprendicesIncompletos }
+      // El backend devuelve: { enLectiva, enProductiva, totalEnSeguimiento, cuota (numero), aprendicesIncompletos }
       // El frontend espera: { enEtapaLectiva, enEtapaProductiva, cuota: { actual, maximo }, aprendicesIncompletos }
       const stats = response.data || response;
       setEstadisticas({
         enEtapaLectiva: stats.enLectiva ?? stats.enEtapaLectiva ?? 0,
         enEtapaProductiva: stats.enProductiva ?? stats.enEtapaProductiva ?? 0,
         cuota: typeof stats.cuota === 'number'
-          ? { actual: stats.totalActivos || 0, maximo: stats.cuota }
+          ? { actual: stats.totalEnSeguimiento || 0, maximo: stats.cuota }
           : (stats.cuota || { actual: 0, maximo: 150 }),
         aprendicesIncompletos: stats.aprendicesIncompletos ?? 0,
       });
     } catch (err) {
       console.error('Error cargando estadisticas:', err);
     }
-  }, []);
+  }, [refreshCounter]);
 
   const cambiarEtapa = async (id, nuevaEtapa) => {
     try {
       await seguimientoService.cambiarEtapa(id, nuevaEtapa);
-      await cargarAprendices();
-      await cargarEstadisticas();
+      setRefreshCounter(prev => prev + 1);
       return { success: true };
     } catch (err) {
       console.error('Error cambiando etapa:', err);
@@ -65,7 +65,7 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
   const asignarReemplazo = async (id, reemplazoId) => {
     try {
       await seguimientoService.asignarReemplazo(id, reemplazoId);
-      await cargarAprendices();
+      setRefreshCounter(prev => prev + 1);
       return { success: true };
     } catch (err) {
       console.error('Error asignando reemplazo:', err);
@@ -77,9 +77,25 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
     setFiltros(prev => ({ ...prev, ...nuevosFiltros }));
   };
 
+  const refetch = useCallback(() => {
+    setRefreshCounter(prev => prev + 1);
+  }, []);
+
   useEffect(() => {
-    cargarAprendices();
-    cargarEstadisticas();
+    const inicializar = async () => {
+      // Primero actualizar etapas automáticamente
+      try {
+        await seguimientoService.actualizarEtapasAutomaticas();
+      } catch (err) {
+        console.log('No se pudieron actualizar etapas automáticamente:', err.message);
+      }
+
+      // Luego cargar datos
+      await cargarAprendices();
+      await cargarEstadisticas();
+    };
+
+    inicializar();
   }, [cargarAprendices, cargarEstadisticas]);
 
   return {
@@ -89,7 +105,7 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
     error,
     filtros,
     actualizarFiltros,
-    refetch: cargarAprendices,
+    refetch,
     refetchEstadisticas: cargarEstadisticas,
     cambiarEtapa,
     asignarReemplazo,
