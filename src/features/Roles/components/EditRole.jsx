@@ -6,6 +6,7 @@ import { permissionService } from "../services/permissionService";
 import { Navbar } from "@/shared/components/Navbar";
 import { ArrowLeft, Shield, Save, Loader2, Edit } from "lucide-react";
 import { confirmAlert, successAlert } from "../../../shared/components/ui/SweetAlert";
+import { useHeader } from "../../../shared/contexts/HeaderContext";
 
 const EditRol = () => {
   const { id } = useParams();
@@ -20,6 +21,15 @@ const EditRol = () => {
   const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
   const [cargandoDatos, setCargandoDatos] = useState(true);
   const [estadoInicial, setEstadoInicial] = useState(null);
+  const { setHeaderConfig } = useHeader();
+    
+      useEffect(() => {
+        setHeaderConfig({
+          title: "Editar Rol",
+          icon: Edit,
+          iconBg: "from-blue-600 to-blue-400",
+        });
+      }, []);
 
   // Cargar rol + permisos
   useEffect(() => {
@@ -177,8 +187,7 @@ const EditRol = () => {
   if (cargandoDatos) {
     return (
       <>
-        <Navbar />
-        <main className="ml-72 min-h-screen bg-gray-50">
+        <main className="bg-gray-50">
           <div className="flex items-center justify-center h-screen">
             <div className="text-center">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
@@ -192,11 +201,10 @@ const EditRol = () => {
 
   return (
     <>
-      <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50">
-        <div className="p-8">
+      <main className="bg-gray-50">
+        <div className="p-4">
           {/* Header */}
-          <div className="mb-8">
+          {/* <div className="mb-2">
             <button
               onClick={() => navigate("/roles")}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
@@ -204,22 +212,7 @@ const EditRol = () => {
               <ArrowLeft className="h-5 w-5" />
               <span className="font-medium">Volver a Roles</span>
             </button>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Shield className="h-7 w-7 text-blue-600" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    Editar Rol
-                  </h1>
-                  <p className="text-gray-600 mt-1">
-                    Modifica permisos y accesos del sistema
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -405,7 +398,7 @@ const EditRol = () => {
 
               {/* Columna Derecha - Permisos */}
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-fit flex flex-col max-h-[calc(100vh-200px)]">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-fit flex flex-col max-h-[calc(100vh-95px)]">
                   <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <h2 className="text-lg font-semibold text-gray-900">
                       Permisos del Sistema
