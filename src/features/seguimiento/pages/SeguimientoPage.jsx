@@ -232,7 +232,7 @@ const SeguimientoPage = () => {
                         // Cuota EXCEDIDA
                         const exceso = actual - maximo;
                         return (
-                          <div className="flex items-center gap-1.5 text-blue-600 text-sm mt-2">
+                          <div className="flex items-center gap-1.5 text-red-600 text-sm mt-2">
                             <TrendingUp size={14} />
                             <span>Cuota excedida (+{exceso})</span>
                           </div>
