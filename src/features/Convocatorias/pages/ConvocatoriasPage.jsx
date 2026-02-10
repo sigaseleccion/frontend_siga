@@ -25,6 +25,7 @@ import { CreateConvocatoriaModal } from "../components/CreateConvocatoriaModal";
 import Header from "../../../shared/components/Header";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
+import { DataTable } from "../../../shared/components/DataTable";
 
 export default function ConvocatoriasPage() {
   const { convocatorias, loading, error, crearConvocatoria } =
@@ -142,107 +143,88 @@ export default function ConvocatoriasPage() {
                   </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          ID Convocatoria
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nombre Convocatoria
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Programa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nivel Formacion
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Fecha Creacion
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Total Aprendices
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredConvocatorias.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={8}
-                            className="py-8 text-center text-gray-500"
+                <DataTable
+                  columns={[
+                    {
+                      key: "idConvocatoria",
+                      header: "ID Convocatoria",
+                      render: (value) => (
+                        <span className="font-medium text-gray-900">{value}</span>
+                      ),
+                    },
+                    {
+                      key: "nombreConvocatoria",
+                      header: "Nombre Convocatoria",
+                    },
+                    {
+                      key: "programa",
+                      header: "Programa",
+                      render: (value) => (
+                        <span
+                          className="max-w-[200px] truncate block"
+                          title={value}
+                        >
+                          {value}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "nivelFormacion",
+                      header: "Nivel Formacion",
+                      render: (value) => (
+                        <Badge
+                          variant="outline"
+                          className="border-gray-300 bg-transparent text-gray-700 hover:bg-transparent rounded-full px-3 py-1 text-xs font-medium"
+                        >
+                          {getNivelFormacionLabel(value)}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "fechaCreacion",
+                      header: "Fecha Creacion",
+                      render: (value) => formatDate(value),
+                    },
+                    {
+                      key: "totalAprendices",
+                      header: "Total Aprendices",
+                    },
+                    {
+                      key: "estado",
+                      header: "Estado",
+                      render: (value) => (
+                        <Badge
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            value === "en proceso"
+                              ? "bg-blue-600 text-white hover:bg-blue-600"
+                              : "bg-pink-500 text-white hover:bg-pink-500"
+                          }`}
+                        >
+                          {value}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "_id",
+                      header: "Acciones",
+                      render: (value) => (
+                        <Link to={`/convocatorias/${value}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                           >
-                            No hay convocatorias registradas
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredConvocatorias.map((conv) => (
-                          <tr
-                            key={conv._id || conv.idConvocatoria}
-                            className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                          >
-                            <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                              {conv.idConvocatoria}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {conv.nombreConvocatoria}
-                            </td>
-                            <td
-                              className="py-4 px-4 text-sm text-gray-600 max-w-[200px] truncate"
-                              title={conv.programa}
-                            >
-                              {conv.programa}
-                            </td>
-                            <td className="py-4 px-4">
-                              <Badge
-                                variant="outline"
-                                className="border-gray-300 bg-transparent text-gray-700 hover:bg-transparent rounded-full px-3 py-1 text-xs font-medium"
-                              >
-                                {getNivelFormacionLabel(conv.nivelFormacion)}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(conv.fechaCreacion)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {conv.totalAprendices}
-                            </td>
-                            <td className="py-4 px-4">
-                              <Badge
-                                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                  conv.estado === "en proceso"
-                                    ? "bg-blue-600 text-white hover:bg-blue-600"
-                                    : "bg-pink-500 text-white hover:bg-pink-500"
-                                }`}
-                              >
-                                {conv.estado}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-4">
-                              <Link to={`/convocatorias/${conv._id}`}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                >
-                                  <PenBoxIcon className="h-4 w-4 mr-1" />
-                                  Editar
-                                </Button>
-                              </Link>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            <PenBoxIcon className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                        </Link>
+                      ),
+                    },
+                  ]}
+                  data={filteredConvocatorias}
+                  pageSize={5}
+                  emptyMessage="No hay convocatorias registradas"
+                />
               )}
             </CardContent>
           </Card>
