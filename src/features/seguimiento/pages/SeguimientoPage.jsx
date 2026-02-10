@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,16 +23,11 @@ import {
   Eye,
   History,
   AlertTriangle,
-  CheckSquare,
+  CheckCircle,
   TrendingUp,
-} from "lucide-react";
-import { useSeguimiento } from "../hooks/useSeguimiento";
-import {
-  EditCuotaModal,
-  AprendicesIncompletosModal,
-  AprendizDetailModal,
-} from "../componentes";
-import { useHeader } from "../../../shared/contexts/HeaderContext";
+} from 'lucide-react';
+import { useSeguimiento } from '../hooks/useSeguimiento';
+import { EditCuotaModal, AprendicesIncompletosModal, AprendizDetailModal, EditAprendizModal } from '../componentes';
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();
@@ -42,6 +37,7 @@ const SeguimientoPage = () => {
     loading,
     filtros,
     actualizarFiltros,
+    refetch,
     refetchEstadisticas,
   } = useSeguimiento();
 
@@ -50,6 +46,7 @@ const SeguimientoPage = () => {
   const [isEditCuotaOpen, setIsEditCuotaOpen] = useState(false);
   const [isIncompletosOpen, setIsIncompletosOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAprendiz, setSelectedAprendiz] = useState(null);
   const { setHeaderConfig } = useHeader();
 
@@ -73,13 +70,14 @@ const SeguimientoPage = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "numeric",
-      year: "numeric",
-    });
+    if (!dateString) return '-';
+
+    // Extraer solo la parte de fecha sin conversión de timezone
+    const datePart = dateString.split('T')[0]; // "2026-02-20"
+    const [year, month, day] = datePart.split('-');
+
+    // Formatear manualmente en formato español dd/mm/yyyy
+    return `${parseInt(day)}/${parseInt(month)}/${year}`;
   };
 
   const calcularDiasRestantes = (fechaFin) => {
@@ -120,8 +118,8 @@ const SeguimientoPage = () => {
   };
 
   const handleEditarAprendiz = (aprendiz) => {
-    // Navegar a editar aprendiz
-    navigate(`/seguimiento/aprendiz/${aprendiz._id}/editar`);
+    setSelectedAprendiz(aprendiz);
+    setIsEditModalOpen(true);
   };
 
   return (
@@ -214,15 +212,39 @@ const SeguimientoPage = () => {
                       Aprendices {estadisticas.cuota?.actual || 0}/
                       {estadisticas.cuota?.maximo || 150}
                     </p>
-                    {estadisticas.aprendicesIncompletos > 0 && (
-                      <button
-                        onClick={() => setIsIncompletosOpen(true)}
-                        className="flex items-center gap-1 text-amber-600 text-sm mt-2 hover:underline"
-                      >
-                        <AlertTriangle size={14} />
-                        Aprendices incompletos
-                      </button>
-                    )}
+                    {/* Estado de la cuota */}
+                    {(() => {
+                      const actual = estadisticas.cuota?.actual || 0;
+                      const maximo = estadisticas.cuota?.maximo || 150;
+                      const diferencia = maximo - actual;
+
+                      if (actual < maximo) {
+                        // Cuota NO cumplida
+                        return (
+                          <div className="flex items-center gap-1.5 text-amber-600 text-sm mt-2">
+                            <AlertTriangle size={14} />
+                            <span>Faltan {diferencia} aprendices para cumplir la cuota</span>
+                          </div>
+                        );
+                      } else if (actual === maximo) {
+                        // Cuota CUMPLIDA
+                        return (
+                          <div className="flex items-center gap-1.5 text-green-600 text-sm mt-2">
+                            <CheckCircle size={14} />
+                            <span>Cuota cumplida</span>
+                          </div>
+                        );
+                      } else {
+                        // Cuota EXCEDIDA
+                        const exceso = actual - maximo;
+                        return (
+                          <div className="flex items-center gap-1.5 text-blue-600 text-sm mt-2">
+                            <TrendingUp size={14} />
+                            <span>Cuota excedida (+{exceso})</span>
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="w-12 h-12 bg-pink-50 rounded-lg flex items-center justify-center">
@@ -316,11 +338,11 @@ const SeguimientoPage = () => {
                                 )} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
                               >
                                 {getEtapaIcon(aprendiz.etapaActual)}
-                                {aprendiz.etapaActual === "lectiva"
-                                  ? "Lectiva"
-                                  : aprendiz.etapaActual === "productiva"
-                                    ? "Productiva"
-                                    : "Finalizado"}
+                                {aprendiz.etapaActual === 'lectiva'
+                                  ? 'Lectiva'
+                                  : aprendiz.etapaActual === 'productiva'
+                                    ? 'Productiva'
+                                    : 'Finalizado'}
                               </Badge>
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
@@ -347,13 +369,12 @@ const SeguimientoPage = () => {
                             </td>
                             <td className="py-4 px-4 text-sm">
                               <span
-                                className={`${
-                                  diasRestantes < 0
-                                    ? "text-red-600"
-                                    : diasRestantes <= 30
-                                      ? "text-amber-600"
-                                      : "text-gray-600"
-                                }`}
+                                className={`${diasRestantes < 0
+                                  ? 'text-red-600'
+                                  : diasRestantes <= 30
+                                    ? 'text-amber-600'
+                                    : 'text-gray-600'
+                                  }`}
                               >
                                 {diasRestantes !== "-"
                                   ? `${diasRestantes} dias`
@@ -409,6 +430,16 @@ const SeguimientoPage = () => {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         aprendiz={selectedAprendiz}
+      />
+
+      <EditAprendizModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        aprendiz={selectedAprendiz}
+        onSuccess={() => {
+          refetch();
+          refetchEstadisticas();
+        }}
       />
     </>
   );

@@ -21,6 +21,7 @@ import {
 import { ArrowLeft, Archive, Eye, CheckSquare } from "lucide-react";
 import { convocatoriaService } from "@/features/Convocatorias/services/convocatoriaService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
 
 export default function HistoricoConvocatoriasPage() {
   const [archivedConvocatorias, setArchivedConvocatorias] = useState([]);
@@ -38,19 +39,37 @@ export default function HistoricoConvocatoriasPage() {
   useEffect(() => {
     const loadArchived = async () => {
       try {
-        setError(null);
-        const data = await convocatoriaService.obtenerConvocatoriasArchivadas();
-        setArchivedConvocatorias(
-          data.map((c) => ({
-            id: c._id,
-            idConvocatoria: c.idConvocatoria,
-            nombreConvocatoria: c.nombreConvocatoria,
-            programa: c.programa,
-            nivelFormacion: c.nivelFormacion,
-            totalAprendices: c.totalAprendices,
-            fechaArchivado: c.fechaArchivado,
-          })),
-        );
+        setError(null)
+        const data = await convocatoriaService.obtenerConvocatoriasArchivadas()
+        const enriched = await Promise.all(
+          data.map(async (c) => {
+            try {
+              const aprendices = await aprendizService.obtenerAprendicesPorConvocatoria(c._id)
+              const validStates = ['seleccion2', 'lectiva', 'productiva', 'finalizado']
+              const filtered = aprendices.filter((a) => validStates.includes(a.etapaActual))
+              return {
+                id: c._id,
+                idConvocatoria: c.idConvocatoria,
+                nombreConvocatoria: c.nombreConvocatoria,
+                programa: c.programa,
+                nivelFormacion: c.nivelFormacion,
+                totalAprendices: filtered.length,
+                fechaArchivado: c.fechaArchivado,
+              }
+            } catch {
+              return {
+                id: c._id,
+                idConvocatoria: c.idConvocatoria,
+                nombreConvocatoria: c.nombreConvocatoria,
+                programa: c.programa,
+                nivelFormacion: c.nivelFormacion,
+                totalAprendices: c.totalAprendices || 0,
+                fechaArchivado: c.fechaArchivado,
+              }
+            }
+          })
+        )
+        setArchivedConvocatorias(enriched)
       } catch (e) {
         setError(e.message);
       }

@@ -77,7 +77,9 @@ export default function SeleccionConvocatoriaPage() {
                   tecnica: ps.pruebaTecnica || "pendiente",
                   medica: ps.examenesMedicos || "pendiente",
                 };
-              } catch {}
+              } catch (e) {
+                console.error(e);
+              }
             }
             return { ...a, pruebas };
           }),
@@ -98,8 +100,9 @@ export default function SeleccionConvocatoriaPage() {
     const notApproved = vals.filter((v) => v === "no aprobado").length;
     const hasContract = Boolean(aprendiz.fechaInicioContrato);
     if (approved === 3 && hasContract) return "bg-green-500";
-    if (notApproved === 1) return "bg-blue-400";
-    if (pending >= 1 && !hasContract) return "bg-yellow-400";
+    if (approved === 3 && !hasContract) return "bg-yellow-400";
+    if (notApproved >= 1) return "bg-blue-400";
+    if (pending >= 1) return "bg-yellow-400";
     return "bg-muted-foreground/30";
   };
 
