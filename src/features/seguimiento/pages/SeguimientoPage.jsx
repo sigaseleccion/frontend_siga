@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useSeguimiento } from '../hooks/useSeguimiento';
 import { EditCuotaModal, AprendicesIncompletosModal, AprendizDetailModal, EditAprendizModal } from '../componentes';
+import { useHeader } from "../../../shared/contexts/HeaderContext";
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();

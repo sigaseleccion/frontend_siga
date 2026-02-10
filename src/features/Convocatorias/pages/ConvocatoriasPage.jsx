@@ -103,7 +103,7 @@ export default function ConvocatoriasPage() {
                 value={filterNivel}
                 onValueChange={(v) => setFilterNivel(v)}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Nivel de formación" />
                 </SelectTrigger>
                 <SelectContent>

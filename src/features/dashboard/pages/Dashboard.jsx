@@ -90,7 +90,6 @@ export default function Dashboard() {
   useEffect(() => {
     setHeaderConfig({
       title: "Dashboard",
-      subtitle: "Vista general del sistema con datos en tiempo real",
       icon: AlignEndHorizontal,
       iconBg: "from-purple-600 to-purple-400",
     });
