@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, CheckSquare, LayoutDashboard, Shield, TrendingUp, UserCog, Users } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { toast } from '@/shared/hooks/useToast'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,8 +129,17 @@ const formatMonthLabel = (date = new Date()) => {
 const getDotClassName = (type) => {
   if (type === 'urgent') return 'bg-red-500'
   if (type === 'important') return 'bg-primary'
-  if (type === 'quota') return 'bg-amber-500'
+  if (type === 'quota_under') return 'bg-amber-500'
+  if (type === 'quota_over') return 'bg-fuchsia-600'
   return 'bg-secondary'
+}
+
+const getToastClassName = (type) => {
+  if (type === 'urgent') return 'bg-red-600 text-white border-red-700'
+  if (type === 'quota_under') return 'bg-amber-500 text-white border-amber-600'
+  if (type === 'quota_over') return 'bg-fuchsia-600 text-white border-fuchsia-700'
+  if (type === 'important') return 'bg-blue-600 text-white border-blue-700'
+  return 'bg-slate-800 text-white border-slate-900'
 }
 
 function NotificationsBell({ onNavigate }) {
@@ -146,6 +156,8 @@ function NotificationsBell({ onNavigate }) {
   })
   const lastLoadedAtRef = useRef(0)
   const quotaTimerRef = useRef(null)
+  const hasLoadedOnceRef = useRef(false)
+  const knownIdsRef = useRef(new Set())
 
   const previewLimit = 8
 
@@ -165,7 +177,7 @@ function NotificationsBell({ onNavigate }) {
     for (const n of notifications) {
       if (n.type === 'urgent') urgent.push(n)
       else if (n.type === 'important') important.push(n)
-      else if (n.type === 'quota') quota.push(n)
+      else if (String(n.type).startsWith('quota_')) quota.push(n)
       else info.push(n)
     }
 
@@ -250,23 +262,34 @@ function NotificationsBell({ onNavigate }) {
 
     const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
     const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
-    const cuotaActual = typeof estadisticas?.totalEnSeguimiento === 'number' ? estadisticas.totalEnSeguimiento : 0
+    const cuotaActual =
+      typeof estadisticas?.totalActivos === 'number'
+        ? estadisticas.totalActivos
+        : typeof estadisticas?.totalEnSeguimiento === 'number'
+          ? estadisticas.totalEnSeguimiento
+          : 0
     const monthLabel = formatMonthLabel()
     const todayKey = getDateKey()
     const currentSlot = getCurrentQuotaSlot()
     const slotLabel = currentSlot === '16' ? '16:00' : '08:00'
 
     const quotaNotifications =
-      cuotaActual < cuotaMaxima && currentSlot
+      cuotaActual !== cuotaMaxima && currentSlot
         ? [
             {
-              id: `quota:${todayKey}:${currentSlot}`,
-              type: 'quota',
+              id: `quota:${todayKey}:${currentSlot}:${cuotaActual < cuotaMaxima ? 'under' : 'over'}`,
+              type: cuotaActual < cuotaMaxima ? 'quota_under' : 'quota_over',
               badge: 'Cuota',
               badgeVariant: 'secondary',
-              badgeClassName: 'bg-amber-500 text-white hover:bg-amber-500',
-              title: 'Cuota de aprendices no cumplida',
-              description: `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Recordatorio ${slotLabel}`,
+              badgeClassName:
+                cuotaActual < cuotaMaxima
+                  ? 'bg-amber-500 text-white hover:bg-amber-500'
+                  : 'bg-fuchsia-600 text-white hover:bg-fuchsia-600',
+              title: cuotaActual < cuotaMaxima ? 'Cuota de aprendices no cumplida' : 'Cuota de aprendices excedida',
+              description:
+                cuotaActual < cuotaMaxima
+                  ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Recordatorio ${slotLabel}`
+                  : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima}) · Recordatorio ${slotLabel}`,
               href: '/seguimiento',
               priority: 2,
             },
@@ -324,14 +347,31 @@ function NotificationsBell({ onNavigate }) {
 
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
-    setNotifications(
-      [...urgentNotifications, ...quotaNotifications, ...importantNotifications, ...infoNotifications]
-        .filter((n) => !dismissedSet.has(n.id))
-        .sort((a, b) => {
-          if (a.priority !== b.priority) return a.priority - b.priority
-          return String(a.title).localeCompare(String(b.title), 'es')
-        }),
-    )
+    const nextNotifications = [...urgentNotifications, ...quotaNotifications, ...importantNotifications, ...infoNotifications]
+      .filter((n) => !dismissedSet.has(n.id))
+      .sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority
+        return String(a.title).localeCompare(String(b.title), 'es')
+      })
+
+    if (hasLoadedOnceRef.current) {
+      const newOnes = nextNotifications.filter((n) => !knownIdsRef.current.has(n.id))
+      if (newOnes.length > 0) {
+        const main = newOnes[0]
+        const title = newOnes.length > 1 ? `${newOnes.length} nuevas notificaciones` : main.title
+        const description = newOnes.length > 1 ? main.description : main.description
+        toast({
+          title,
+          description,
+          className: getToastClassName(main.type),
+          duration: 5000,
+        })
+      }
+    }
+
+    knownIdsRef.current = new Set(nextNotifications.map((n) => n.id))
+    hasLoadedOnceRef.current = true
+    setNotifications(nextNotifications)
 
     lastLoadedAtRef.current = now
     setIsLoading(false)

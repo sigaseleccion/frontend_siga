@@ -85,35 +85,40 @@ export default function ConvocatoriasPage() {
     <div>
       <main className="min-h-screen bg-gray-50">
         <div className="p-4">
-          <div className="mb-6 flex gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-[250px]">
+          <div className="mb-6 flex items-center gap-4 flex-wrap">
+            {/* Buscador */}
+            <div className="relative w-full max-w-lg">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre de convocatoria..."
                 value={searchNombre}
                 onChange={(e) => setSearchNombre(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white border-gray-200 w-full"
               />
             </div>
-            <Select
-              value={filterNivel}
-              onValueChange={(v) => setFilterNivel(v)}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Nivel de formacion" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todos los niveles</SelectItem>
-                <SelectItem value="tecnica">Tecnica</SelectItem>
-                <SelectItem value="tecnologia">Tecnologia</SelectItem>
-                <SelectItem value="profesional">Profesional</SelectItem>
-              </SelectContent>
-            </Select>
 
-            <Button onClick={() => setIsModalOpen(true)} className="ml-auto">
-              <Upload className="mr-2 h-4 w-4" />
-              Crear convocatoria
-            </Button>
+            {/* Grupo: filtro + botón */}
+            <div className="flex items-center gap-3 ml-auto">
+              <Select
+                value={filterNivel}
+                onValueChange={(v) => setFilterNivel(v)}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Nivel de formación" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todos los niveles</SelectItem>
+                  <SelectItem value="tecnica">Técnica</SelectItem>
+                  <SelectItem value="tecnologia">Tecnología</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button onClick={() => setIsModalOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Crear convocatoria
+              </Button>
+            </div>
           </div>
 
           {error && (

@@ -1,57 +1,72 @@
-'use client';
+"use client";
 
-import { useParams, Link } from 'react-router-dom'
-import { Navbar } from '@/shared/components/Navbar'
-import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
-import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { useParams, Link } from "react-router-dom";
+import { Navbar } from "@/shared/components/Navbar";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { ArrowLeft, CheckCircle, XCircle, Clock, CheckSquare } from "lucide-react";
+import { useHeader } from "../../../shared/contexts/HeaderContext";
 
 export default function HistoricoAprendizDetailPage() {
-  const { id: convocatoriaId } = useParams()
+  const { id: convocatoriaId } = useParams();
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Histórico Convocatorias",
+      icon: CheckSquare,
+      iconBg: "from-purple-600 to-purple-400",
+    });
+  }, []);
 
   const aprendiz = {
-    nombre: 'Maria Gonzalez Lopez',
-    documento: '9876543210',
-    tipoDocumento: 'CC',
-    pais: 'Colombia',
-    ciudad: 'Bogota',
-    direccion: 'Carrera 15 #30-20',
-    programaFormacion: 'Administracion de Empresas',
-    telefono: '+57 310 9876543',
-    correo: 'maria.gonzalez@example.com',
-    fechaInicioLectiva: '2024-02-01',
-    fechaFinLectiva: '2024-07-01',
-    fechaInicioProductiva: '2024-07-02',
-    fechaFinProductiva: '2025-01-01',
+    nombre: "Maria Gonzalez Lopez",
+    documento: "9876543210",
+    tipoDocumento: "CC",
+    pais: "Colombia",
+    ciudad: "Bogota",
+    direccion: "Carrera 15 #30-20",
+    programaFormacion: "Administracion de Empresas",
+    telefono: "+57 310 9876543",
+    correo: "maria.gonzalez@example.com",
+    fechaInicioLectiva: "2024-02-01",
+    fechaFinLectiva: "2024-07-01",
+    fechaInicioProductiva: "2024-07-02",
+    fechaFinProductiva: "2025-01-01",
     pruebas: [
-      { nombre: 'Prueba Psicologica', estado: 'aprobado' },
-      { nombre: 'Prueba Tecnica', estado: 'aprobado' },
-      { nombre: 'Examenes Medicos', estado: 'aprobado' },
+      { nombre: "Prueba Psicologica", estado: "aprobado" },
+      { nombre: "Prueba Tecnica", estado: "aprobado" },
+      { nombre: "Examenes Medicos", estado: "aprobado" },
     ],
-  }
+  };
 
   const getEstadoIcon = (estado) => {
     switch (estado) {
-      case 'aprobado':
-        return <CheckCircle className="h-4 w-4 text-primary-foreground" />
-      case 'no aprobado':
-        return <XCircle className="h-4 w-4 text-primary-foreground" />
+      case "aprobado":
+        return <CheckCircle className="h-4 w-4 text-primary-foreground" />;
+      case "no aprobado":
+        return <XCircle className="h-4 w-4 text-primary-foreground" />;
       default:
-        return <Clock className="h-4 w-4 text-primary-foreground" />
+        return <Clock className="h-4 w-4 text-primary-foreground" />;
     }
-  }
+  };
 
   const getEstadoColor = (estado) => {
     switch (estado) {
-      case 'aprobado':
-        return 'bg-green-600'
-      case 'no aprobado':
-        return 'bg-red-600'
+      case "aprobado":
+        return "bg-green-600";
+      case "no aprobado":
+        return "bg-red-600";
       default:
-        return 'bg-muted'
+        return "bg-muted";
     }
-  }
+  };
 
   return (
     <div>
@@ -67,8 +82,12 @@ export default function HistoricoAprendizDetailPage() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Detalle del Aprendiz (Historico)</h1>
-          <p className="text-muted-foreground mt-2">Informacion completa y estado de pruebas</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Detalle del Aprendiz (Historico)
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Informacion completa y estado de pruebas
+          </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -79,23 +98,35 @@ export default function HistoricoAprendizDetailPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Nombre</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Nombre
+                  </p>
                   <p className="text-sm">{aprendiz.nombre}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Documento</p>
-                  <p className="text-sm">{aprendiz.tipoDocumento} {aprendiz.documento}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Documento
+                  </p>
+                  <p className="text-sm">
+                    {aprendiz.tipoDocumento} {aprendiz.documento}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ciudad</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Ciudad
+                  </p>
                   <p className="text-sm">{aprendiz.ciudad}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Telefono</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Telefono
+                  </p>
                   <p className="text-sm">{aprendiz.telefono}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm font-medium text-muted-foreground">Correo</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Correo
+                  </p>
                   <p className="text-sm">{aprendiz.correo}</p>
                 </div>
               </div>
@@ -108,17 +139,31 @@ export default function HistoricoAprendizDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Programa de Formacion</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Programa de Formacion
+                </p>
                 <p className="text-sm">{aprendiz.programaFormacion}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Inicio Lectiva</p>
-                  <p className="text-sm">{new Date(aprendiz.fechaInicioLectiva).toLocaleDateString('es-ES')}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Inicio Lectiva
+                  </p>
+                  <p className="text-sm">
+                    {new Date(aprendiz.fechaInicioLectiva).toLocaleDateString(
+                      "es-ES",
+                    )}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Fin Lectiva</p>
-                  <p className="text-sm">{new Date(aprendiz.fechaFinLectiva).toLocaleDateString('es-ES')}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Fin Lectiva
+                  </p>
+                  <p className="text-sm">
+                    {new Date(aprendiz.fechaFinLectiva).toLocaleDateString(
+                      "es-ES",
+                    )}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -134,13 +179,25 @@ export default function HistoricoAprendizDetailPage() {
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
               <div className="space-y-6">
                 {aprendiz.pruebas.map((prueba, index) => (
-                  <div key={index} className="relative flex items-start gap-4 pl-10">
-                    <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full ${getEstadoColor(prueba.estado)}`}>
+                  <div
+                    key={index}
+                    className="relative flex items-start gap-4 pl-10"
+                  >
+                    <div
+                      className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full ${getEstadoColor(prueba.estado)}`}
+                    >
                       {getEstadoIcon(prueba.estado)}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{prueba.nombre}</h4>
-                      <Badge variant={prueba.estado === 'aprobado' ? 'default' : 'destructive'} className="mt-2">
+                      <Badge
+                        variant={
+                          prueba.estado === "aprobado"
+                            ? "default"
+                            : "destructive"
+                        }
+                        className="mt-2"
+                      >
                         {prueba.estado}
                       </Badge>
                     </div>
@@ -152,5 +209,5 @@ export default function HistoricoAprendizDetailPage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }

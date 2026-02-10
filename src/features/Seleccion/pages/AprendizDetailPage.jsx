@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Navbar } from "@/shared/components/Navbar";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,

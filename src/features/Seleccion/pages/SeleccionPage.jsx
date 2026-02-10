@@ -14,13 +14,10 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
+  confirmAlert,
+  errorAlert,
+  successAlert,
+} from "../../../shared/components/ui/SweetAlert";
 import {
   Eye,
   Search,
@@ -41,8 +38,7 @@ export default function SeleccionPage() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [selectedConvocatoria, setSelectedConvocatoria] = useState(null);
+  // Eliminado diálogo local; se usa SweetAlert para confirmación de archivado
 
   const [convocatorias, setConvocatorias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -151,27 +147,35 @@ export default function SeleccionPage() {
     conv.nombreConvocatoria.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const handleArchiveClick = (convocatoria) => {
-    setSelectedConvocatoria(convocatoria);
-    setArchiveDialogOpen(true);
-  };
-
-  const handleConfirmArchive = () => {
-    if (selectedConvocatoria) {
-      convocatoriaService
-        .archivarConvocatoria(selectedConvocatoria.id)
-        .then(() => {
-          setConvocatorias(
-            convocatorias.filter((c) => c.id !== selectedConvocatoria.id),
-          );
-          setArchiveDialogOpen(false);
-          setSelectedConvocatoria(null);
-        })
-        .catch((e) => {
-          setError(e.message);
-        });
+  const handleArchiveClick = async (convocatoria) => {
+    const result = await confirmAlert({
+      title: "Archivar Convocatoria",
+      text:
+        `¿Desea archivar la convocatoria "${convocatoria.nombreConvocatoria}"? Este proceso es irreversible.`,
+      confirmText: "Sí, archivar",
+      cancelText: "Cancelar",
+      icon: "warning",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await convocatoriaService.archivarConvocatoria(convocatoria.id);
+      setConvocatorias(
+        convocatorias.filter((c) => c.id !== convocatoria.id),
+      );
+      await successAlert({
+        title: "Convocatoria archivada",
+        text: "La convocatoria se ha archivado correctamente.",
+      });
+    } catch (e) {
+      setError(e.message);
+      await errorAlert({
+        title: "Error al archivar",
+        text: "No se pudo archivar la convocatoria.",
+      });
     }
   };
+
+  // Mantener función vacía por compatibilidad antigua eliminada
 
   const isPruebasCompletas = (conv) => {
     return conv.aprendicesConPruebasCompletas > 0 && conv.totalAprendices > 0;
@@ -181,17 +185,17 @@ export default function SeleccionPage() {
     <main className="min-h-screen bg-gray-50">
       <div className="p-4">
         <div className="mb-8 flex items-center justify-between">
-          <div className="relative w-[600px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative w-full max-w-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Buscar convocatoria por nombre..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-white border-gray-200 w-full"
             />
           </div>
           <Link to="/seleccion/historico">
-            <Button variant="outline" className="bg-transparent">
+            <Button variant="outline">
               <History className="h-4 w-4 mr-2" />
               Historico
             </Button>
@@ -295,36 +299,7 @@ export default function SeleccionPage() {
           </Card>
         )}
 
-        <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Archivar Convocatoria</DialogTitle>
-              <DialogDescription>
-                Desea archivar esta convocatoria? Este proceso es irreversible.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedConvocatoria && (
-              <div className="py-4">
-                <p className="text-sm text-muted-foreground">
-                  Convocatoria:{" "}
-                  <span className="font-medium text-foreground">
-                    {selectedConvocatoria.nombreConvocatoria}
-                  </span>
-                </p>
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setArchiveDialogOpen(false)}
-                className="bg-transparent"
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmArchive}>Confirmar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        
       </div>
     </main>
   );
