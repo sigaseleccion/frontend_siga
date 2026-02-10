@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Navbar } from '@/shared/components/Navbar'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -16,6 +16,7 @@ import { confirmAlert, errorAlert, successAlert, warningAlert } from '../../../s
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams()
+  const navigate = useNavigate()
 
   const [reporteFile, setReporteFile] = useState(null)
   const [tab, setTab] = useState('adjuntar')
@@ -30,6 +31,10 @@ export default function ReporteTecnicoPage() {
   const [error, setError] = useState(null)
   const [convocatoria, setConvocatoria] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [savingEstados, setSavingEstados] = useState(false)
+  const [originalEstados, setOriginalEstados] = useState({})
+  const [pendingChanges, setPendingChanges] = useState({})
+  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0 || Boolean(reporteFile)
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,12 +67,29 @@ export default function ReporteTecnicoPage() {
           })
         )
         setAprendices(withEstados)
+        const original = {}
+        withEstados.forEach((a) => {
+          original[a.id] = a.pruebaTecnica
+        })
+        setOriginalEstados(original)
+        setPendingChanges({})
       } catch (e) {
         setError(e.message)
       }
     }
     loadData()
   }, [convocatoriaId])
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -126,29 +148,61 @@ export default function ReporteTecnicoPage() {
     }
   }
 
-  const handlePruebaTecnicaChange = async (aprendizId, estado) => {
-    const target = aprendices.find((a) => a.id === aprendizId)
-    if (target && target.pruebaSeleccionId) {
-      try {
-        await pruebaSeleccionService.actualizarPrueba(target.pruebaSeleccionId, { pruebaTecnica: estado })
-        setAprendices((prev) =>
-          prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
-        )
-        await successAlert({
-          title: 'Estado actualizado',
-          text: 'La prueba técnica del aprendiz se actualizó correctamente.',
-        })
-      } catch (e) {
-        setError(e.message)
+  const handlePruebaTecnicaChange = (aprendizId, estado) => {
+    setAprendices((prev) =>
+      prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
+    )
+    setPendingChanges((prev) => ({ ...prev, [aprendizId]: estado }))
+  }
+
+  const handleGuardarEstados = async () => {
+    const ids = Object.keys(pendingChanges)
+    if (ids.length === 0) {
+      await warningAlert({
+        title: 'Sin cambios',
+        text: 'No hay cambios por guardar en estados de prueba técnica.',
+      })
+      return
+    }
+    try {
+      setSavingEstados(true)
+      setError(null)
+      const updates = ids.map((id) => {
+        const target = aprendices.find((a) => a.id === id)
+        if (target && target.pruebaSeleccionId) {
+          return pruebaSeleccionService.actualizarPrueba(target.pruebaSeleccionId, {
+            pruebaTecnica: pendingChanges[id],
+          })
+        }
+        return Promise.resolve()
+      })
+      const results = await Promise.allSettled(updates)
+      const rejected = results.filter((r) => r.status === 'rejected')
+      if (rejected.length > 0) {
         await errorAlert({
-          title: 'Error al actualizar',
-          text: 'No se pudo actualizar la prueba técnica del aprendiz.',
+          title: 'Error al guardar',
+          text: 'Algunos estados no se pudieron guardar.',
+        })
+      } else {
+        await successAlert({
+          title: 'Estados guardados',
+          text: 'Los estados de prueba técnica se guardaron correctamente.',
         })
       }
-    } else {
-      setAprendices((prev) =>
-        prev.map((a) => (a.id === aprendizId ? { ...a, pruebaTecnica: estado } : a))
-      )
+      const newOriginal = { ...originalEstados }
+      ids.forEach((id) => {
+        newOriginal[id] = pendingChanges[id]
+      })
+      setOriginalEstados(newOriginal)
+      setPendingChanges({})
+    } catch (e) {
+      setError(e.message)
+      await errorAlert({
+        title: 'Error al guardar',
+        text: 'Ocurrió un error al guardar los estados.',
+      })
+    } finally {
+      setSavingEstados(false)
     }
   }
 
@@ -158,6 +212,22 @@ export default function ReporteTecnicoPage() {
       return <FileText className="h-8 w-8 text-red-500" />
     }
     return <File className="h-8 w-8 text-green-600" />
+  }
+
+  const handleBack = async (e) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault()
+      const result = await confirmAlert({
+        title: 'Cambios sin guardar',
+        text: 'Tiene cambios sin guardar. ¿Desea salir sin guardar?',
+        confirmText: 'Salir sin guardar',
+        cancelText: 'Cancelar',
+        icon: 'warning',
+      })
+      if (result.isConfirmed) {
+        navigate(`/seleccion/${convocatoriaId}`)
+      }
+    }
   }
 
   return (
@@ -172,7 +242,7 @@ export default function ReporteTecnicoPage() {
           </Card>
         )}
         <div className="mb-6">
-          <Link to={`/seleccion/${convocatoriaId}`}>
+          <Link to={`/seleccion/${convocatoriaId}`} onClick={handleBack}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a Convocatoria
@@ -360,8 +430,8 @@ export default function ReporteTecnicoPage() {
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <Button>
-                    Guardar cambios
+                  <Button onClick={handleGuardarEstados} disabled={savingEstados}>
+                    {savingEstados ? 'Guardando...' : 'Guardar cambios'}
                   </Button>
                 </div>
               </CardContent>

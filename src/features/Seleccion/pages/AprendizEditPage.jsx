@@ -46,6 +46,7 @@ export default function AprendizEditPage() {
   const [aprendiz, setAprendiz] = useState(null);
   const [pruebaSeleccionId, setPruebaSeleccionId] = useState(null);
   const [pruebaTecnica, setPruebaTecnica] = useState("pendiente");
+  const [backendPruebasAprobadas, setBackendPruebasAprobadas] = useState(false);
 
   const [initialState, setInitialState] = useState({
     pruebas: { psicologica: "pendiente", medica: "pendiente" },
@@ -118,6 +119,11 @@ export default function AprendizEditPage() {
               medica: ps.examenesMedicos || "pendiente",
             });
             setPruebaTecnica(ps.pruebaTecnica || "pendiente");
+            const ok =
+              (ps.pruebaPsicologica || "pendiente") === "aprobado" &&
+              (ps.examenesMedicos || "pendiente") === "aprobado" &&
+              (ps.pruebaTecnica || "pendiente") === "aprobado";
+            setBackendPruebasAprobadas(ok);
           } catch (e) {
             setError(e.message);
           }
@@ -129,10 +135,7 @@ export default function AprendizEditPage() {
     if (aprendizId) loadData();
   }, [aprendizId]);
 
-  const todasPruebasAprobadas =
-    pruebas.psicologica === "aprobado" &&
-    pruebaTecnica === "aprobado" &&
-    pruebas.medica === "aprobado";
+  const todasPruebasAprobadas = backendPruebasAprobadas;
 
   const puedeAprobar =
     todasPruebasAprobadas &&
@@ -140,17 +143,18 @@ export default function AprendizEditPage() {
     fechaFinContrato !== "" &&
     aprendiz?.etapaActual === "seleccion2";
 
+  const lockSelectors =
+    todasPruebasAprobadas &&
+    fechaInicioContrato !== "" &&
+    fechaFinContrato !== "";
+
   const disablePorEtapa =
     aprendiz?.etapaActual !== "seleccion2" &&
     todasPruebasAprobadas &&
     fechaInicioContrato !== "" &&
     fechaFinContrato !== "";
 
-  const mostrarAprobadoUI =
-    todasPruebasAprobadas &&
-    fechaInicioContrato !== "" &&
-    fechaFinContrato !== "" &&
-    aprendiz?.etapaActual !== "lectiva2";
+  const mostrarAprobadoUI = aprendiz?.etapaActual === "lectiva";
 
   useEffect(() => {
     const autoSaveIfNeeded = async () => {
@@ -174,27 +178,31 @@ export default function AprendizEditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disablePorEtapa, hasUnsavedChanges]);
 
-  const handlePruebaChange = async (prueba, estado) => {
+  const handlePruebaChange = (prueba, estado) => {
     setPruebas((prev) => ({ ...prev, [prueba]: estado }));
-    if (pruebaSeleccionId) {
-      try {
-        if (prueba === "psicologica") {
-          await pruebaSeleccionService.actualizarPrueba(pruebaSeleccionId, {
-            pruebaPsicologica: estado,
-          });
-        } else if (prueba === "medica") {
-          await pruebaSeleccionService.actualizarPrueba(pruebaSeleccionId, {
-            examenesMedicos: estado,
-          });
-        }
-      } catch (e) {
-        setError(e.message);
-      }
-    }
   };
 
   const handleGuardar = async () => {
     try {
+      if (pruebaSeleccionId) {
+        await pruebaSeleccionService.actualizarPrueba(pruebaSeleccionId, {
+          pruebaPsicologica: pruebas.psicologica,
+          examenesMedicos: pruebas.medica,
+        });
+        try {
+          const ps = await pruebaSeleccionService.obtenerPorId(
+            pruebaSeleccionId,
+          );
+          const ok =
+            (ps.pruebaPsicologica || "pendiente") === "aprobado" &&
+            (ps.examenesMedicos || "pendiente") === "aprobado" &&
+            (ps.pruebaTecnica || "pendiente") === "aprobado";
+          setBackendPruebasAprobadas(ok);
+          setPruebaTecnica(ps.pruebaTecnica || "pendiente");
+        } catch (e) {
+          setError(e.message);
+        }
+      }
       await aprendizService.actualizarAprendiz(aprendizId, {
         fechaInicioContrato: fechaInicioContrato || null,
         fechaFinContrato: fechaFinContrato || null,
@@ -331,7 +339,10 @@ export default function AprendizEditPage() {
                 {mostrarAprobadoUI ? "Aprendiz aprobado" : "Aprobar aprendiz"}
               </Button>
 
-              {hasUnsavedChanges && (
+              {hasUnsavedChanges &&
+                !(backendPruebasAprobadas &&
+                  fechaInicioContrato !== "" &&
+                  fechaFinContrato !== "") && (
                 <Button
                   onClick={handleGuardar}
                   disabled={disablePorEtapa}
@@ -463,13 +474,13 @@ export default function AprendizEditPage() {
                         <Select
                           value={pruebas.psicologica}
                           onValueChange={(value) =>
-                            !disablePorEtapa &&
+                            !(disablePorEtapa || lockSelectors) &&
                             handlePruebaChange("psicologica", value)
                           }
                         >
                           <SelectTrigger
                             className="w-[180px]"
-                            disabled={disablePorEtapa}
+                            disabled={disablePorEtapa || lockSelectors}
                           >
                             <SelectValue />
                           </SelectTrigger>
@@ -525,13 +536,13 @@ export default function AprendizEditPage() {
                         <Select
                           value={pruebas.medica}
                           onValueChange={(value) =>
-                            !disablePorEtapa &&
+                            !(disablePorEtapa || lockSelectors) &&
                             handlePruebaChange("medica", value)
                           }
                         >
                           <SelectTrigger
                             className="w-[180px]"
-                            disabled={disablePorEtapa}
+                            disabled={disablePorEtapa || lockSelectors}
                           >
                             <SelectValue />
                           </SelectTrigger>
