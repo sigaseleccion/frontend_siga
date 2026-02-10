@@ -35,6 +35,7 @@ import { ExcelUploadModal } from "../components/ExcelUploadModal";
 import Header from "../../../shared/components/Header";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
+import { DataTable } from "../../../shared/components/DataTable";
 
 export default function ConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
@@ -281,162 +282,119 @@ export default function ConvocatoriaDetailPage() {
                   {convocatoria.estado}
                 </Badge>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Ranking
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Nombre
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Tipo Doc.
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        N. Documento
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Ciudad
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Programa
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Inicio Lectiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Fin Lectiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Inicio Productiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Fin Productiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Recomendados
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aprendices.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={12}
-                          className="py-8 text-center text-gray-500"
+              <DataTable
+                columns={[
+                  {
+                    key: "ranking",
+                    header: "Ranking",
+                    render: (value) => (
+                      <span className="font-medium text-gray-900">{value}</span>
+                    ),
+                  },
+                  {
+                    key: "nombre",
+                    header: "Nombre",
+                  },
+                  {
+                    key: "tipoDocumento",
+                    header: "Tipo Doc.",
+                  },
+                  {
+                    key: "documento",
+                    header: "N. Documento",
+                  },
+                  {
+                    key: "ciudad",
+                    header: "Ciudad",
+                  },
+                  {
+                    key: "programaFormacion",
+                    header: "Programa",
+                  },
+                  {
+                    key: "fechaInicioLectiva",
+                    header: "Inicio Lectiva",
+                    render: (value) => formatDate(value),
+                  },
+                  {
+                    key: "fechaFinLectiva",
+                    header: "Fin Lectiva",
+                    render: (value) => formatDate(value),
+                  },
+                  {
+                    key: "fechaInicioProductiva",
+                    header: "Inicio Productiva",
+                    render: (value) => formatDate(value),
+                  },
+                  {
+                    key: "fechaFinProductiva",
+                    header: "Fin Productiva",
+                    render: (value) => formatDate(value),
+                  },
+                  {
+                    key: "aprendicesRecomendados",
+                    header: "Recomendados",
+                    render: (value, row) =>
+                      value && value.length > 0 ? (
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-blue-600 hover:underline"
+                          onClick={() => setSelectedRecomendados(value)}
                         >
-                          No hay aprendices registrados en esta convocatoria
-                        </td>
-                      </tr>
-                    ) : (
-                      aprendices.map((aprendiz) => (
-                        <tr
-                          key={aprendiz._id}
-                          className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
-                            aprendiz.etapaActual === "seleccion2"
-                              ? "bg-gray-100"
-                              : ""
-                          }`}
+                          Ver {value.length} recomendado(s)
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      ),
+                  },
+                  {
+                    key: "estadoConvocatoria",
+                    header: "Estado",
+                    render: (value, row) =>
+                      [
+                        "seleccion2",
+                        "lectiva",
+                        "productiva",
+                        "finalizado",
+                      ].includes(row.etapaActual) ? (
+                        <Badge
+                          variant="outline"
+                          className="border-gray-300 bg-gray-200 text-gray-600"
                         >
-                          <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                            {aprendiz.ranking}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.nombre}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.tipoDocumento}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.documento}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.ciudad}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.programaFormacion}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaInicioLectiva)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaFinLectiva)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaInicioProductiva)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaFinProductiva)}
-                          </td>
-                          <td className="py-4 px-4 text-sm">
-                            {aprendiz.aprendicesRecomendados &&
-                            aprendiz.aprendicesRecomendados.length > 0 ? (
-                              <Button
-                                variant="link"
-                                className="h-auto p-0 text-blue-600 hover:underline"
-                                onClick={() =>
-                                  setSelectedRecomendados(
-                                    aprendiz.aprendicesRecomendados,
-                                  )
-                                }
-                              >
-                                Ver {aprendiz.aprendicesRecomendados.length}{" "}
-                                recomendado(s)
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            {[
-                              "seleccion2",
-                              "lectiva",
-                              "productiva",
-                              "finalizado",
-                            ].includes(aprendiz.etapaActual) ? (
-                              <Badge
-                                variant="outline"
-                                className="border-gray-300 bg-gray-200 text-gray-600"
-                              >
-                                seleccionado
-                              </Badge>
-                            ) : (
-                              <Select
-                                value={aprendiz.estadoConvocatoria}
-                                onValueChange={(value) =>
-                                  handleEstadoChange(
-                                    aprendiz._id,
-                                    value,
-                                    aprendiz.nombre,
-                                  )
-                                }
-                                disabled={!canEditAprendiz(aprendiz)}
-                              >
-                                <SelectTrigger className="w-[160px] border-gray-200">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="no seleccionado">
-                                    No Seleccionado
-                                  </SelectItem>
-                                  <SelectItem value="seleccionado">
-                                    Seleccionado
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          seleccionado
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={value}
+                          onValueChange={(newValue) =>
+                            handleEstadoChange(row._id, newValue, row.nombre)
+                          }
+                          disabled={!canEditAprendiz(row)}
+                        >
+                          <SelectTrigger className="w-[160px] border-gray-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="no seleccionado">
+                              No Seleccionado
+                            </SelectItem>
+                            <SelectItem value="seleccionado">
+                              Seleccionado
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ),
+                  },
+                ]}
+                data={aprendices}
+                pageSize={5}
+                emptyMessage="No hay aprendices registrados en esta convocatoria"
+                rowClassName={(row) =>
+                  `border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
+                    row.etapaActual === "seleccion2" ? "bg-gray-100" : ""
+                  }`
+                }
+              />
             </CardContent>
           </Card>
 
