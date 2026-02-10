@@ -8,7 +8,6 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Users,
-  AlertTriangle,
   BookOpen,
   Briefcase,
   AlignEndHorizontal,
@@ -101,9 +100,10 @@ export default function Dashboard() {
 
     const headers = getAuthHeaders();
 
-    const [convocatoriasResult, estadisticasResult, seguimientoResult, pruebasResult] =
+    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult] =
       await Promise.allSettled([
         fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/convocatorias/archivadas`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
@@ -112,6 +112,12 @@ export default function Dashboard() {
     const convocatorias =
       convocatoriasResult.status === "fulfilled" && Array.isArray(convocatoriasResult.value)
         ? convocatoriasResult.value
+        : [];
+
+    const convocatoriasArchivadas =
+      convocatoriasArchivadasResult.status === "fulfilled" &&
+      Array.isArray(convocatoriasArchivadasResult.value)
+        ? convocatoriasArchivadasResult.value
         : [];
 
     const estadisticas =
@@ -133,6 +139,7 @@ export default function Dashboard() {
 
     if (
       convocatoriasResult.status === "rejected" &&
+      convocatoriasArchivadasResult.status === "rejected" &&
       estadisticasResult.status === "rejected" &&
       seguimientoResult.status === "rejected" &&
       pruebasResult.status === "rejected"
@@ -140,8 +147,11 @@ export default function Dashboard() {
       setErrorMessage("No se pudieron cargar los datos del dashboard");
     }
 
-    const convocatoriasActivas = convocatorias.filter((c) => c?.archivada !== true).length;
-    const convocatoriasArchivadas = convocatorias.filter((c) => c?.archivada === true).length;
+    const convocatoriasActivas = convocatorias.length;
+    const convocatoriasArchivadasCount =
+      convocatoriasArchivadas.length > 0
+        ? convocatoriasArchivadas.length
+        : convocatorias.filter((c) => c?.archivada === true).length;
 
     const enLectiva = typeof estadisticas?.enLectiva === "number" ? estadisticas.enLectiva : 0;
     const enProductiva =
@@ -186,8 +196,15 @@ export default function Dashboard() {
       (a) => typeof a?.diasRestantes === "number" && a.diasRestantes >= 0 && a.diasRestantes <= 7,
     ).length;
 
+    const normalizeEstado = (value) => {
+      if (typeof value !== "string") return "";
+      return value.trim().toLowerCase();
+    };
+
     const pruebasPendientes = pruebas.filter((p) =>
-      [p?.pruebaPsicologica, p?.pruebaTecnica, p?.examenesMedicos].some((v) => v === "pendiente"),
+      [p?.pruebaPsicologica, p?.pruebaTecnica, p?.examenesMedicos].some(
+        (v) => normalizeEstado(v) === "pendiente",
+      ),
     ).length;
 
     const aprendicesIncompletos =
@@ -201,9 +218,12 @@ export default function Dashboard() {
 
     for (const p of pruebas) {
       const mapState = (value) => {
-        if (value === "aprobado") return "aprobados";
-        if (value === "rechazado") return "rechazados";
-        if (value === "pendiente") return "pendientes";
+        const estado = normalizeEstado(value);
+        if (estado === "aprobado") return "aprobados";
+        if (estado === "rechazado" || estado === "no aprobado" || estado === "no_aprobado" || estado === "reprobado") {
+          return "rechazados";
+        }
+        if (estado === "pendiente") return "pendientes";
         return null;
       };
       const ps = mapState(p?.pruebaPsicologica);
@@ -216,7 +236,7 @@ export default function Dashboard() {
 
     setData({
       convocatoriasActivas,
-      convocatoriasArchivadas,
+      convocatoriasArchivadas: convocatoriasArchivadasCount,
       totalActivos,
       enLectiva,
       enProductiva,
@@ -370,7 +390,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 my-8">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 my-8">
         <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
           <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -434,22 +454,6 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-600">Alertas activas</CardTitle>
-            <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.urgentCount + data.pruebasPendientes + data.aprendicesIncompletos}</div>
-            <p className="text-xs text-gray-600 mt-2">
-              Urgentes: {isLoading ? "—" : data.urgentCount} · Pruebas: {isLoading ? "—" : data.pruebasPendientes} · Incompletos: {isLoading ? "—" : data.aprendicesIncompletos}
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -465,40 +469,104 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 w-40 bg-gray-100 rounded" />
-                    <div className="h-2 bg-gray-100 rounded-full" />
-                  </div>
-                ))}
-              </div>
-            ) : data.ciudades.length === 0 ? (
-              <div className="text-sm text-gray-600">Sin datos</div>
-            ) : (
-              <div className="space-y-5">
-                {data.ciudades.map((item) => (
-                  <div key={item.ciudad} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100">
-                          {item.porcentaje}%
-                        </Badge>
+            <div className="space-y-6">
+              <div>
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="h-4 w-40 bg-gray-100 rounded" />
+                        <div className="h-2 bg-gray-100 rounded-full" />
                       </div>
-                      <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
+                    ))}
+                  </div>
+                ) : data.ciudades.length === 0 ? (
+                  <div className="text-sm text-gray-600">Sin datos</div>
+                ) : (
+                  <div className="space-y-5">
+                    {data.ciudades.map((item) => (
+                      <div key={item.ciudad} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100"
+                            >
+                              {item.porcentaje}%
+                            </Badge>
+                          </div>
+                          <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
+                            style={{ width: `${item.porcentaje}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="h-px bg-gray-200" />
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <ClipboardList className="h-4 w-4 text-blue-600" />
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
-                        style={{ width: `${item.porcentaje}%` }}
-                      />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Acciones recomendadas</p>
+                      <p className="text-xs text-gray-600">Enfocado en lo que requiere atención</p>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="h-20 bg-gray-100 rounded-xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                          <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
+                        <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
+                          <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
+                        <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
+                          <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
+                        <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
@@ -626,97 +694,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2 mt-6">
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-              <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                <ClipboardList className="h-4 w-4 text-blue-600" />
-              </div>
-              Acciones recomendadas
-            </CardTitle>
-            <CardDescription>Enfocado en lo que requiere atención</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-20 bg-gray-100 rounded-xl" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="destructive" className="text-xs">Urgente</Badge>
-                      <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
-                    <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
-                      <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
-                    <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
-                      <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
-                    <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-900">Resumen rápido</CardTitle>
-            <CardDescription>Indicadores clave del día</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-10 bg-gray-100 rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                  <span className="text-sm text-gray-700">Cuota</span>
-                  {cuotaBadge}
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                  <span className="text-sm text-gray-700">Convocatorias activas</span>
-                  <Badge variant="secondary" className="text-xs">{data.convocatoriasActivas}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                  <span className="text-sm text-gray-700">Pruebas pendientes</span>
-                  <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">{data.pruebasPendientes}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                  <span className="text-sm text-gray-700">Urgentes (≤ 7 días)</span>
-                  <Badge variant="destructive" className="text-xs">{data.urgentCount}</Badge>
-                </div>
               </div>
             )}
           </CardContent>
