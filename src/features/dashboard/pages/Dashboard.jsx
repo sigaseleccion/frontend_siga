@@ -8,193 +8,540 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Users,
-  CheckCircle,
-  Clock,
   AlertTriangle,
   BookOpen,
   Briefcase,
   AlignEndHorizontal,
+  RefreshCw,
+  TrendingUp,
+  ClipboardList,
+  Target,
+  CheckSquare,
+  MapPin,
+  CalendarClock,
+  TestTubeDiagonal,
 } from "lucide-react";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/shared/components/ui/button";
+import { Link } from "react-router-dom";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+const getToken = () => {
+  const direct = localStorage.getItem("token");
+  if (direct) return direct;
+  try {
+    const auth = JSON.parse(localStorage.getItem("auth") || "{}");
+    return typeof auth?.token === "string" ? auth.token : null;
+  } catch {
+    return null;
+  }
+};
+
+const getAuthHeaders = () => {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
+const fetchJson = async (url, options = {}) => {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    let errorMessage = "Error al consultar el servidor";
+    try {
+      const error = await response.json();
+      errorMessage = error?.message || errorMessage;
+    } catch {
+    }
+    throw new Error(errorMessage);
+  }
+  return response.json();
+};
 
 export default function Dashboard() {
   const { setHeaderConfig } = useHeader();
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [data, setData] = useState({
+    convocatoriasActivas: 0,
+    convocatoriasArchivadas: 0,
+    totalActivos: 0,
+    enLectiva: 0,
+    enProductiva: 0,
+    cuota: 150,
+    cuotaStatus: "ok",
+    cuotaDelta: 0,
+    urgentCount: 0,
+    pruebasPendientes: 0,
+    aprendicesIncompletos: 0,
+    proximosVencimientos: [],
+    ciudades: [],
+    pruebas: {
+      psicologica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+      tecnica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+      medica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+    },
+  });
 
   useEffect(() => {
     setHeaderConfig({
       title: "Dashboard",
+      subtitle: "Vista general del sistema con datos en tiempo real",
       icon: AlignEndHorizontal,
       iconBg: "from-purple-600 to-purple-400",
     });
   }, []);
 
-  const pruebasStats = {
-    psicologica: { aprobados: 45, rechazados: 8 },
-    tecnica: { aprobados: 42, rechazados: 11 },
-    medica: { aprobados: 48, rechazados: 5 },
+  const loadDashboard = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const headers = getAuthHeaders();
+
+    const [convocatoriasResult, estadisticasResult, seguimientoResult, pruebasResult] =
+      await Promise.allSettled([
+        fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
+      ]);
+
+    const convocatorias =
+      convocatoriasResult.status === "fulfilled" && Array.isArray(convocatoriasResult.value)
+        ? convocatoriasResult.value
+        : [];
+
+    const estadisticas =
+      estadisticasResult.status === "fulfilled"
+        ? estadisticasResult.value?.data || estadisticasResult.value
+        : null;
+
+    const aprendicesSeguimiento =
+      seguimientoResult.status === "fulfilled" && Array.isArray(seguimientoResult.value?.value)
+        ? seguimientoResult.value.value
+        : Array.isArray(seguimientoResult.status === "fulfilled" ? seguimientoResult.value : null)
+          ? seguimientoResult.value
+          : [];
+
+    const pruebas =
+      pruebasResult.status === "fulfilled" && Array.isArray(pruebasResult.value)
+        ? pruebasResult.value
+        : [];
+
+    if (
+      convocatoriasResult.status === "rejected" &&
+      estadisticasResult.status === "rejected" &&
+      seguimientoResult.status === "rejected" &&
+      pruebasResult.status === "rejected"
+    ) {
+      setErrorMessage("No se pudieron cargar los datos del dashboard");
+    }
+
+    const convocatoriasActivas = convocatorias.filter((c) => c?.archivada !== true).length;
+    const convocatoriasArchivadas = convocatorias.filter((c) => c?.archivada === true).length;
+
+    const enLectiva = typeof estadisticas?.enLectiva === "number" ? estadisticas.enLectiva : 0;
+    const enProductiva =
+      typeof estadisticas?.enProductiva === "number" ? estadisticas.enProductiva : 0;
+    const totalActivos =
+      typeof estadisticas?.totalActivos === "number" ? estadisticas.totalActivos : enLectiva + enProductiva;
+
+    const cuotaRaw = typeof estadisticas?.cuota === "number" ? estadisticas.cuota : null;
+    const cuota = typeof cuotaRaw === "number" && cuotaRaw > 0 ? cuotaRaw : 150;
+    const cuotaDelta = totalActivos - cuota;
+    const cuotaStatus = cuotaDelta === 0 ? "ok" : cuotaDelta < 0 ? "under" : "over";
+
+    const ciudadesMap = new Map();
+    for (const a of aprendicesSeguimiento) {
+      const ciudad = typeof a?.ciudad === "string" && a.ciudad.trim() ? a.ciudad.trim() : "Sin ciudad";
+      ciudadesMap.set(ciudad, (ciudadesMap.get(ciudad) || 0) + 1);
+    }
+    const ciudades = Array.from(ciudadesMap.entries())
+      .map(([ciudad, cantidad]) => ({ ciudad, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 5);
+    const totalCiudades = ciudades.reduce((sum, c) => sum + c.cantidad, 0) || 1;
+    const ciudadesWithPct = ciudades.map((c) => ({
+      ...c,
+      porcentaje: Math.round((c.cantidad / totalCiudades) * 100),
+    }));
+
+    const proximosVencimientos = aprendicesSeguimiento
+      .filter((a) => typeof a?.diasRestantes === "number" && a.diasRestantes >= 0)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes)
+      .slice(0, 6)
+      .map((a) => ({
+        id: a?._id,
+        nombre: a?.nombre || "Aprendiz",
+        documento: a?.documento || "",
+        dias: a?.diasRestantes,
+        programa: a?.programaFormacion || "Sin programa",
+        etapa: a?.etapaActual || "",
+      }));
+
+    const urgentCount = aprendicesSeguimiento.filter(
+      (a) => typeof a?.diasRestantes === "number" && a.diasRestantes >= 0 && a.diasRestantes <= 7,
+    ).length;
+
+    const pruebasPendientes = pruebas.filter((p) =>
+      [p?.pruebaPsicologica, p?.pruebaTecnica, p?.examenesMedicos].some((v) => v === "pendiente"),
+    ).length;
+
+    const aprendicesIncompletos =
+      typeof estadisticas?.aprendicesIncompletos === "number" ? estadisticas.aprendicesIncompletos : 0;
+
+    const agg = {
+      psicologica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+      tecnica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+      medica: { aprobados: 0, rechazados: 0, pendientes: 0 },
+    };
+
+    for (const p of pruebas) {
+      const mapState = (value) => {
+        if (value === "aprobado") return "aprobados";
+        if (value === "rechazado") return "rechazados";
+        if (value === "pendiente") return "pendientes";
+        return null;
+      };
+      const ps = mapState(p?.pruebaPsicologica);
+      const pt = mapState(p?.pruebaTecnica);
+      const em = mapState(p?.examenesMedicos);
+      if (ps) agg.psicologica[ps] += 1;
+      if (pt) agg.tecnica[pt] += 1;
+      if (em) agg.medica[em] += 1;
+    }
+
+    setData({
+      convocatoriasActivas,
+      convocatoriasArchivadas,
+      totalActivos,
+      enLectiva,
+      enProductiva,
+      cuota,
+      cuotaStatus,
+      cuotaDelta,
+      urgentCount,
+      pruebasPendientes,
+      aprendicesIncompletos,
+      proximosVencimientos,
+      ciudades: ciudadesWithPct,
+      pruebas: agg,
+    });
+
+    setLastUpdatedAt(new Date());
+    setIsLoading(false);
   };
 
-  const proximosVencimientos = [
-    {
-      nombre: "Juan Perez",
-      dias: 5,
-      program: "Desarrollo de Software",
-      etapa: "lectiva",
-    },
-    {
-      nombre: "Maria Gonzalez",
-      dias: 12,
-      program: "Administracion",
-      etapa: "lectiva",
-    },
-    {
-      nombre: "Carlos Rodriguez",
-      dias: 18,
-      program: "Contabilidad",
-      etapa: "productiva",
-    },
-    {
-      nombre: "Ana Martinez",
-      dias: 25,
-      program: "Marketing Digital",
-      etapa: "lectiva",
-    },
-  ];
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const cuotaBadge = useMemo(() => {
+    if (data.cuotaStatus === "under") {
+      return (
+        <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+          Cuota incompleta ({Math.abs(data.cuotaDelta)})
+        </Badge>
+      );
+    }
+    if (data.cuotaStatus === "over") {
+      return (
+        <Badge className="bg-fuchsia-600 text-white hover:bg-fuchsia-600">
+          Cuota excedida (+{data.cuotaDelta})
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+        Cuota cumplida
+      </Badge>
+    );
+  }, [data.cuotaStatus, data.cuotaDelta]);
+
+  const pruebasSummary = useMemo(() => {
+    const toPct = (obj) => {
+      const total = obj.aprobados + obj.rechazados;
+      if (total <= 0) return 0;
+      return Math.round((obj.aprobados / total) * 100);
+    };
+    return [
+      { key: "psicologica", label: "Psicológica", data: data.pruebas.psicologica, pct: toPct(data.pruebas.psicologica) },
+      { key: "tecnica", label: "Técnica", data: data.pruebas.tecnica, pct: toPct(data.pruebas.tecnica) },
+      { key: "medica", label: "Médicos", data: data.pruebas.medica, pct: toPct(data.pruebas.medica) },
+    ];
+  }, [data.pruebas]);
+
+  const getDaysBadge = (dias) => {
+    if (typeof dias !== "number") return { variant: "secondary", className: "bg-gray-100 text-gray-700 hover:bg-gray-100" };
+    if (dias <= 7) return { variant: "destructive", className: "" };
+    if (dias <= 30) return { variant: "secondary", className: "bg-amber-100 text-amber-800 hover:bg-amber-100" };
+    return { variant: "secondary", className: "bg-purple-100 text-purple-800 hover:bg-purple-100" };
+  };
+
+  const getPctBarClass = (pct) => {
+    if (pct >= 80) return "from-emerald-600 to-emerald-500";
+    if (pct >= 50) return "from-amber-500 to-amber-400";
+    return "from-red-600 to-red-500";
+  };
 
   return (
-    <div>
-      <main className="min-h-screen bg-gray-50">
-        <div className="p-4">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Main Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Vista general del sistema de gestion de aprendices
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8 ">
-          <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">
-                Convocatorias Activas
-              </CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-primary" />
+    <div className="p-4 md:p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-purple-50 shadow-sm">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-purple-200/40 blur-2xl" />
+        <div className="absolute -left-24 -bottom-24 h-64 w-64 rounded-full bg-blue-200/40 blur-2xl" />
+        <div className="relative p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+                {!isLoading && (
+                  <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                    En vivo
+                  </Badge>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">12</div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-green-600 font-medium">+12%</span>
-                <p className="text-xs text-muted-foreground">vs mes anterior</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">
-                En Seleccion
-              </CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-secondary" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">28</div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-green-600 font-medium">+5%</span>
-                <p className="text-xs text-muted-foreground">en proceso</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">
-                En Seguimiento
-              </CardTitle>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">145</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                85 lectiva / 60 productiva
+              <p className="text-sm text-gray-600 mt-1">
+                {lastUpdatedAt ? `Actualizado: ${lastUpdatedAt.toLocaleString("es-ES")}` : "Cargando datos…"}
               </p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={loadDashboard} disabled={isLoading} className="bg-white">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+          </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                Aprendices por Ciudad
-              </CardTitle>
-              <CardDescription>Distribucion geografica actual</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-5">
-                {[
-                  { ciudad: "Bogota", cantidad: 65, porcentaje: 65 },
-                  { ciudad: "Medellin", cantidad: 48, porcentaje: 48 },
-                  { ciudad: "Cali", cantidad: 22, porcentaje: 22 },
-                  { ciudad: "Otras", cantidad: 18, porcentaje: 18 },
-                ].map((item, i) => (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Link to="/convocatorias" className="block">
+              <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">Convocatorias</p>
+                  <p className="text-sm text-gray-900 mt-1">Ver y crear</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+            </Link>
+            <Link to="/seleccion" className="block">
+              <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">Selección</p>
+                  <p className="text-sm text-gray-900 mt-1">Pruebas y estado</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                  <CheckSquare className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+            </Link>
+            <Link to="/seguimiento" className="block">
+              <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">Seguimiento</p>
+                  <p className="text-sm text-gray-900 mt-1">Cuota y etapas</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                  <Target className="h-5 w-5 text-amber-600" />
+                </div>
+              </div>
+            </Link>
+            <Link to="/roles" className="block">
+              <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">Roles</p>
+                  <p className="text-sm text-gray-900 mt-1">Permisos</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-slate-100 transition-colors">
+                  <ClipboardList className="h-5 w-5 text-slate-700" />
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="mt-6 mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 my-8">
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-semibold text-gray-600">Convocatorias activas</CardTitle>
+            <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.convocatoriasActivas}</div>
+            <p className="text-xs text-gray-600 mt-2">
+              Archivadas: {isLoading ? "—" : data.convocatoriasArchivadas}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-purple-600 to-fuchsia-600" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-semibold text-gray-600">Aprendices activos</CardTitle>
+            <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.totalActivos}</div>
+            <p className="text-xs text-gray-600 mt-2">
+              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-emerald-600" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-semibold text-gray-600">Cuota del mes</CardTitle>
+            <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Target className="h-5 w-5 text-amber-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-3xl font-bold text-gray-900">
+                {isLoading ? "—" : `${data.totalActivos}/${data.cuota}`}
+              </div>
+              {!isLoading && cuotaBadge}
+            </div>
+            <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  data.cuotaStatus === "over"
+                    ? "bg-fuchsia-600"
+                    : data.cuotaStatus === "under"
+                      ? "bg-amber-500"
+                      : "bg-emerald-600"
+                }`}
+                style={{
+                  width: `${Math.min(100, Math.round((data.totalActivos / Math.max(1, data.cuota)) * 100))}%`,
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-semibold text-gray-600">Alertas activas</CardTitle>
+            <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.urgentCount + data.pruebasPendientes + data.aprendicesIncompletos}</div>
+            <p className="text-xs text-gray-600 mt-2">
+              Urgentes: {isLoading ? "—" : data.urgentCount} · Pruebas: {isLoading ? "—" : data.pruebasPendientes} · Incompletos: {isLoading ? "—" : data.aprendicesIncompletos}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-bold text-gray-900">Aprendices por ciudad</CardTitle>
+              <CardDescription>Top 5 por distribución actual</CardDescription>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <MapPin className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="space-y-2">
+                    <div className="h-4 w-40 bg-gray-100 rounded" />
+                    <div className="h-2 bg-gray-100 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : data.ciudades.length === 0 ? (
+              <div className="text-sm text-gray-600">Sin datos</div>
+            ) : (
+              <div className="space-y-5">
+                {data.ciudades.map((item) => (
+                  <div key={item.ciudad} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-foreground">
-                        {item.ciudad}
-                      </span>
-                      <span className="text-sm font-bold text-primary">
-                        {item.cantidad}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100">
+                          {item.porcentaje}%
+                        </Badge>
+                      </div>
+                      <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
                         style={{ width: `${item.porcentaje}%` }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                Proximos Vencimientos
-              </CardTitle>
-              <CardDescription>
-                Aprendices que terminan etapa pronto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-bold text-gray-900">Próximos vencimientos</CardTitle>
+              <CardDescription>Contratos por vencer (según días restantes)</CardDescription>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+              <CalendarClock className="h-5 w-5 text-red-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
               <div className="space-y-3">
-                {proximosVencimientos.map((apprentice, i) => (
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-gray-100 rounded-xl" />
+                ))}
+              </div>
+            ) : data.proximosVencimientos.length === 0 ? (
+              <div className="text-sm text-gray-600">Sin vencimientos próximos</div>
+            ) : (
+              <div className="space-y-3">
+                {data.proximosVencimientos.map((apprentice) => (
                   <div
-                    key={i}
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    key={apprentice.id || `${apprentice.nombre}-${apprentice.dias}`}
+                    className="flex items-start justify-between gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all"
                   >
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
                         {apprentice.nombre}
+                        {apprentice.documento ? ` (${apprentice.documento})` : ""}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs text-muted-foreground">
-                          {apprentice.program}
-                        </p>
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1 truncate">{apprentice.programa}</p>
+                      <div className="mt-3 flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="text-xs px-2 py-0 border-primary/30 text-primary bg-primary/5"
+                          className="text-xs px-2 py-0 border-gray-200 text-gray-700 bg-gray-50 hover:bg-gray-50"
                         >
-                          {apprentice.etapa === "lectiva" ? (
+                          {String(apprentice.etapa).includes("lectiva") ? (
                             <>
                               <BookOpen className="h-2.5 w-2.5 mr-1" />
                               Lectiva
@@ -202,152 +549,180 @@ export default function Dashboard() {
                           ) : (
                             <>
                               <Briefcase className="h-2.5 w-2.5 mr-1" />
-                              Productiva
+                              {apprentice.etapa || "Etapa"}
                             </>
                           )}
                         </Badge>
+                        {apprentice.dias <= 7 && (
+                          <Badge className="text-xs bg-red-600 text-white hover:bg-red-600">
+                            Acción requerida
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        apprentice.dias <= 7 ? "destructive" : "secondary"
-                      }
-                      className="font-semibold ml-3"
-                    >
-                      {apprentice.dias} dias
-                    </Badge>
+                    <div className="flex-shrink-0">
+                      {(() => {
+                        const badge = getDaysBadge(apprentice.dias);
+                        return (
+                          <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
+                            {apprentice.dias} días
+                          </Badge>
+                        );
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                Resultados de Pruebas de Seleccion
-              </CardTitle>
-              <CardDescription>
-                Estadisticas de aprobacion por prueba
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-bold text-gray-900">Pruebas de selección</CardTitle>
+              <CardDescription>Porcentaje de aprobación y pendientes</CardDescription>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <TestTubeDiagonal className="h-5 w-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 w-44 bg-gray-100 rounded" />
+                    <div className="h-2 bg-gray-100 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : (
               <div className="space-y-5">
-                {[
-                  {
-                    nombre: "Prueba Psicologica",
-                    data: pruebasStats.psicologica,
-                  },
-                  { nombre: "Prueba Tecnica", data: pruebasStats.tecnica },
-                  { nombre: "Examenes Medicos", data: pruebasStats.medica },
-                ].map((prueba, i) => {
-                  const total = prueba.data.aprobados + prueba.data.rechazados;
-                  const porcentaje = Math.round(
-                    (prueba.data.aprobados / total) * 100,
-                  );
-
-                  return (
-                    <div key={i} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-foreground">
-                          {prueba.nombre}
-                        </span>
-                        <span className="text-sm font-bold text-primary">
-                          {porcentaje}%
-                        </span>
+                {pruebasSummary.map((prueba) => (
+                  <div key={prueba.key} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <span className="text-sm font-semibold text-gray-900">{prueba.label}</span>
                       </div>
-                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
-                          style={{ width: `${porcentaje}%` }}
-                        />
-                      </div>
-                      <div className="flex gap-4 text-xs">
-                        <span className="text-green-600 font-medium">
-                          Aprobados: {prueba.data.aprobados}
-                        </span>
-                        <span className="text-muted-foreground">
-                          Rechazados: {prueba.data.rechazados}
-                        </span>
-                      </div>
+                      <Badge className="text-xs bg-gray-900 text-white hover:bg-gray-900">{prueba.pct}%</Badge>
                     </div>
-                  );
-                })}
+                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r ${getPctBarClass(prueba.pct)} rounded-full transition-all duration-500`}
+                        style={{ width: `${prueba.pct}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                        Aprobados: {prueba.data.aprobados}
+                      </Badge>
+                      <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
+                        Rechazados: {prueba.data.rechazados}
+                      </Badge>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                        Pendientes: {prueba.data.pendientes}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-          <Card className="border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                <div className="h-8 w-8 rounded-lg bg-yellow-100 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                </div>
-                Alertas y Acciones Requeridas
-              </CardTitle>
-              <CardDescription>
-                Tareas pendientes que requieren atencion
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+      <div className="grid gap-6 xl:grid-cols-2 mt-6">
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+              </div>
+              Acciones recomendadas
+            </CardTitle>
+            <CardDescription>Enfocado en lo que requiere atención</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
               <div className="space-y-3">
-                <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-lg">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-20 bg-gray-100 rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="destructive" className="text-xs">
-                        Urgente
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        5 casos
-                      </span>
+                      <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                      <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
                     </div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Aprendices terminan etapa en menos de 7 dias
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Buscar reemplazos inmediatamente
-                    </p>
+                    <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
+                    <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 border-l-4 border-primary bg-primary/5 rounded-lg">
+                <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="text-xs bg-primary">Importante</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        8 casos
-                      </span>
+                      <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
+                      <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
                     </div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Pruebas de seleccion pendientes
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completar evaluaciones para avanzar
-                    </p>
+                    <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
+                    <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 border-l-4 border-secondary bg-secondary/10 rounded-lg">
+                <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="text-xs bg-secondary">
-                        Informacion
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        3 casos
-                      </span>
+                      <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
+                      <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
                     </div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Convocatorias listas para cerrar
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Revisar seleccion y confirmar cierre
-                    </p>
+                    <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
+                    <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold text-gray-900">Resumen rápido</CardTitle>
+            <CardDescription>Indicadores clave del día</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                  <span className="text-sm text-gray-700">Cuota</span>
+                  {cuotaBadge}
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                  <span className="text-sm text-gray-700">Convocatorias activas</span>
+                  <Badge variant="secondary" className="text-xs">{data.convocatoriasActivas}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                  <span className="text-sm text-gray-700">Pruebas pendientes</span>
+                  <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">{data.pruebasPendientes}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                  <span className="text-sm text-gray-700">Urgentes (≤ 7 días)</span>
+                  <Badge variant="destructive" className="text-xs">{data.urgentCount}</Badge>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
