@@ -29,6 +29,7 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
     nombre: '',
     correo: '',
     contrasena: '',
+    confirmarContrasena: '',
     rol: '',
     activo: true
   });
@@ -37,8 +38,11 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
     nombre: '',
     correo: '',
     contrasena: '',
+    confirmarContrasena: '',
     rol: ''
   });
+
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Filtrar solo roles activos
   const rolesActivos = roles.filter(rol => rol.activo !== false);
@@ -49,10 +53,12 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
         nombre: usuario.nombre || '',
         correo: usuario.correo || '',
         contrasena: '',
+        confirmarContrasena: '',
         rol: usuario.rol?._id || usuario.rol || '',
         activo: usuario.activo !== false
       });
-      setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
+      setErrors({ nombre: '', correo: '', contrasena: '', confirmarContrasena: '', rol: '' });
+      setShowConfirmPassword(false);
     }
   }, [usuario, open]);
 
@@ -62,6 +68,18 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
       ...prev,
       [name]: value
     }));
+
+    // Mostrar campo de confirmar contraseña cuando se detecta cambio en contraseña
+    if (name === 'contrasena' && value.length > 0) {
+      setShowConfirmPassword(true);
+    } else if (name === 'contrasena' && value.length === 0) {
+      setShowConfirmPassword(false);
+      setFormData(prev => ({
+        ...prev,
+        confirmarContrasena: ''
+      }));
+    }
+
     // Limpiar error cuando el usuario escribe
     if (errors[name]) {
       setErrors(prev => ({
@@ -110,6 +128,7 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
       nombre: '',
       correo: '',
       contrasena: '',
+      confirmarContrasena: '',
       rol: ''
     };
 
@@ -130,6 +149,12 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
 
     if (formData.contrasena && !validatePassword(formData.contrasena)) {
       newErrors.contrasena = 'La contraseña no cumple con los requisitos de seguridad';
+      isValid = false;
+    }
+
+    // Validar que las contraseñas coincidan si se está cambiando la contraseña
+    if (showConfirmPassword && formData.contrasena !== formData.confirmarContrasena) {
+      newErrors.confirmarContrasena = 'Las contraseñas no coinciden';
       isValid = false;
     }
 
@@ -252,6 +277,30 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
             error={errors.contrasena}
           />
 
+          {showConfirmPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-confirmarContrasena">Confirmar Nueva Contraseña <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-confirmarContrasena"
+                name="confirmarContrasena"
+                type="password"
+                placeholder="Vuelva a ingresar la contraseña"
+                value={formData.confirmarContrasena}
+                onChange={handleChange}
+                className={errors.confirmarContrasena ? 'border-red-500' : ''}
+              />
+              {errors.confirmarContrasena && (
+                <p className="text-sm text-red-500 mt-1">{errors.confirmarContrasena}</p>
+              )}
+              {!errors.confirmarContrasena && formData.confirmarContrasena && formData.contrasena === formData.confirmarContrasena && (
+                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                  <span className="inline-block w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
+                  Las contraseñas coinciden
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="edit-activo">Estado</Label>
             <Select 
@@ -273,7 +322,8 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
           <Button
             variant="outline"
             onClick={() => {
-              setErrors({ nombre: '', correo: '', contrasena: '', rol: '' });
+              setErrors({ nombre: '', correo: '', contrasena: '', confirmarContrasena: '', rol: '' });
+              setShowConfirmPassword(false);
               onOpenChange(false);
             }}
             className="bg-transparent"

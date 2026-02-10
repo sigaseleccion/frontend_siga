@@ -20,6 +20,8 @@ import {
   DeleteUsuarioDialog,
 } from "../components/index.js";
 import { useHeader } from "../../../shared/contexts/HeaderContext.jsx";
+import { DataTable } from "../../../shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 const UsuariosPage = () => {
   const { usuarios, loading: usuariosLoading, refetch } = useUsuarios();
@@ -198,99 +200,91 @@ const UsuariosPage = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Listado de Usuarios
               </h2>
-              <div className="overflow-x-auto">
-                {usuariosLoading ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Cargando usuarios...</p>
+              {usuariosLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                    <Spinner />
+                    <span className="text-gray-700 font-medium">
+                      Cargando...
+                    </span>
                   </div>
-                ) : filteredUsuarios.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">No hay usuarios registrados</p>
-                  </div>
-                ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nombre
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Correo
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Rol
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Fecha Creación
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsuarios.map((usuario) => (
-                        <tr
-                          key={usuario._id}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                </div>
+              ) : (
+                <DataTable
+                  columns={[
+                    {
+                      key: "nombre",
+                      header: "Nombre",
+                      render: (value) => (
+                        <span className="font-medium text-gray-900">{value}</span>
+                      ),
+                    },
+                    {
+                      key: "correo",
+                      header: "Correo",
+                    },
+                    {
+                      key: "rol",
+                      header: "Rol",
+                      render: (value, row) => (
+                        <Badge
+                          className={`${getRolBadgeStyle(
+                            value,
+                          )} rounded-full px-3 py-1 text-xs font-medium`}
                         >
-                          <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                            {usuario.nombre}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {usuario.correo}
-                          </td>
-                          <td className="py-4 px-4">
-                            <Badge
-                              className={`${getRolBadgeStyle(
-                                usuario.rol,
-                              )} rounded-full px-3 py-1 text-xs font-medium`}
-                            >
-                              {getRolNombre(usuario.rol)}
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-4">
-                            <Badge
-                              className={`${getEstadoBadgeStyle(
-                                usuario.activo,
-                              )} rounded-full px-3 py-1 text-xs font-medium`}
-                            >
-                              {usuario.activo ? "Activo" : "Inactivo"}
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(usuario.fechaCreacion)}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditClick(usuario)}
-                                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                              >
-                                <Edit2 size={16} className="mr-1" />
-                                Editar
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteClick(usuario)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+                          {getRolNombre(value)}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "activo",
+                      header: "Estado",
+                      render: (value) => (
+                        <Badge
+                          className={`${getEstadoBadgeStyle(
+                            value,
+                          )} rounded-full px-3 py-1 text-xs font-medium`}
+                        >
+                          {value ? "Activo" : "Inactivo"}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "fechaCreacion",
+                      header: "Fecha Creación",
+                      render: (value) => formatDate(value),
+                    },
+                    {
+                      key: "_id",
+                      header: "Acciones",
+                      render: (value, row) => (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(row)}
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                          >
+                            <Edit2 size={16} className="mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(row)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      ),
+                    },
+                  ]}
+                  data={filteredUsuarios}
+                  pageSize={5}
+                  emptyMessage="No hay usuarios registrados"
+                />
+              )}
             </CardContent>
           </Card>
         </div>
