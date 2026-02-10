@@ -1,22 +1,19 @@
+"use client";
 
-
-
-'use client';
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Navbar } from '@/shared/components/Navbar';
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
-import { Input } from '@/shared/components/ui/input';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Navbar } from "@/shared/components/Navbar";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/shared/components/ui/select';
+} from "@/shared/components/ui/select";
 import {
   Search,
   BookOpen,
@@ -26,9 +23,16 @@ import {
   Eye,
   History,
   AlertTriangle,
-} from 'lucide-react';
-import { useSeguimiento } from '../hooks/useSeguimiento';
-import { EditCuotaModal, AprendicesIncompletosModal, AprendizDetailModal } from '../componentes';
+  CheckSquare,
+  TrendingUp,
+} from "lucide-react";
+import { useSeguimiento } from "../hooks/useSeguimiento";
+import {
+  EditCuotaModal,
+  AprendicesIncompletosModal,
+  AprendizDetailModal,
+} from "../componentes";
+import { useHeader } from "../../../shared/contexts/HeaderContext";
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();
@@ -41,12 +45,21 @@ const SeguimientoPage = () => {
     refetchEstadisticas,
   } = useSeguimiento();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [etapaFilter, setEtapaFilter] = useState('todas');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [etapaFilter, setEtapaFilter] = useState("todas");
   const [isEditCuotaOpen, setIsEditCuotaOpen] = useState(false);
   const [isIncompletosOpen, setIsIncompletosOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedAprendiz, setSelectedAprendiz] = useState(null);
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Seguimiento",
+      icon: TrendingUp,
+      iconBg: "from-blue-600 to-blue-400",
+    });
+  }, []);
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -56,21 +69,21 @@ const SeguimientoPage = () => {
 
   const handleEtapaChange = (value) => {
     setEtapaFilter(value);
-    actualizarFiltros({ etapa: value === 'todas' ? '' : value });
+    actualizarFiltros({ etapa: value === "todas" ? "" : value });
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
+    if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
     });
   };
 
   const calcularDiasRestantes = (fechaFin) => {
-    if (!fechaFin) return '-';
+    if (!fechaFin) return "-";
     const hoy = new Date();
     const fin = new Date(fechaFin);
     const diferencia = Math.ceil((fin - hoy) / (1000 * 60 * 60 * 24));
@@ -79,22 +92,22 @@ const SeguimientoPage = () => {
 
   const getEtapaBadgeStyle = (etapa) => {
     switch (etapa) {
-      case 'lectiva':
-        return 'bg-blue-100 text-blue-700 hover:bg-blue-100';
-      case 'productiva':
-        return 'bg-purple-100 text-purple-700 hover:bg-purple-100';
-      case 'finalizado':
-        return 'bg-gray-100 text-gray-700 hover:bg-gray-100';
+      case "lectiva":
+        return "bg-blue-100 text-blue-700 hover:bg-blue-100";
+      case "productiva":
+        return "bg-purple-100 text-purple-700 hover:bg-purple-100";
+      case "finalizado":
+        return "bg-gray-100 text-gray-700 hover:bg-gray-100";
       default:
-        return 'bg-gray-100 text-gray-700 hover:bg-gray-100';
+        return "bg-gray-100 text-gray-700 hover:bg-gray-100";
     }
   };
 
   const getEtapaIcon = (etapa) => {
     switch (etapa) {
-      case 'lectiva':
+      case "lectiva":
         return <BookOpen size={12} className="mr-1" />;
-      case 'productiva':
+      case "productiva":
         return <Briefcase size={12} className="mr-1" />;
       default:
         return null;
@@ -113,32 +126,12 @@ const SeguimientoPage = () => {
 
   return (
     <>
-      <Navbar />
-      <main className="ml-64 min-h-screen bg-gray-50">
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Seguimiento</h1>
-                <p className="text-gray-600 mt-1">
-                  Monitoreo de aprendices en etapas lectiva y productiva
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/seguimiento/historico')}
-                className="flex items-center gap-2"
-              >
-                <History size={18} />
-                Historico
-              </Button>
-            </div>
-          </div>
-
+      <main className="min-h-screen bg-gray-50">
+        <div className="p-4">
           {/* Search and Filter */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 relative">
+          <div className="mb-6 flex items-center gap-4 flex-wrap">
+            {/* Buscador */}
+            <div className="relative w-full max-w-lg">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar aprendiz..."
@@ -147,16 +140,26 @@ const SeguimientoPage = () => {
                 className="pl-10 bg-white border-gray-200"
               />
             </div>
-            <Select value={etapaFilter} onValueChange={handleEtapaChange}>
-              <SelectTrigger className="w-[200px] bg-white">
-                <SelectValue placeholder="Todas las etapas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas las etapas</SelectItem>
-                <SelectItem value="lectiva">Etapa Lectiva</SelectItem>
-                <SelectItem value="productiva">Etapa Productiva</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-3 ml-auto">
+              <Select value={etapaFilter} onValueChange={handleEtapaChange}>
+                <SelectTrigger className="w-[200px] bg-white">
+                  <SelectValue placeholder="Todas las etapas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las etapas</SelectItem>
+                  <SelectItem value="lectiva">Etapa Lectiva</SelectItem>
+                  <SelectItem value="productiva">Etapa Productiva</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/seguimiento/historico")}
+                className="flex items-center gap-2"
+              >
+                <History size={18} />
+                Historico
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -166,7 +169,9 @@ const SeguimientoPage = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">En Etapa Lectiva</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      En Etapa Lectiva
+                    </p>
                     <p className="text-3xl font-bold text-gray-900">
                       {estadisticas.enEtapaLectiva}
                     </p>
@@ -183,7 +188,9 @@ const SeguimientoPage = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">En Etapa Productiva</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      En Etapa Productiva
+                    </p>
                     <p className="text-3xl font-bold text-gray-900">
                       {estadisticas.enEtapaProductiva}
                     </p>
@@ -200,9 +207,12 @@ const SeguimientoPage = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Cuota de Aprendices</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Cuota de Aprendices
+                    </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      Aprendices {estadisticas.cuota?.actual || 0}/{estadisticas.cuota?.maximo || 150}
+                      Aprendices {estadisticas.cuota?.actual || 0}/
+                      {estadisticas.cuota?.maximo || 150}
                     </p>
                     {estadisticas.aprendicesIncompletos > 0 && (
                       <button
@@ -246,7 +256,9 @@ const SeguimientoPage = () => {
                   </div>
                 ) : aprendices.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-600">No hay aprendices en seguimiento</p>
+                    <p className="text-gray-600">
+                      No hay aprendices en seguimiento
+                    </p>
                   </div>
                 ) : (
                   <table className="w-full">
@@ -286,7 +298,9 @@ const SeguimientoPage = () => {
                     </thead>
                     <tbody>
                       {aprendices.map((aprendiz) => {
-                        const diasRestantes = calcularDiasRestantes(aprendiz.fechaFinContrato);
+                        const diasRestantes = calcularDiasRestantes(
+                          aprendiz.fechaFinContrato,
+                        );
                         return (
                           <tr
                             key={aprendiz._id}
@@ -298,22 +312,24 @@ const SeguimientoPage = () => {
                             <td className="py-4 px-4">
                               <Badge
                                 className={`${getEtapaBadgeStyle(
-                                  aprendiz.etapaActual
+                                  aprendiz.etapaActual,
                                 )} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
                               >
                                 {getEtapaIcon(aprendiz.etapaActual)}
-                                {aprendiz.etapaActual === 'lectiva'
-                                  ? 'Lectiva'
-                                  : aprendiz.etapaActual === 'productiva'
-                                  ? 'Productiva'
-                                  : 'Finalizado'}
+                                {aprendiz.etapaActual === "lectiva"
+                                  ? "Lectiva"
+                                  : aprendiz.etapaActual === "productiva"
+                                    ? "Productiva"
+                                    : "Finalizado"}
                               </Badge>
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.programaFormacion || aprendiz.programa || '-'}
+                              {aprendiz.programaFormacion ||
+                                aprendiz.programa ||
+                                "-"}
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.ciudad || '-'}
+                              {aprendiz.ciudad || "-"}
                             </td>
                             <td className="py-4 px-4 text-sm text-gray-600">
                               {formatDate(aprendiz.fechaInicioContrato)}
@@ -326,20 +342,22 @@ const SeguimientoPage = () => {
                             </td>
                             <td className="py-4 px-4 text-sm text-blue-600">
                               {aprendiz.reemplazoId
-                                ? `${aprendiz.reemplazoId.nombre} ${aprendiz.reemplazoId.documento || ''}`
-                                : '-'}
+                                ? `${aprendiz.reemplazoId.nombre} ${aprendiz.reemplazoId.documento || ""}`
+                                : "-"}
                             </td>
                             <td className="py-4 px-4 text-sm">
                               <span
                                 className={`${
                                   diasRestantes < 0
-                                    ? 'text-red-600'
+                                    ? "text-red-600"
                                     : diasRestantes <= 30
-                                    ? 'text-amber-600'
-                                    : 'text-gray-600'
+                                      ? "text-amber-600"
+                                      : "text-gray-600"
                                 }`}
                               >
-                                {diasRestantes !== '-' ? `${diasRestantes} dias` : '-'}
+                                {diasRestantes !== "-"
+                                  ? `${diasRestantes} dias`
+                                  : "-"}
                               </span>
                             </td>
                             <td className="py-4 px-4">

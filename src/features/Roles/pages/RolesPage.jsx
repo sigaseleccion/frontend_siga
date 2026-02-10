@@ -85,15 +85,14 @@ export default function RolesPage() {
     <>
       <main className="min-h-screen bg-gray-50">
         <div className="p-4">
-          <div className="flex items-center gap-4 mb-6">
-            {/* Buscador */}
-            <div className="relative flex-1 min-w-[250px]">
+          <div className="mb-8 flex items-center justify-between">
+            <div className="relative w-full max-w-lg">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre de rol..."
                 value={searchNombre}
                 onChange={(e) => setSearchNombre(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white border-gray-200 w-full"
               />
             </div>
 

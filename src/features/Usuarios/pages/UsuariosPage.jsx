@@ -6,19 +6,20 @@ import {
   warningAlert,
 } from "../../../shared/components/ui/SweetAlert";
 import Header from "../../../shared/components/Header";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navbar } from "@/shared/components/Navbar";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
-import { Plus, Search, Users, Edit2, Trash2 } from "lucide-react";
+import { Plus, Search, Users, Edit2, Trash2, UserCog } from "lucide-react";
 import { useUsuarios, useRoles } from "../hooks/index.js";
 import {
   CreateUsuarioModal,
   EditUsuarioModal,
   DeleteUsuarioDialog,
 } from "../components/index.js";
+import { useHeader } from "../../../shared/contexts/HeaderContext.jsx";
 
 const UsuariosPage = () => {
   const { usuarios, loading: usuariosLoading, refetch } = useUsuarios();
@@ -29,6 +30,15 @@ const UsuariosPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: "Usuarios",
+      icon: UserCog,
+      iconBg: "from-purple-600 to-purple-400",
+    });
+  }, []);
 
   const handleEditClick = (usuario) => {
     setSelectedUsuario(usuario);
@@ -107,8 +117,7 @@ const UsuariosPage = () => {
   if (rolesLoading) {
     return (
       <>
-        <Navbar />
-        <main className="ml-64 min-h-screen bg-gray-50 flex items-center justify-center">
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-600">Cargando...</p>
           </div>
@@ -119,26 +128,26 @@ const UsuariosPage = () => {
 
   return (
     <>
-      <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50 p-1">
-        <Header
-          title="Usuarios"
-          subtitle="Gestión de usuarios del sistema"
-          actions={<></>}
-        />
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
+      <main className="min-h-screen bg-gray-50">
+        <div className="p-4">
+          {/* Search Bar */}
+          <div className="mb-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Usuarios</h1>
-                <p className="text-gray-600 mt-1">
-                  Gestion de usuarios del sistema
-                </p>
+              {/* Buscador más corto */}
+              <div className="relative w-full max-w-lg">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por nombre o correo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white border-gray-200 w-full"
+                />
               </div>
+
+              {/* Botón al final */}
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
               >
                 <Plus size={20} />
                 Crear Usuario
@@ -181,19 +190,6 @@ const UsuariosPage = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por nombre o correo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white border-gray-200"
-              />
-            </div>
           </div>
 
           {/* Users Table */}

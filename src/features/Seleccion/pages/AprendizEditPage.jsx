@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Navbar } from "@/shared/components/Navbar";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
