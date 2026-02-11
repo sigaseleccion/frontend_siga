@@ -4,6 +4,7 @@ import ProtectedRoute from "./shared/components/auth/ProtectedRoute";
 // Auth pages
 import LoginPage from "./features/auth/pages/LoginPage";
 import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
+import Error403 from "./features/auth/pages/403";
 
 // Dashboard
 import Dashboard from "./features/dashboard/pages/Dashboard";
@@ -34,12 +35,14 @@ import EditRol from "./features/Roles/components/EditRole";
 // Usuarios
 import UsuariosPage from "./features/Usuarios/pages/UsuariosPage";
 
+
 export default function AppRoutes() {
   return (
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/recuperar" element={<ForgotPasswordPage />} />
+      <Route path="/403" element={<Error403 />} />
 
       {/* Main routes */}
       <Route
@@ -183,7 +186,7 @@ export default function AppRoutes() {
       <Route
         path="/usuarios"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute modulo="usuarios" accion="ver">
             <UsuariosPage />
           </ProtectedRoute>
         }

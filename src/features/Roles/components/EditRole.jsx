@@ -11,6 +11,7 @@ import {
 } from "../../../shared/components/ui/SweetAlert";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
+import { capitalizarPalabras } from "../../../shared/utils/capitalizarPalabras";
 
 const EditRol = () => {
   const { id } = useParams();
@@ -439,13 +440,8 @@ const EditRol = () => {
                               <div className="flex items-center justify-between mb-4">
                                 <div>
                                   <h3 className="text-lg font-semibold text-gray-900">
-                                    {permiso.modulo}
+                                    {capitalizarPalabras(permiso.modulo)}
                                   </h3>
-                                  {permiso.descripcion && (
-                                    <p className="text-sm text-gray-500 mt-1">
-                                      {permiso.descripcion}
-                                    </p>
-                                  )}
                                 </div>
                                 {permisosActivosEnModulo > 0 && (
                                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">

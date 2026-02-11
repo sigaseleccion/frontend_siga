@@ -1,5 +1,5 @@
 import React, { useState, useEffect, act } from "react";
-import { Shield, Plus, Edit2, Trash2, Search } from "lucide-react";
+import { Shield, Plus, Edit2, Trash2, Search, ShieldBanIcon, ShieldUser, ShieldX, ShieldCheck } from "lucide-react";
 import { useListRole } from "../hooks/useListRole";
 import { useNavigate } from "react-router-dom";
 import { roleService } from "../services/roleService";
@@ -113,26 +113,47 @@ export default function RolesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <Card className="border border-gray-200">
               <CardContent className="p-6">
-                <p className="text-sm text-gray-500">Roles activos</p>
-                <p className="text-3xl font-semibold text-blue-600">
-                  {roles.filter((r) => r.activo).length}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Roles activos</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {roles.filter((r) => r.activo).length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <ShieldUser className="text-blue-600" size={24} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card className="border border-gray-200">
               <CardContent className="p-6">
-                <p className="text-sm text-gray-500">Roles inactivos</p>
-                <p className="text-3xl font-semibold text-pink-600">
-                  {roles.filter((r) => !r.activo).length}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Roles inactivos</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {roles.filter((r) => !r.activo).length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                    <ShieldX className="text-red-600" size={24} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card className="border border-gray-200">
               <CardContent className="p-6">
-                <p className="text-sm text-gray-500">Roles totales</p>
-                <p className="text-3xl font-semibold text-gray-900">
-                  {roles.length}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Roles totales</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {roles.length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <ShieldCheck className="text-green-600" size={24} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -175,7 +196,7 @@ export default function RolesPage() {
                           className={`px-3 py-1 rounded-full text-xs font-medium ${
                             role.activo === true
                               ? "bg-blue-600 text-white"
-                              : "bg-pink-600 text-white"
+                              : "bg-red-100 text-red-700"
                           }`}
                         >
                           {role.activo === true ? "Activo" : "Inactivo"}

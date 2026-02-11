@@ -5,7 +5,7 @@ const baseSwal = Swal.mixin({
   buttonsStyling: false, // 👈 importante
   reverseButtons: true,
   customClass: {
-    popup: 'rounded-3xl p-6 shadow-xl bg-white border border-gray-100',
+    popup: 'rounded-full p-6 shadow-xl bg-white border border-gray-100',
     title: "text-xl font-semibold text-gray-800",
     htmlContainer: "text-gray-600 mt-2",
     actions: "mt-6 gap-4",
