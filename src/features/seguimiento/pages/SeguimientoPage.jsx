@@ -29,6 +29,7 @@ import {
 import { useSeguimiento } from '../hooks/useSeguimiento';
 import { EditCuotaModal, AprendicesIncompletosModal, AprendizDetailModal, EditAprendizModal } from '../componentes';
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { DataTable } from "@/shared/components/DataTable";
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();
@@ -36,7 +37,6 @@ const SeguimientoPage = () => {
     aprendices,
     estadisticas,
     loading,
-    filtros,
     actualizarFiltros,
     refetch,
     refetchEstadisticas,
@@ -279,134 +279,121 @@ const SeguimientoPage = () => {
                   </div>
                 ) : aprendices.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-600">
-                      No hay aprendices en seguimiento
-                    </p>
+                    <p className="text-gray-600">No hay aprendices en seguimiento</p>
                   </div>
                 ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nombre
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Etapa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Programa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Ciudad
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Productiva
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Fin Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Reemplazo
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Dias Restantes
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {aprendices.map((aprendiz) => {
-                        const diasRestantes = calcularDiasRestantes(
-                          aprendiz.fechaFinContrato,
-                        );
-                        return (
-                          <tr
-                            key={aprendiz._id}
-                            className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                  <DataTable
+                    columns={[
+                      {
+                        key: "nombreCompleto",
+                        header: "Nombre",
+                        render: (value, row) => (
+                          <span className="font-medium text-gray-900">
+                            {row.nombre} {row.apellido}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "etapaActual",
+                        header: "Etapa",
+                        render: (value, row) => (
+                          <Badge
+                            className={`${getEtapaBadgeStyle(row.etapaActual)} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
                           >
-                            <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                              {aprendiz.nombre} {aprendiz.apellido}
-                            </td>
-                            <td className="py-4 px-4">
-                              <Badge
-                                className={`${getEtapaBadgeStyle(
-                                  aprendiz.etapaActual,
-                                )} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
-                              >
-                                {getEtapaIcon(aprendiz.etapaActual)}
-                                {aprendiz.etapaActual === 'lectiva'
-                                  ? 'Lectiva'
-                                  : aprendiz.etapaActual === 'productiva'
-                                    ? 'Productiva'
-                                    : 'Finalizado'}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.programaFormacion ||
-                                aprendiz.programa ||
-                                "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.ciudad || "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaInicioContrato)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaInicioProductiva)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaFinContrato)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-blue-600">
-                              {aprendiz.reemplazoId
-                                ? `${aprendiz.reemplazoId.nombre} ${aprendiz.reemplazoId.documento || ""}`
-                                : "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm">
-                              <span
-                                className={`${diasRestantes < 0
-                                  ? 'text-red-600'
-                                  : diasRestantes <= 30
-                                    ? 'text-amber-600'
-                                    : 'text-gray-600'
-                                  }`}
-                              >
-                                {diasRestantes !== "-"
-                                  ? `${diasRestantes} dias`
-                                  : "-"}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleVerAprendiz(aprendiz)}
-                                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                >
-                                  <Eye size={16} />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditarAprendiz(aprendiz)}
-                                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                >
-                                  <Edit2 size={16} />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                            {getEtapaIcon(row.etapaActual)}
+                            {row.etapaActual === "lectiva"
+                              ? "Lectiva"
+                              : row.etapaActual === "productiva"
+                              ? "Productiva"
+                              : "Finalizado"}
+                          </Badge>
+                        ),
+                      },
+                      {
+                        key: "programaFormacion",
+                        header: "Programa",
+                        render: (value, row) => (
+                          <span className="text-sm text-gray-600">
+                            {row.programaFormacion || row.programa || "-"}
+                          </span>
+                        ),
+                      },
+                      { key: "ciudad", header: "Ciudad" },
+                      {
+                        key: "fechaInicioContrato",
+                        header: "Inicio Contrato",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "fechaInicioProductiva",
+                        header: "Inicio Productiva",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "fechaFinContrato",
+                        header: "Fin Contrato",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "reemplazoId",
+                        header: "Reemplazo",
+                        render: (value, row) => (
+                          <span className="text-sm text-blue-600">
+                            {row.reemplazoId
+                              ? `${row.reemplazoId.nombre} ${row.reemplazoId.documento || ""}`
+                              : "-"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "diasRestantes",
+                        header: "Dias Restantes",
+                        render: (value, row) => {
+                          const dias = calcularDiasRestantes(row.fechaFinContrato);
+                          return (
+                            <span
+                              className={`${
+                                dias < 0
+                                  ? "text-red-600"
+                                  : dias <= 30
+                                  ? "text-amber-600"
+                                  : "text-gray-600"
+                              }`}
+                            >
+                              {dias !== "-" ? `${dias} dias` : "-"}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "acciones",
+                        header: "Acciones",
+                        render: (value, row) => (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVerAprendiz(row)}
+                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+                            >
+                              <Eye size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditarAprendiz(row)}
+                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+                            >
+                              <Edit2 size={16} />
+                            </Button>
+                          </div>
+                        ),
+                      },
+                    ]}
+                    data={aprendices}
+                    pageSize={5}
+                    pageSizeOptions={[5, 10, 20]}
+                  />
                 )}
               </div>
             </CardContent>

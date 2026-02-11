@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
@@ -19,13 +26,16 @@ export function DataTable({
   pageSize = 5,
   emptyMessage = "No hay datos disponibles",
   rowClassName,
+  pageSizeOptions = [5, 10, 20],
+  showPageSizeSelector = true,
 }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize || 5);
 
   // Calcular datos paginados
-  const totalPages = Math.ceil(data.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
+  const totalPages = Math.ceil(data.length / currentPageSize);
+  const startIndex = (currentPage - 1) * currentPageSize;
+  const endIndex = startIndex + currentPageSize;
   const currentData = data.slice(startIndex, endIndex);
 
   // Navegación
@@ -98,11 +108,36 @@ export function DataTable({
       </div>
 
       {/* Paginación */}
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <div className="flex items-center justify-between mt-4 px-2">
-          <div className="text-sm text-gray-600">
-            Mostrando {startIndex + 1} -{" "}
-            {Math.min(endIndex, data.length)} de {data.length} registros
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600">
+              Mostrando {startIndex + 1} - {Math.min(endIndex, data.length)} de {data.length} registros
+            </div>
+            {showPageSizeSelector && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Items por página</span>
+                <Select
+                  value={String(currentPageSize)}
+                  onValueChange={(v) => {
+                    const n = parseInt(v, 10);
+                    setCurrentPageSize(Number.isNaN(n) ? 5 : n);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((opt) => (
+                      <SelectItem key={opt} value={String(opt)}>
+                        {opt} por página
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button

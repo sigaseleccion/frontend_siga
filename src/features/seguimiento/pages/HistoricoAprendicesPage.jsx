@@ -19,13 +19,13 @@ import { ArrowLeft, Search, Eye } from 'lucide-react';
 import { useHistorico } from '../hooks/useHistorico';
 import { AprendizDetailModal } from '../componentes';
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { DataTable } from "@/shared/components/DataTable";
 
 const HistoricoAprendicesPage = () => {
   const navigate = useNavigate();
   const {
     aprendices,
     loading,
-    filtros,
     actualizarFiltros,
   } = useHistorico();
 
@@ -106,87 +106,58 @@ const HistoricoAprendicesPage = () => {
                   </div>
                 ) : aprendices.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-600">
-                      No hay aprendices finalizados
-                    </p>
+                    <p className="text-gray-600">No hay aprendices finalizados</p>
                   </div>
                 ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nombre
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Tipo Doc.
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          N. Documento
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Ciudad
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Programa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Productiva
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Fin Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {aprendices.map((aprendiz) => (
-                        <tr
-                          key={aprendiz._id}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                        >
-                          <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                            {aprendiz.nombre}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.tipoDocumento || "-"}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.documento || "-"}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.ciudad || "-"}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {aprendiz.programaFormacion || aprendiz.programa || "-"}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaInicioContrato)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaInicioProductiva)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {formatDate(aprendiz.fechaFinContrato)}
-                          </td>
-                          <td className="py-4 px-4">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVerAprendiz(aprendiz)}
-                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                            >
-                              <Eye size={16} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <DataTable
+                    columns={[
+                      { key: "nombre", header: "Nombre" },
+                      { key: "tipoDocumento", header: "Tipo Doc." },
+                      { key: "documento", header: "N. Documento" },
+                      { key: "ciudad", header: "Ciudad" },
+                      {
+                        key: "programaFormacion",
+                        header: "Programa",
+                        render: (value, row) => (
+                          <span className="text-sm text-gray-600">
+                            {row.programaFormacion || row.programa || "-"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "fechaInicioContrato",
+                        header: "Inicio Contrato",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "fechaInicioProductiva",
+                        header: "Inicio Productiva",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "fechaFinContrato",
+                        header: "Fin Contrato",
+                        render: (value) => <span>{formatDate(value)}</span>,
+                      },
+                      {
+                        key: "acciones",
+                        header: "Acciones",
+                        render: (value, row) => (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVerAprendiz(row)}
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+                          >
+                            <Eye size={16} />
+                          </Button>
+                        ),
+                      },
+                    ]}
+                    data={aprendices}
+                    pageSize={5}
+                    pageSizeOptions={[5, 10, 20]}
+                  />
                 )}
               </div>
             </CardContent>

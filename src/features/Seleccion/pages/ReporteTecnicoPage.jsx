@@ -44,6 +44,7 @@ import {
 } from "../../../shared/components/ui/SweetAlert";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
+import { DataTable } from "@/shared/components/DataTable";
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams();
@@ -479,73 +480,40 @@ export default function ReporteTecnicoPage() {
                   <CardTitle>Estado de prueba técnica por aprendiz</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                            Nombre
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                            Tipo Doc.
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                            N. Documento
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                            P. Técnica
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {aprendices.map((aprendiz) => (
-                          <tr
-                            key={aprendiz.id}
-                            className="border-b border-border last:border-0"
+                  <DataTable
+                    columns={[
+                      { key: "nombre", header: "Nombre" },
+                      { key: "tipoDocumento", header: "Tipo Doc." },
+                      { key: "documento", header: "N. Documento" },
+                      {
+                        key: "pruebaTecnica",
+                        header: "P. Técnica",
+                        render: (value, row) => (
+                          <Select
+                            value={row.pruebaTecnica}
+                            onValueChange={(v) =>
+                              handlePruebaTecnicaChange(row.id, v)
+                            }
                           >
-                            <td className="py-3 px-4 text-sm font-medium">
-                              {aprendiz.nombre}
-                            </td>
-                            <td className="py-3 px-4 text-sm">
-                              {aprendiz.tipoDocumento}
-                            </td>
-                            <td className="py-3 px-4 text-sm">
-                              {aprendiz.documento}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Select
-                                value={aprendiz.pruebaTecnica}
-                                onValueChange={(value) =>
-                                  handlePruebaTecnicaChange(aprendiz.id, value)
-                                }
-                              >
-                                <SelectTrigger className="w-[150px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pendiente">
-                                    Pendiente
-                                  </SelectItem>
-                                  <SelectItem value="aprobado">
-                                    Aprobado
-                                  </SelectItem>
-                                  <SelectItem value="no aprobado">
-                                    No aprobado
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pendiente">Pendiente</SelectItem>
+                              <SelectItem value="aprobado">Aprobado</SelectItem>
+                              <SelectItem value="no aprobado">No aprobado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ),
+                      },
+                    ]}
+                    data={aprendices}
+                    pageSize={5}
+                    pageSizeOptions={[5, 10, 20]}
+                  />
+ 
                   <div className="mt-6 flex justify-end">
-                    <Button
-                      onClick={handleGuardarEstados}
-                      disabled={savingEstados}
-                    >
+                    <Button onClick={handleGuardarEstados} disabled={savingEstados}>
                       {savingEstados ? "Guardando..." : "Guardar cambios"}
                     </Button>
                   </div>

@@ -14,6 +14,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { ArrowLeft, CheckSquare, Eye } from "lucide-react";
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { DataTable } from "@/shared/components/DataTable";
 
 export default function HistoricoConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
@@ -96,64 +97,30 @@ export default function HistoricoConvocatoriaDetailPage() {
                   {error}
                 </div>
               )}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Nombre
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Tipo Doc.
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        N. Documento
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Ciudad
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Programa
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aprendices.map((aprendiz) => (
-                      <tr
-                        key={aprendiz.id}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="py-3 px-4 text-sm font-medium">
-                          {aprendiz.nombre}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.tipoDocumento}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.documento}
-                        </td>
-                        <td className="py-3 px-4 text-sm">{aprendiz.ciudad}</td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.programaFormacion}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Link
-                            to={`/seleccion/historico/${convocatoriaId}/aprendiz/${aprendiz.id}`}
-                          >
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  { key: "nombre", header: "Nombre" },
+                  { key: "tipoDocumento", header: "Tipo Doc." },
+                  { key: "documento", header: "N. Documento" },
+                  { key: "ciudad", header: "Ciudad" },
+                  { key: "programaFormacion", header: "Programa" },
+                  {
+                    key: "acciones",
+                    header: "Acciones",
+                    render: (value, row) => (
+                      <Link to={`/seleccion/historico/${convocatoriaId}/aprendiz/${row.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver
+                        </Button>
+                      </Link>
+                    ),
+                  },
+                ]}
+                data={aprendices}
+                pageSize={5}
+                pageSizeOptions={[5, 10, 20]}
+              />
             </CardContent>
           </Card>
         </div>

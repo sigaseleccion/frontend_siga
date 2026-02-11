@@ -17,6 +17,7 @@ import { aprendizService } from "@/features/Convocatorias/services/aprendizServi
 import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
+import { DataTable } from "@/shared/components/DataTable";
 
 export default function SeleccionConvocatoriaPage() {
   const { id: convocatoriaId } = useParams();
@@ -107,6 +108,15 @@ export default function SeleccionConvocatoriaPage() {
     return "bg-muted-foreground/30";
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      return new Date(dateStr).toLocaleDateString("es-ES");
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <>
       <main className="min-h-screen bg-gray-50">
@@ -154,117 +164,69 @@ export default function SeleccionConvocatoriaPage() {
               <CardTitle>Aprendices en Seleccion</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Nombre
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Tipo Doc.
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        N. Documento
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Ciudad
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Programa
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Inicio Lectiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Fin Lectiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Inicio Productiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Fin Productiva
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aprendices.map((aprendiz) => (
-                      <tr
-                        key={aprendiz._id}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="py-3 px-4 text-sm font-medium">
-                          <span
-                            className={`inline-block h-3 w-3 rounded-full mr-2 ${getDotClass(aprendiz)}`}
-                          />
-                          {aprendiz.nombre}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.tipoDocumento}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.documento}
-                        </td>
-                        <td className="py-3 px-4 text-sm">{aprendiz.ciudad}</td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.programaFormacion}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.fechaInicioLectiva
-                            ? new Date(
-                                aprendiz.fechaInicioLectiva,
-                              ).toLocaleDateString("es-ES")
-                            : "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.fechaFinLectiva
-                            ? new Date(
-                                aprendiz.fechaFinLectiva,
-                              ).toLocaleDateString("es-ES")
-                            : "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.fechaInicioProductiva
-                            ? new Date(
-                                aprendiz.fechaInicioProductiva,
-                              ).toLocaleDateString("es-ES")
-                            : "-"}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {aprendiz.fechaFinProductiva
-                            ? new Date(
-                                aprendiz.fechaFinProductiva,
-                              ).toLocaleDateString("es-ES")
-                            : "-"}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <Link
-                              to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz._id}`}
-                            >
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
-                                Ver
-                              </Button>
-                            </Link>
-                            <Link
-                              to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz._id}/editar`}
-                            >
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4 mr-1" />
-                                Editar
-                              </Button>
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  {
+                    key: "nombre",
+                    header: "Nombre",
+                    render: (value, row) => (
+                      <div className="flex items-center">
+                        <span
+                          className={`inline-block h-3 w-3 rounded-full mr-2 ${getDotClass(row)}`}
+                        />
+                        <span className="font-medium">{row.nombre}</span>
+                      </div>
+                    ),
+                  },
+                  { key: "tipoDocumento", header: "Tipo Doc." },
+                  { key: "documento", header: "N. Documento" },
+                  { key: "ciudad", header: "Ciudad" },
+                  { key: "programaFormacion", header: "Programa" },
+                  {
+                    key: "fechaInicioLectiva",
+                    header: "Inicio Lectiva",
+                    render: (value) => <span>{formatDate(value)}</span>,
+                  },
+                  {
+                    key: "fechaFinLectiva",
+                    header: "Fin Lectiva",
+                    render: (value) => <span>{formatDate(value)}</span>,
+                  },
+                  {
+                    key: "fechaInicioProductiva",
+                    header: "Inicio Productiva",
+                    render: (value) => <span>{formatDate(value)}</span>,
+                  },
+                  {
+                    key: "fechaFinProductiva",
+                    header: "Fin Productiva",
+                    render: (value) => <span>{formatDate(value)}</span>,
+                  },
+                  {
+                    key: "acciones",
+                    header: "Acciones",
+                    render: (value, row) => (
+                      <div className="flex gap-2">
+                        <Link to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver
+                          </Button>
+                        </Link>
+                        <Link to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}/editar`}>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                        </Link>
+                      </div>
+                    ),
+                  },
+                ]}
+                data={aprendices}
+                pageSize={5}
+                pageSizeOptions={[5, 10, 20]}
+              />
             </CardContent>
           </Card>
         </div>
