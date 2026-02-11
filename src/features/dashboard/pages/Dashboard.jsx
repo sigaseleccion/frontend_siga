@@ -180,7 +180,7 @@ export default function Dashboard() {
     }));
 
     const proximosVencimientos = aprendicesSeguimiento
-      .filter((a) => typeof a?.diasRestantes === "number" && a.diasRestantes >= 0)
+      .filter((a) => typeof a?.diasRestantes === "number" && (a.diasRestantes >= 0 || a.diasRestantes === -1))
       .sort((a, b) => a.diasRestantes - b.diasRestantes)
       .slice(0, 6)
       .map((a) => ({
@@ -294,11 +294,45 @@ export default function Dashboard() {
     ];
   }, [data.pruebas]);
 
-  const getDaysBadge = (dias) => {
-    if (typeof dias !== "number") return { variant: "secondary", className: "bg-gray-100 text-gray-700 hover:bg-gray-100" };
-    if (dias <= 7) return { variant: "destructive", className: "" };
-    if (dias <= 30) return { variant: "secondary", className: "bg-amber-100 text-amber-800 hover:bg-amber-100" };
-    return { variant: "secondary", className: "bg-purple-100 text-purple-800 hover:bg-purple-100" };
+  const getDaysBadge = (dias, etapa) => {
+    if (typeof dias !== "number") {
+      return {
+        variant: "secondary",
+        className: "bg-gray-100 text-gray-700 hover:bg-gray-100",
+        label: "—",
+      };
+    }
+
+    if (dias < 0) {
+      return { variant: "destructive", className: "", label: "Sin reemplazo" };
+    }
+
+    const isLectiva = String(etapa || "").toLowerCase().includes("lectiva");
+
+    if (isLectiva) {
+      if (dias <= 30) return { variant: "destructive", className: "", label: `${dias} días` };
+      if (dias <= 62) {
+        return {
+          variant: "secondary",
+          className: "bg-amber-100 text-amber-800 hover:bg-amber-100",
+          label: `${dias} días`,
+        };
+      }
+    }
+
+    if (dias <= 7) return { variant: "destructive", className: "", label: `${dias} días` };
+    if (dias <= 30) {
+      return {
+        variant: "secondary",
+        className: "bg-amber-100 text-amber-800 hover:bg-amber-100",
+        label: `${dias} días`,
+      };
+    }
+    return {
+      variant: "secondary",
+      className: "bg-purple-100 text-purple-800 hover:bg-purple-100",
+      label: `${dias} días`,
+    };
   };
 
   const getPctBarClass = (pct) => {
@@ -620,19 +654,28 @@ export default function Dashboard() {
                             </>
                           )}
                         </Badge>
-                        {apprentice.dias <= 7 && (
-                          <Badge className="text-xs bg-red-600 text-white hover:bg-red-600">
-                            Acción requerida
-                          </Badge>
-                        )}
+                        {typeof apprentice.dias === "number" &&
+                          (apprentice.dias < 0 ||
+                            (String(apprentice.etapa || "").toLowerCase().includes("lectiva") &&
+                              apprentice.dias <= 62)) && (
+                            <Badge
+                              className={`text-xs text-white ${
+                                apprentice.dias < 0 || apprentice.dias <= 30
+                                  ? "bg-red-600 hover:bg-red-600"
+                                  : "bg-amber-500 hover:bg-amber-500"
+                              }`}
+                            >
+                              Urgente
+                            </Badge>
+                          )}
                       </div>
                     </div>
                     <div className="flex-shrink-0">
                       {(() => {
-                        const badge = getDaysBadge(apprentice.dias);
+                        const badge = getDaysBadge(apprentice.dias, apprentice.etapa);
                         return (
                           <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
-                            {apprentice.dias} días
+                            {badge.label}
                           </Badge>
                         );
                       })()}

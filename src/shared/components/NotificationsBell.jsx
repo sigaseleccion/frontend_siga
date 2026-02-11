@@ -53,8 +53,11 @@ const fetchJson = async (url, options = {}) => {
 }
 
 const DISMISSED_NOTIFICATIONS_KEY = 'siga.notifications.dismissed'
+const SENT_SLOTS_KEY = 'siga.notifications.sentSlots'
 const DISMISSED_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DISMISSED_MAX_ITEMS = 500
+const SENT_MAX_ITEMS = 1000
+const CHANGE_TOAST_MIN_INTERVAL_MS = 30_000
 
 const readDismissedMap = () => {
   try {
@@ -85,6 +88,32 @@ const writeDismissedMap = (map) => {
   }
 }
 
+const readSentSlotsMap = () => {
+  try {
+    const raw = localStorage.getItem(SENT_SLOTS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return parsed
+  } catch (e) {
+    return {}
+  }
+}
+
+const pruneSentSlotsMap = (map) => {
+  const entries = Object.entries(map)
+    .filter(([, slotKey]) => typeof slotKey === 'string' && slotKey.length <= 32)
+    .slice(-SENT_MAX_ITEMS)
+  return Object.fromEntries(entries)
+}
+
+const writeSentSlotsMap = (map) => {
+  try {
+    localStorage.setItem(SENT_SLOTS_KEY, JSON.stringify(map))
+  } catch (e) {
+  }
+}
+
 const getDateKey = (date = new Date()) => {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -98,14 +127,17 @@ const getMonthKey = (date = new Date()) => {
   return `${y}-${m}`
 }
 
-const getCurrentQuotaSlot = (date = new Date()) => {
-  const hour = date.getHours()
-  if (hour >= 16) return '16'
-  if (hour >= 8) return '08'
-  return null
+const isWithinSendWindow = (now = new Date()) => {
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const d = now.getDate()
+
+  const start = new Date(y, m, d, 8, 0, 0, 0)
+  const end = new Date(y, m, d, 16, 0, 0, 0)
+  return now.getTime() >= start.getTime() && now.getTime() <= end.getTime()
 }
 
-const getNextQuotaTriggerAt = (now = new Date()) => {
+const getNextSendTrigger = (now = new Date()) => {
   const y = now.getFullYear()
   const m = now.getMonth()
   const d = now.getDate()
@@ -113,9 +145,9 @@ const getNextQuotaTriggerAt = (now = new Date()) => {
   const todayAt8 = new Date(y, m, d, 8, 0, 0, 0)
   const todayAt16 = new Date(y, m, d, 16, 0, 0, 0)
 
-  if (now.getTime() < todayAt8.getTime()) return todayAt8
-  if (now.getTime() < todayAt16.getTime()) return todayAt16
-  return new Date(y, m, d + 1, 8, 0, 0, 0)
+  if (now.getTime() < todayAt8.getTime()) return { at: todayAt8, slot: '08' }
+  if (now.getTime() < todayAt16.getTime()) return { at: todayAt16, slot: '16' }
+  return { at: new Date(y, m, d + 1, 8, 0, 0, 0), slot: '08' }
 }
 
 const formatMonthLabel = (date = new Date()) => {
@@ -128,6 +160,7 @@ const formatMonthLabel = (date = new Date()) => {
 
 const getDotClassName = (type) => {
   if (type === 'urgent') return 'bg-red-500'
+  if (type === 'urgent_warning') return 'bg-amber-500'
   if (type === 'important') return 'bg-primary'
   if (type === 'quota_under') return 'bg-amber-500'
   if (type === 'quota_over') return 'bg-fuchsia-600'
@@ -136,10 +169,21 @@ const getDotClassName = (type) => {
 
 const getToastClassName = (type) => {
   if (type === 'urgent') return 'bg-red-600 text-white border-red-700'
+  if (type === 'urgent_warning') return 'bg-amber-500 text-white border-amber-600'
   if (type === 'quota_under') return 'bg-amber-500 text-white border-amber-600'
   if (type === 'quota_over') return 'bg-fuchsia-600 text-white border-fuchsia-700'
   if (type === 'important') return 'bg-blue-600 text-white border-blue-700'
   return 'bg-slate-800 text-white border-slate-900'
+}
+
+const getNotificationSignature = (notification) => {
+  return [
+    notification?.type,
+    notification?.badge,
+    notification?.title,
+    notification?.description,
+    notification?.href,
+  ].join('|')
 }
 
 function NotificationsBell({ onNavigate }) {
@@ -155,9 +199,11 @@ function NotificationsBell({ onNavigate }) {
     return initial
   })
   const lastLoadedAtRef = useRef(0)
-  const quotaTimerRef = useRef(null)
+  const sendTimerRef = useRef(null)
+  const pollTimerRef = useRef(null)
   const hasLoadedOnceRef = useRef(false)
-  const knownIdsRef = useRef(new Set())
+  const knownSignaturesRef = useRef(new Map())
+  const lastChangeToastAtRef = useRef(new Map())
 
   const previewLimit = 8
 
@@ -175,7 +221,7 @@ function NotificationsBell({ onNavigate }) {
     const info = []
 
     for (const n of notifications) {
-      if (n.type === 'urgent') urgent.push(n)
+      if (String(n.type).startsWith('urgent')) urgent.push(n)
       else if (n.type === 'important') important.push(n)
       else if (String(n.type).startsWith('quota_')) quota.push(n)
       else info.push(n)
@@ -205,7 +251,7 @@ function NotificationsBell({ onNavigate }) {
     else navigate(notification.href)
   }
 
-  const loadNotifications = async ({ force = false } = {}) => {
+  const loadNotifications = async ({ force = false, reason = 'poll', slot = null } = {}) => {
     const now = Date.now()
     if (isLoading) return
     if (!force && now - lastLoadedAtRef.current < 15_000) return
@@ -240,24 +286,47 @@ function NotificationsBell({ onNavigate }) {
       ? aprendicesSeguimiento
           .filter((a) => {
             const dias = a?.diasRestantes
-            return typeof dias === 'number' && dias >= 0 && dias <= 7
+            if (typeof dias !== 'number' || dias < 0) return false
+            const etapa = String(a?.etapaActual || '').toLowerCase()
+            const isLectiva = etapa.includes('lectiva')
+            if (isLectiva) return dias <= 62
+            return dias <= 7
           })
           .sort((a, b) => (a?.diasRestantes ?? 999999) - (b?.diasRestantes ?? 999999))
-          .map((a) => ({
-            id: `urgent:${a._id}`,
-            type: 'urgent',
-            badge: 'Urgente',
-            badgeVariant: 'destructive',
-            title: `${a?.nombre || 'Aprendiz'}${a?.documento ? ` (${a.documento})` : ''}`,
-            description:
-              typeof a?.diasRestantes === 'number'
-                ? a.diasRestantes === 0
+          .map((a) => {
+            const dias = a?.diasRestantes
+            const etapa = String(a?.etapaActual || '').toLowerCase()
+            const isLectiva = etapa.includes('lectiva')
+            const isRed = isLectiva ? dias <= 30 : dias <= 7
+
+            const type = isRed ? 'urgent' : 'urgent_warning'
+            const badgeVariant = isRed ? 'destructive' : 'secondary'
+            const badgeClassName = isRed ? null : 'bg-amber-500 text-white hover:bg-amber-500'
+
+            const description = typeof dias === 'number'
+              ? isLectiva
+                ? dias === 0
+                  ? 'Pasa a etapa productiva hoy'
+                  : `Pasa a etapa productiva en ${dias} días`
+                : dias === 0
                   ? 'El contrato vence hoy'
-                  : `El contrato vence en ${a.diasRestantes} días`
-                : 'Contrato por vencer',
-            href: '/seguimiento',
-            priority: 1,
-          }))
+                  : `El contrato vence en ${dias} días`
+              : isLectiva
+                ? 'Paso a productiva próximo'
+                : 'Contrato por vencer'
+
+            return {
+              id: `urgent:${a._id}`,
+              type,
+              badge: 'Urgente',
+              badgeVariant,
+              ...(badgeClassName ? { badgeClassName } : {}),
+              title: `${a?.nombre || 'Aprendiz'}${a?.documento ? ` (${a.documento})` : ''}`,
+              description,
+              href: '/seguimiento',
+              priority: 1,
+            }
+          })
       : []
 
     const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
@@ -269,15 +338,13 @@ function NotificationsBell({ onNavigate }) {
           ? estadisticas.totalEnSeguimiento
           : 0
     const monthLabel = formatMonthLabel()
-    const todayKey = getDateKey()
-    const currentSlot = getCurrentQuotaSlot()
-    const slotLabel = currentSlot === '16' ? '16:00' : '08:00'
+    const monthKey = getMonthKey()
 
     const quotaNotifications =
-      cuotaActual !== cuotaMaxima && currentSlot
+      cuotaActual !== cuotaMaxima
         ? [
             {
-              id: `quota:${todayKey}:${currentSlot}:${cuotaActual < cuotaMaxima ? 'under' : 'over'}`,
+              id: `quota:${monthKey}`,
               type: cuotaActual < cuotaMaxima ? 'quota_under' : 'quota_over',
               badge: 'Cuota',
               badgeVariant: 'secondary',
@@ -288,8 +355,8 @@ function NotificationsBell({ onNavigate }) {
               title: cuotaActual < cuotaMaxima ? 'Cuota de aprendices no cumplida' : 'Cuota de aprendices excedida',
               description:
                 cuotaActual < cuotaMaxima
-                  ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Recordatorio ${slotLabel}`
-                  : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima}) · Recordatorio ${slotLabel}`,
+                  ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima}`
+                  : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima})`,
               href: '/seguimiento',
               priority: 2,
             },
@@ -354,49 +421,115 @@ function NotificationsBell({ onNavigate }) {
         return String(a.title).localeCompare(String(b.title), 'es')
       })
 
-    if (hasLoadedOnceRef.current) {
-      const newOnes = nextNotifications.filter((n) => !knownIdsRef.current.has(n.id))
-      if (newOnes.length > 0) {
-        const main = newOnes[0]
-        const title = newOnes.length > 1 ? `${newOnes.length} nuevas notificaciones` : main.title
-        const description = newOnes.length > 1 ? main.description : main.description
+    const nowDate = new Date()
+    const withinWindow = isWithinSendWindow(nowDate)
+    const previousSignatures = knownSignaturesRef.current
+    const nextSignatures = new Map()
+
+    const newItems = []
+    const changedItems = []
+
+    for (const n of nextNotifications) {
+      const signature = getNotificationSignature(n)
+      nextSignatures.set(n.id, signature)
+
+      const prevSignature = previousSignatures.get(n.id)
+      if (!prevSignature) newItems.push(n)
+      else if (prevSignature !== signature) changedItems.push(n)
+    }
+
+    const sendScheduled = reason === 'schedule' && (slot === '08' || slot === '16')
+    if (sendScheduled) {
+      const slotKey = `${getDateKey(nowDate)}:${slot}`
+      const sentMap = pruneSentSlotsMap(readSentSlotsMap())
+      let sentCount = 0
+      const maxToasts = 3
+      for (const n of nextNotifications) {
+        if (sentCount >= maxToasts) break
+        if (sentMap[n.id] === slotKey) continue
         toast({
-          title,
-          description,
-          className: getToastClassName(main.type),
+          title: n.title,
+          description: n.description,
+          className: getToastClassName(n.type),
+          duration: 5000,
+        })
+        sentMap[n.id] = slotKey
+        sentCount += 1
+      }
+      if (nextNotifications.length - sentCount > 0) {
+        toast({
+          title: 'Notificaciones',
+          description: `Y ${nextNotifications.length - sentCount} más`,
+          className: getToastClassName('important'),
           duration: 5000,
         })
       }
+      writeSentSlotsMap(sentMap)
+    } else if (hasLoadedOnceRef.current && withinWindow && (newItems.length > 0 || changedItems.length > 0)) {
+      const candidates = changedItems.length > 0 ? changedItems : newItems
+      const main = candidates[0]
+      const total = candidates.length
+
+      const lastToastAt = lastChangeToastAtRef.current.get(main.id) || 0
+      if (Date.now() - lastToastAt >= CHANGE_TOAST_MIN_INTERVAL_MS) {
+        toast({
+          title: total > 1 ? `${total} notificaciones actualizadas` : main.title,
+          description: main.description,
+          className: getToastClassName(main.type),
+          duration: 5000,
+        })
+        lastChangeToastAtRef.current.set(main.id, Date.now())
+      }
     }
 
-    knownIdsRef.current = new Set(nextNotifications.map((n) => n.id))
+    knownSignaturesRef.current = nextSignatures
     hasLoadedOnceRef.current = true
     setNotifications(nextNotifications)
 
     lastLoadedAtRef.current = now
     setIsLoading(false)
 
-    if (quotaTimerRef.current) {
-      clearTimeout(quotaTimerRef.current)
-      quotaTimerRef.current = null
+    if (sendTimerRef.current) {
+      clearTimeout(sendTimerRef.current)
+      sendTimerRef.current = null
     }
 
-    const nextTriggerAt = getNextQuotaTriggerAt(new Date())
-    const delayMs = Math.max(1_000, nextTriggerAt.getTime() - Date.now() + 1_000)
-    quotaTimerRef.current = setTimeout(() => {
-      loadNotifications({ force: true })
+    const nextTrigger = getNextSendTrigger(new Date())
+    const delayMs = Math.max(1_000, nextTrigger.at.getTime() - Date.now() + 1_000)
+    sendTimerRef.current = setTimeout(() => {
+      loadNotifications({ force: true, reason: 'schedule', slot: nextTrigger.slot })
     }, delayMs)
   }
 
   useEffect(() => {
-    loadNotifications()
+    loadNotifications({ force: true, reason: 'init' })
   }, [])
 
   useEffect(() => {
     return () => {
-      if (quotaTimerRef.current) {
-        clearTimeout(quotaTimerRef.current)
-        quotaTimerRef.current = null
+      if (sendTimerRef.current) {
+        clearTimeout(sendTimerRef.current)
+        sendTimerRef.current = null
+      }
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    pollTimerRef.current = setInterval(() => {
+      loadNotifications({ force: false, reason: 'poll' })
+    }, 15_000)
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
       }
     }
   }, [])
@@ -411,12 +544,12 @@ function NotificationsBell({ onNavigate }) {
 
   useEffect(() => {
     if (!open) return
-    loadNotifications()
+    loadNotifications({ force: true, reason: 'ui' })
   }, [open])
 
   useEffect(() => {
     if (!allOpen) return
-    loadNotifications()
+    loadNotifications({ force: true, reason: 'ui' })
   }, [allOpen])
 
   const NotificationsList = ({ items, emptyText }) => {
