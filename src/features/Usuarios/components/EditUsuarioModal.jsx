@@ -208,7 +208,7 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             Editar Usuario
@@ -218,103 +218,107 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-nombre">Nombre <span className="text-red-500">*</span></Label>
-            <Input
-              id="edit-nombre"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              className={errors.nombre ? 'border-red-500' : ''}
-            />
-            {errors.nombre && (
-              <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-correo">Correo <span className="text-red-500">*</span></Label>
-            <Input
-              id="edit-correo"
-              name="correo"
-              type="email"
-              value={formData.correo}
-              onChange={handleChange}
-              className={errors.correo ? 'border-red-500' : ''}
-            />
-            {errors.correo && (
-              <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-rol">Rol <span className="text-red-500">*</span></Label>
-            <Select value={formData.rol} onValueChange={handleRolChange}>
-              <SelectTrigger id="edit-rol" className={errors.rol ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Seleccionar rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {rolesActivos.map(rol => (
-                  <SelectItem key={rol._id} value={rol._id}>
-                    {rol.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.rol && (
-              <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
-            )}
-          </div>
-
-          <PasswordInput
-            value={formData.contrasena}
-            onChange={handleChange}
-            label="Nueva Contraseña"
-            placeholder="Dejar vacío para mantener la actual"
-            showValidation={!!formData.contrasena}
-            required={false}
-            error={errors.contrasena}
-          />
-
-          {showConfirmPassword && (
+        <div className="py-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-confirmarContrasena">Confirmar Nueva Contraseña <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-nombre">Nombre <span className="text-red-500">*</span></Label>
               <Input
-                id="edit-confirmarContrasena"
-                name="confirmarContrasena"
-                type="password"
-                placeholder="Vuelva a ingresar la contraseña"
-                value={formData.confirmarContrasena}
+                id="edit-nombre"
+                name="nombre"
+                value={formData.nombre}
                 onChange={handleChange}
-                className={errors.confirmarContrasena ? 'border-red-500' : ''}
+                className={errors.nombre ? 'border-red-500' : ''}
               />
-              {errors.confirmarContrasena && (
-                <p className="text-sm text-red-500 mt-1">{errors.confirmarContrasena}</p>
-              )}
-              {!errors.confirmarContrasena && formData.confirmarContrasena && formData.contrasena === formData.confirmarContrasena && (
-                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <span className="inline-block w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
-                  Las contraseñas coinciden
-                </p>
+              {errors.nombre && (
+                <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
               )}
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-activo">Estado</Label>
-            <Select 
-              value={formData.activo ? 'activo' : 'inactivo'} 
-              onValueChange={handleActivoChange}
-            >
-              <SelectTrigger id="edit-activo">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="edit-correo">Correo <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-correo"
+                name="correo"
+                type="email"
+                value={formData.correo}
+                onChange={handleChange}
+                className={errors.correo ? 'border-red-500' : ''}
+              />
+              {errors.correo && (
+                <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-rol">Rol <span className="text-red-500">*</span></Label>
+              <Select value={formData.rol} onValueChange={handleRolChange}>
+                <SelectTrigger id="edit-rol" className={errors.rol ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Seleccionar rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rolesActivos.map(rol => (
+                    <SelectItem key={rol._id} value={rol._id}>
+                      {rol.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.rol && (
+                <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-activo">Estado</Label>
+              <Select 
+                value={formData.activo ? 'activo' : 'inactivo'} 
+                onValueChange={handleActivoChange}
+              >
+                <SelectTrigger id="edit-activo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <PasswordInput
+                value={formData.contrasena}
+                onChange={handleChange}
+                label="Nueva Contraseña"
+                placeholder="Dejar vacío para mantener la actual"
+                showValidation={!!formData.contrasena}
+                required={false}
+                error={errors.contrasena}
+              />
+            </div>
+
+            {showConfirmPassword && (
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="edit-confirmarContrasena">Confirmar Nueva Contraseña <span className="text-red-500">*</span></Label>
+                <Input
+                  id="edit-confirmarContrasena"
+                  name="confirmarContrasena"
+                  type="password"
+                  placeholder="Vuelva a ingresar la contraseña"
+                  value={formData.confirmarContrasena}
+                  onChange={handleChange}
+                  className={errors.confirmarContrasena ? 'border-red-500' : ''}
+                />
+                {errors.confirmarContrasena && (
+                  <p className="text-sm text-red-500 mt-1">{errors.confirmarContrasena}</p>
+                )}
+                {!errors.confirmarContrasena && formData.confirmarContrasena && formData.contrasena === formData.confirmarContrasena && (
+                  <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
+                    Las contraseñas coinciden
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

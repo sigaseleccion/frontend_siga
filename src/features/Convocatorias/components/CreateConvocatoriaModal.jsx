@@ -23,11 +23,11 @@ import { useExcelParser } from '../hooks/useExcelParser';
 import { successAlert, errorAlert } from '../../../shared/components/ui/SweetAlert';
 
 const programaOptions = [
-  { value: 'TECNICO EN PROGRAMACION DE SOFTWARE', label: 'Tecnico en Programacion de Software' },
-  { value: 'TECNOLOGO EN ANALISIS Y DESARROLLO DE SOFTWARE', label: 'Tecnologo en Analisis y Desarrollo de Software' },
-  { value: 'TNLOG. IMPLEMENTACION DE INFRAESTRUCTURA DE TIC', label: 'Tnlog. Implementacion de Infraestructura de TIC' },
+  { value: 'TECNICO EN PROGRAMACION DE SOFTWARE', label: 'Técnico en Programación de Software' },
+  { value: 'TECNOLOGO EN ANALISIS Y DESARROLLO DE SOFTWARE', label: 'Tecnólogo en Análisis y Desarrollo de Software' },
+  { value: 'TNLOG. IMPLEMENTACION DE INFRAESTRUCTURA DE TIC', label: 'Tnlog. Implementación de Infraestructura de TIC' },
   { value: 'TNLOG. DESARROLLO DE SOFTWARE', label: 'Tnlog. Desarrollo de Software' },
-  { value: 'ADMINISTRACION DE EMPRESAS', label: 'Administracion de Empresas' },
+  { value: 'ADMINISTRACION DE EMPRESAS', label: 'Administración de Empresas' },
   { value: 'Otro', label: 'Otro' },
 ];
 

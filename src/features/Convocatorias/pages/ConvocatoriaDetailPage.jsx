@@ -36,6 +36,7 @@ import Header from "../../../shared/components/Header";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
 import { DataTable } from "../../../shared/components/DataTable";
+import { aprendizService } from "../services/aprendizService";
 
 export default function ConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
@@ -54,7 +55,28 @@ export default function ConvocatoriaDetailPage() {
   const [selectedRecomendados, setSelectedRecomendados] = useState(null);
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [loadingRecomendados, setLoadingRecomendados] = useState(false);
   const { setHeaderConfig } = useHeader();
+
+  // Función para cargar los datos completos de aprendices recomendados
+  const handleVerRecomendados = async (recomendadosIds) => {
+    console.log('[v0] Cargando aprendices recomendados:', recomendadosIds);
+    setLoadingRecomendados(true);
+    try {
+      const aprendicesCompletos = await aprendizService.obtenerAprendicesPorIds(recomendadosIds);
+      console.log('[v0] Aprendices completos obtenidos:', aprendicesCompletos);
+      setSelectedRecomendados(aprendicesCompletos);
+    } catch (error) {
+      console.error('[v0] Error al cargar aprendices recomendados:', error);
+      errorAlert({
+        title: "Error",
+        text: "No se pudieron cargar los aprendices recomendados",
+      });
+      setSelectedRecomendados([]);
+    } finally {
+      setLoadingRecomendados(false);
+    }
+  };
 
   useEffect(() => {
     setHeaderConfig({
@@ -339,9 +361,10 @@ export default function ConvocatoriaDetailPage() {
                         <Button
                           variant="link"
                           className="h-auto p-0 text-blue-600 hover:underline"
-                          onClick={() => setSelectedRecomendados(value)}
+                          onClick={() => handleVerRecomendados(value)}
+                          disabled={loadingRecomendados}
                         >
-                          Ver {value.length} recomendado(s)
+                          {loadingRecomendados ? 'Cargando...' : `Ver ${value.length} recomendado(s)`}
                         </Button>
                       ) : (
                         <span className="text-gray-400">-</span>

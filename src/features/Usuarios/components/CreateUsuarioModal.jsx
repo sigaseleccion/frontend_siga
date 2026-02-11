@@ -186,7 +186,7 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             Crear Nuevo Usuario
@@ -196,90 +196,94 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre <span className="text-red-500">*</span></Label>
-            <Input
-              id="nombre"
-              name="nombre"
-              placeholder="Nombre completo"
-              value={formData.nombre}
-              onChange={handleChange}
-              className={errors.nombre ? 'border-red-500' : ''}
-            />
-            {errors.nombre && (
-              <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="correo">Correo <span className="text-red-500">*</span></Label>
-            <Input
-              id="correo"
-              name="correo"
-              type="email"
-              placeholder="correo@empresa.com"
-              value={formData.correo}
-              onChange={handleChange}
-              className={errors.correo ? 'border-red-500' : ''}
-            />
-            {errors.correo && (
-              <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="rol">Rol <span className="text-red-500">*</span></Label>
-            <Select value={formData.rol} onValueChange={handleRolChange}>
-              <SelectTrigger id="rol" className={errors.rol ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Seleccionar rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {rolesActivos.map(rol => (
-                  <SelectItem key={rol._id} value={rol._id}>
-                    {rol.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.rol && (
-              <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
-            )}
-          </div>
-
-          <PasswordInput
-            value={formData.contrasena}
-            onChange={handleChange}
-            label="Contraseña"
-            placeholder="Ingrese contraseña segura"
-            showValidation={true}
-            required={true}
-            error={errors.contrasena}
-          />
-
-          {showConfirmPassword && (
+        <div className="py-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="confirmarContrasena">Confirmar Contraseña <span className="text-red-500">*</span></Label>
+              <Label htmlFor="nombre">Nombre <span className="text-red-500">*</span></Label>
               <Input
-                id="confirmarContrasena"
-                name="confirmarContrasena"
-                type="password"
-                placeholder="Vuelva a ingresar la contraseña"
-                value={formData.confirmarContrasena}
+                id="nombre"
+                name="nombre"
+                placeholder="Nombre completo"
+                value={formData.nombre}
                 onChange={handleChange}
-                className={errors.confirmarContrasena ? 'border-red-500' : ''}
+                className={errors.nombre ? 'border-red-500' : ''}
               />
-              {errors.confirmarContrasena && (
-                <p className="text-sm text-red-500 mt-1">{errors.confirmarContrasena}</p>
-              )}
-              {!errors.confirmarContrasena && formData.confirmarContrasena && formData.contrasena === formData.confirmarContrasena && (
-                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <span className="inline-block w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
-                  Las contraseñas coinciden
-                </p>
+              {errors.nombre && (
+                <p className="text-sm text-red-500 mt-1">{errors.nombre}</p>
               )}
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label htmlFor="correo">Correo <span className="text-red-500">*</span></Label>
+              <Input
+                id="correo"
+                name="correo"
+                type="email"
+                placeholder="correo@empresa.com"
+                value={formData.correo}
+                onChange={handleChange}
+                className={errors.correo ? 'border-red-500' : ''}
+              />
+              {errors.correo && (
+                <p className="text-sm text-red-500 mt-1">{errors.correo}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rol">Rol <span className="text-red-500">*</span></Label>
+              <Select value={formData.rol} onValueChange={handleRolChange}>
+                <SelectTrigger id="rol" className={errors.rol ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Seleccionar rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rolesActivos.map(rol => (
+                    <SelectItem key={rol._id} value={rol._id}>
+                      {rol.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.rol && (
+                <p className="text-sm text-red-500 mt-1">{errors.rol}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <PasswordInput
+                value={formData.contrasena}
+                onChange={handleChange}
+                label="Contraseña"
+                placeholder="Ingrese contraseña segura"
+                showValidation={true}
+                required={true}
+                error={errors.contrasena}
+              />
+            </div>
+
+            {showConfirmPassword && (
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="confirmarContrasena">Confirmar Contraseña <span className="text-red-500">*</span></Label>
+                <Input
+                  id="confirmarContrasena"
+                  name="confirmarContrasena"
+                  type="password"
+                  placeholder="Vuelva a ingresar la contraseña"
+                  value={formData.confirmarContrasena}
+                  onChange={handleChange}
+                  className={errors.confirmarContrasena ? 'border-red-500' : ''}
+                />
+                {errors.confirmarContrasena && (
+                  <p className="text-sm text-red-500 mt-1">{errors.confirmarContrasena}</p>
+                )}
+                {!errors.confirmarContrasena && formData.confirmarContrasena && formData.contrasena === formData.confirmarContrasena && (
+                  <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">✓</span>
+                    Las contraseñas coinciden
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>

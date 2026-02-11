@@ -75,4 +75,25 @@ export const aprendizService = {
     }
     return response.json();
   },
+
+  // Obtener múltiples aprendices por sus IDs
+  async obtenerAprendicesPorIds(ids) {
+    if (!ids || ids.length === 0) return [];
+    
+    try {
+      // Hacer múltiples requests en paralelo para obtener cada aprendiz
+      const promises = ids.map(id => {
+        // Si el id es un objeto con $oid, extraer el valor
+        const aprendizId = typeof id === 'object' && id.$oid ? id.$oid : id;
+        return this.obtenerAprendizPorId(aprendizId).catch(() => null);
+      });
+      
+      const results = await Promise.all(promises);
+      // Filtrar los resultados nulos (aprendices no encontrados)
+      return results.filter(aprendiz => aprendiz !== null);
+    } catch (error) {
+      console.error('[v0] Error al obtener aprendices recomendados:', error);
+      return [];
+    }
+  },
 };
