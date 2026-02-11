@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap');
+@import "tailwindcss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 
 @layer base {
-  * {
-    @apply font-sans antialiased;
-  }
   :root {
+    /* * {
+      font-family: 'Nunito', sans-serif;
+    } */
     /* New color palette: Principal=#FFFFFF, Secundario=#1100ff, Terciario=#d300ff, Cuarto=#01e17f */
     --background: oklch(1 0 0);
     /* #FFFFFF - Pure white background */
