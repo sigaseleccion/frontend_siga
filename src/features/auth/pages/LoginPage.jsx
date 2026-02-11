@@ -14,8 +14,9 @@ import {
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "../../../shared/contexts/auth/AuthContext";
 import { Link } from "react-router-dom";
+import { successAlert } from "../../../shared/components/ui/SweetAlert";
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -23,9 +24,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
     setIsLoading(true);
 
     try {
@@ -43,13 +46,14 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Error al iniciar sesión");
+        setErrorMessage("Las credenciales ingresadas no son válidas.");
+        return;
       }
 
       // Guarda token + usuario en el AuthContext
       login(data);
     } catch (error) {
-      alert(error.message);
+      setErrorMessage("Las credenciales ingresadas no son válidas.");
     } finally {
       setIsLoading(false);
     }
@@ -130,6 +134,11 @@ export default function LoginPage() {
               </div>
             </div>
 
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg">
+                  {errorMessage}
+                </div>
+              )}
             <div className="flex justify-end">
               <Link
                 to="/login/recuperar"

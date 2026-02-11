@@ -6,6 +6,7 @@ const AuthContext = createContext()
 export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [manualLogout, setManualLogout] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -24,17 +25,22 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem('auth', JSON.stringify(authData))
     setAuth(authData)
+    setManualLogout(false)
     navigate('/')
   }
 
   const logout = () => {
+    setManualLogout(true)
+    sessionStorage.removeItem("session-warning-shown");
     localStorage.removeItem('auth')
     setAuth(null)
     navigate('/login')
   }
 
   return (
-    <AuthContext.Provider value={{ auth, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ auth, login, logout, loading, manualLogout }}
+    >
       {children}
     </AuthContext.Provider>
   )

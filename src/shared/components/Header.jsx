@@ -63,7 +63,7 @@ export const Header = ({
   };
 
   return (
-    <div className="">
+    <div className="relative z-50">
       {/* Breadcrumbs (opcional) */}
       {breadcrumbs.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
