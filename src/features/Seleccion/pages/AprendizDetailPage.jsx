@@ -20,6 +20,7 @@ import {
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
 import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function AprendizDetailPage() {
   const { id: convocatoriaId, aprendizId } = useParams();
@@ -34,6 +35,8 @@ export default function AprendizDetailPage() {
   const [fechaInicioContrato, setFechaInicioContrato] = useState("");
   const [fechaFinContrato, setFechaFinContrato] = useState("");
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -45,8 +48,10 @@ export default function AprendizDetailPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now();
       try {
         setError(null);
+        setLoading(true);
         const a = await aprendizService.obtenerAprendizPorId(aprendizId);
         setAprendiz(a);
         const inicioC = a.fechaInicioContrato
@@ -73,6 +78,10 @@ export default function AprendizDetailPage() {
         }
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     if (aprendizId) loadData();
@@ -121,6 +130,7 @@ export default function AprendizDetailPage() {
             </Link>
           </div>
 
+          {!loading && (
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -188,7 +198,6 @@ export default function AprendizDetailPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle>Informacion del Programa</CardTitle>
@@ -257,7 +266,9 @@ export default function AprendizDetailPage() {
               </CardContent>
             </Card>
           </div>
+          )}
 
+          {!loading && (
           <div className="grid gap-6 lg:grid-cols-2 mt-6">
             <Card>
               <CardHeader>
@@ -360,8 +371,10 @@ export default function AprendizDetailPage() {
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
       </main>
     </>
   );
 }
+ 

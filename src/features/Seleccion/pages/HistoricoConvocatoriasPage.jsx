@@ -17,12 +17,15 @@ import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function HistoricoConvocatoriasPage() {
   const [archivedConvocatorias, setArchivedConvocatorias] = useState([]);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -34,8 +37,10 @@ export default function HistoricoConvocatoriasPage() {
 
   useEffect(() => {
     const loadArchived = async () => {
+      const start = Date.now();
       try {
         setError(null)
+        setLoading(true);
         const data = await convocatoriaService.obtenerConvocatoriasArchivadas()
         const enriched = await Promise.all(
           data.map(async (c) => {
@@ -68,6 +73,10 @@ export default function HistoricoConvocatoriasPage() {
         setArchivedConvocatorias(enriched)
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     loadArchived();
@@ -105,12 +114,21 @@ export default function HistoricoConvocatoriasPage() {
             </div>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Convocatorias Archivadas</CardTitle>
             </CardHeader>
             <CardContent>
-              {(() => {
+              {!loading && (() => {
                 const term = searchTerm.toLowerCase().trim();
                 const filtered = term
                   ? archivedConvocatorias.filter((c) => {

@@ -35,6 +35,7 @@ import {
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
 import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function AprendizEditPage() {
   const { id: convocatoriaId, aprendizId } = useParams();
@@ -46,6 +47,7 @@ export default function AprendizEditPage() {
   const [pruebaSeleccionId, setPruebaSeleccionId] = useState(null);
   const [pruebaTecnica, setPruebaTecnica] = useState("pendiente");
   const [backendPruebasAprobadas, setBackendPruebasAprobadas] = useState(false);
+  const [aprobadoLocal, setAprobadoLocal] = useState(false);
 
   const [initialState, setInitialState] = useState({
     pruebas: { psicologica: "pendiente", medica: "pendiente" },
@@ -61,6 +63,8 @@ export default function AprendizEditPage() {
     initialState.fechaFinContrato,
   );
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -90,8 +94,10 @@ export default function AprendizEditPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now();
       try {
         setError(null);
+        setLoading(true);
         const a = await aprendizService.obtenerAprendizPorId(aprendizId);
         setAprendiz(a);
         setPruebaSeleccionId(a.pruebaSeleccionId || null);
@@ -129,6 +135,10 @@ export default function AprendizEditPage() {
         }
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     if (aprendizId) loadData();
@@ -153,7 +163,10 @@ export default function AprendizEditPage() {
     fechaInicioContrato !== "" &&
     fechaFinContrato !== "";
 
-  const mostrarAprobadoUI = aprendiz?.etapaActual === "lectiva";
+  const mostrarAprobadoUI =
+    aprobadoLocal ||
+    aprendiz?.etapaActual === "lectiva" ||
+    disablePorEtapa;
 
   useEffect(() => {
     const autoSaveIfNeeded = async () => {
@@ -240,6 +253,7 @@ export default function AprendizEditPage() {
         fechaInicioContrato: fechaInicioContrato || null,
         fechaFinContrato: fechaFinContrato || null,
       });
+      setAprobadoLocal(true);
       await successAlert({
         title: "Aprendiz aprobado",
         text: "El aprendiz ha sido aprobado y pasó a etapa lectiva.",
@@ -354,6 +368,16 @@ export default function AprendizEditPage() {
             </div>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
+          {!loading && (
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="border-border shadow-sm">
               <CardHeader>
@@ -399,7 +423,6 @@ export default function AprendizEditPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="border-border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">
@@ -447,119 +470,122 @@ export default function AprendizEditPage() {
               </CardContent>
             </Card>
           </div>
+          )}
 
-          <Card className="mt-6 border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                Pruebas de selección
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-
-                <div className="space-y-6">
-                  <div className="relative flex items-start gap-4 pl-10">
-                    <div
-                      className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebas.psicologica)}`}
-                    >
-                      {getEstadoIcon(pruebas.psicologica)}
-                    </div>
-                    <div className="flex-1 space-y-3 min-w-0">
-                      <h4 className="font-semibold text-foreground">
-                        Prueba psicológica
-                      </h4>
-                      <div className="flex gap-3 items-center flex-wrap">
-                        <Select
-                          value={pruebas.psicologica}
-                          onValueChange={(value) =>
-                            !(disablePorEtapa || lockSelectors) &&
-                            handlePruebaChange("psicologica", value)
-                          }
-                        >
-                          <SelectTrigger
-                            className="w-[180px]"
-                            disabled={disablePorEtapa || lockSelectors}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pendiente">Pendiente</SelectItem>
-                            <SelectItem value="aprobado">Aprobado</SelectItem>
-                            <SelectItem value="no aprobado">
-                              No aprobado
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+          {!loading && (
+            <Card className="mt-6 border-border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold">
+                  Pruebas de selección
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+  
+                  <div className="space-y-6">
+                    <div className="relative flex items-start gap-4 pl-10">
+                      <div
+                        className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebas.psicologica)}`}
+                      >
+                        {getEstadoIcon(pruebas.psicologica)}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-10">
-                    <div
-                      className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebaTecnica)}`}
-                    >
-                      {getEstadoIcon(pruebaTecnica)}
-                    </div>
-                    <div className="flex-1 space-y-3 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex-1 space-y-3 min-w-0">
                         <h4 className="font-semibold text-foreground">
-                          Prueba técnica
+                          Prueba psicológica
                         </h4>
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex gap-3 items-center flex-wrap">
-                        <div className="px-3 py-2 bg-muted/50 rounded-md border border-border">
-                          <span className="text-sm capitalize">
-                            {pruebaTecnica}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Este campo se modifica desde Reporte técnico
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start gap-4 pl-10">
-                    <div
-                      className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebas.medica)}`}
-                    >
-                      {getEstadoIcon(pruebas.medica)}
-                    </div>
-                    <div className="flex-1 space-y-3 min-w-0">
-                      <h4 className="font-semibold text-foreground">
-                        Exámenes médicos
-                      </h4>
-                      <div className="flex gap-3 items-center flex-wrap">
-                        <Select
-                          value={pruebas.medica}
-                          onValueChange={(value) =>
-                            !(disablePorEtapa || lockSelectors) &&
-                            handlePruebaChange("medica", value)
-                          }
-                        >
-                          <SelectTrigger
-                            className="w-[180px]"
-                            disabled={disablePorEtapa || lockSelectors}
+                        <div className="flex gap-3 items-center flex-wrap">
+                          <Select
+                            value={pruebas.psicologica}
+                            onValueChange={(value) =>
+                              !(disablePorEtapa || lockSelectors) &&
+                              handlePruebaChange("psicologica", value)
+                            }
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pendiente">Pendiente</SelectItem>
-                            <SelectItem value="aprobado">Aprobado</SelectItem>
-                            <SelectItem value="no aprobado">
-                              No aprobado
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                            <SelectTrigger
+                              className="w-[180px]"
+                              disabled={disablePorEtapa || lockSelectors}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pendiente">Pendiente</SelectItem>
+                              <SelectItem value="aprobado">Aprobado</SelectItem>
+                              <SelectItem value="no aprobado">
+                                No aprobado
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+  
+                    <div className="relative flex items-start gap-4 pl-10">
+                      <div
+                        className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebaTecnica)}`}
+                      >
+                        {getEstadoIcon(pruebaTecnica)}
+                      </div>
+                      <div className="flex-1 space-y-3 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-foreground">
+                            Prueba técnica
+                          </h4>
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex gap-3 items-center flex-wrap">
+                          <div className="px-3 py-2 bg-muted/50 rounded-md border border-border">
+                            <span className="text-sm capitalize">
+                              {pruebaTecnica}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Este campo se modifica desde Reporte técnico
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+  
+                    <div className="relative flex items-start gap-4 pl-10">
+                      <div
+                        className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${getEstadoColor(pruebas.medica)}`}
+                      >
+                        {getEstadoIcon(pruebas.medica)}
+                      </div>
+                      <div className="flex-1 space-y-3 min-w-0">
+                        <h4 className="font-semibold text-foreground">
+                          Exámenes médicos
+                        </h4>
+                        <div className="flex gap-3 items-center flex-wrap">
+                          <Select
+                            value={pruebas.medica}
+                            onValueChange={(value) =>
+                              !(disablePorEtapa || lockSelectors) &&
+                              handlePruebaChange("medica", value)
+                            }
+                          >
+                            <SelectTrigger
+                              className="w-[180px]"
+                              disabled={disablePorEtapa || lockSelectors}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pendiente">Pendiente</SelectItem>
+                              <SelectItem value="aprobado">Aprobado</SelectItem>
+                              <SelectItem value="no aprobado">
+                                No aprobado
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </>

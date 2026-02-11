@@ -18,6 +18,7 @@ import { pruebaSeleccionService } from "@/features/Convocatorias/services/prueba
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function SeleccionConvocatoriaPage() {
   const { id: convocatoriaId } = useParams();
@@ -32,6 +33,8 @@ export default function SeleccionConvocatoriaPage() {
   const [aprendices, setAprendices] = useState([]);
   const [error, setError] = useState(null);
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -43,8 +46,10 @@ export default function SeleccionConvocatoriaPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now();
       try {
         setError(null);
+        setLoading(true);
         const conv =
           await convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId);
         setConvocatoriaInfo({
@@ -89,6 +94,10 @@ export default function SeleccionConvocatoriaPage() {
         setAprendices(enriched);
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     loadData();
@@ -159,12 +168,21 @@ export default function SeleccionConvocatoriaPage() {
             </div>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Aprendices en Seleccion</CardTitle>
             </CardHeader>
             <CardContent>
-              <DataTable
+              {!loading && <DataTable
                 columns={[
                   {
                     key: "nombre",
@@ -226,7 +244,7 @@ export default function SeleccionConvocatoriaPage() {
                 data={aprendices}
                 pageSize={5}
                 pageSizeOptions={[5, 10, 20]}
-              />
+              />}
             </CardContent>
           </Card>
         </div>
