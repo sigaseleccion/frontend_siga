@@ -43,6 +43,7 @@ import {
   warningAlert,
 } from "../../../shared/components/ui/SweetAlert";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams();
@@ -50,12 +51,7 @@ export default function ReporteTecnicoPage() {
 
   const [reporteFile, setReporteFile] = useState(null);
   const [tab, setTab] = useState("adjuntar");
-
-  const convocatoriaInfo = {
-    id: convocatoriaId,
-    nombreConvocatoria: "Convocatoria Desarrollo Web 2024",
-    nivelFormacion: "Tecnologia",
-  };
+ 
 
   const [aprendices, setAprendices] = useState([]);
   const [error, setError] = useState(null);
@@ -313,9 +309,9 @@ export default function ReporteTecnicoPage() {
           <div className="mb-8">
             <div className="flex items-center gap-3 mt-2">
               <h1 className="text-3xl font-bold text-foreground">
-                {convocatoriaInfo.nombreConvocatoria}
+                {convocatoria?.nombreConvocatoria || "-"}
               </h1>
-              <Badge>{convocatoriaInfo.nivelFormacion}</Badge>
+              <Badge>{getNivelFormacionLabel(convocatoria?.nivelFormacion)}</Badge>
             </div>
           </div>
 

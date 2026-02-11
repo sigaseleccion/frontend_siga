@@ -22,6 +22,7 @@ import { ArrowLeft, Archive, Eye, CheckSquare } from "lucide-react";
 import { convocatoriaService } from "@/features/Convocatorias/services/convocatoriaService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 
 export default function HistoricoConvocatoriasPage() {
   const [archivedConvocatorias, setArchivedConvocatorias] = useState([]);
@@ -76,15 +77,6 @@ export default function HistoricoConvocatoriasPage() {
     };
     loadArchived();
   }, []);
-
-  const getNivelFormacionLabel = (nivel) => {
-    const labels = {
-      tecnica: "Tecnica",
-      tecnologia: "Tecnologia",
-      profesional: "Profesional",
-    };
-    return labels[nivel];
-  };
 
   return (
     <>

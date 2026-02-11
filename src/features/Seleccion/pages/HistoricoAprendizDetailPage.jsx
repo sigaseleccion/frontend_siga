@@ -1,7 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Navbar } from "@/shared/components/Navbar";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -12,10 +12,21 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { ArrowLeft, CheckCircle, XCircle, Clock, CheckSquare } from "lucide-react";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
+import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 
 export default function HistoricoAprendizDetailPage() {
-  const { id: convocatoriaId } = useParams();
+  const { id: convocatoriaId, aprendizId } = useParams();
   const { setHeaderConfig } = useHeader();
+  const [error, setError] = useState(null);
+  const [aprendiz, setAprendiz] = useState(null);
+  const [pruebas, setPruebas] = useState({
+    psicologica: "pendiente",
+    medica: "pendiente",
+  });
+  const [pruebaTecnica, setPruebaTecnica] = useState("pendiente");
+  const [fechaInicioContrato, setFechaInicioContrato] = useState("");
+  const [fechaFinContrato, setFechaFinContrato] = useState("");
 
   useEffect(() => {
     setHeaderConfig({
@@ -25,26 +36,40 @@ export default function HistoricoAprendizDetailPage() {
     });
   }, []);
 
-  const aprendiz = {
-    nombre: "Maria Gonzalez Lopez",
-    documento: "9876543210",
-    tipoDocumento: "CC",
-    pais: "Colombia",
-    ciudad: "Bogota",
-    direccion: "Carrera 15 #30-20",
-    programaFormacion: "Administracion de Empresas",
-    telefono: "+57 310 9876543",
-    correo: "maria.gonzalez@example.com",
-    fechaInicioLectiva: "2024-02-01",
-    fechaFinLectiva: "2024-07-01",
-    fechaInicioProductiva: "2024-07-02",
-    fechaFinProductiva: "2025-01-01",
-    pruebas: [
-      { nombre: "Prueba Psicologica", estado: "aprobado" },
-      { nombre: "Prueba Tecnica", estado: "aprobado" },
-      { nombre: "Examenes Medicos", estado: "aprobado" },
-    ],
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setError(null);
+        const a = await aprendizService.obtenerAprendizPorId(aprendizId);
+        setAprendiz(a);
+        const inicioC = a.fechaInicioContrato
+          ? new Date(a.fechaInicioContrato).toISOString().slice(0, 10)
+          : "";
+        const finC = a.fechaFinContrato
+          ? new Date(a.fechaFinContrato).toISOString().slice(0, 10)
+          : "";
+        setFechaInicioContrato(inicioC);
+        setFechaFinContrato(finC);
+        if (a.pruebaSeleccionId) {
+          try {
+            const ps = await pruebaSeleccionService.obtenerPorId(
+              a.pruebaSeleccionId,
+            );
+            setPruebas({
+              psicologica: ps.pruebaPsicologica || "pendiente",
+              medica: ps.examenesMedicos || "pendiente",
+            });
+            setPruebaTecnica(ps.pruebaTecnica || "pendiente");
+          } catch (e) {
+            setError(e.message);
+          }
+        }
+      } catch (e) {
+        setError(e.message);
+      }
+    };
+    if (aprendizId) loadData();
+  }, [aprendizId]);
 
   const getEstadoIcon = (estado) => {
     switch (estado) {
@@ -68,10 +93,16 @@ export default function HistoricoAprendizDetailPage() {
     }
   };
 
+  const pruebasArray = [
+    { nombre: "Prueba Psicologica", estado: pruebas.psicologica },
+    { nombre: "Prueba Tecnica", estado: pruebaTecnica },
+    { nombre: "Examenes Medicos", estado: pruebas.medica },
+  ];
+
   return (
     <div>
-      <Navbar />
-      <main className="ml-72 min-h-screen bg-gray-50 p-8">
+      <main className="min-h-screen bg-gray-50">
+        <div className="p-4">
         <div className="mb-6">
           <Link to={`/seleccion/historico/${convocatoriaId}`}>
             <Button variant="ghost" size="sm">
@@ -80,6 +111,13 @@ export default function HistoricoAprendizDetailPage() {
             </Button>
           </Link>
         </div>
+        {error && (
+          <Card className="mb-4">
+            <CardContent className="p-4 text-red-700 bg-red-50 border border-red-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">
@@ -101,33 +139,33 @@ export default function HistoricoAprendizDetailPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     Nombre
                   </p>
-                  <p className="text-sm">{aprendiz.nombre}</p>
+                  <p className="text-sm">{aprendiz?.nombre || "-"}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     Documento
                   </p>
                   <p className="text-sm">
-                    {aprendiz.tipoDocumento} {aprendiz.documento}
+                    {aprendiz?.tipoDocumento || "-"} {aprendiz?.documento || ""}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     Ciudad
                   </p>
-                  <p className="text-sm">{aprendiz.ciudad}</p>
+                  <p className="text-sm">{aprendiz?.ciudad || "-"}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     Telefono
                   </p>
-                  <p className="text-sm">{aprendiz.telefono}</p>
+                  <p className="text-sm">{aprendiz?.telefono || "-"}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm font-medium text-muted-foreground">
                     Correo
                   </p>
-                  <p className="text-sm">{aprendiz.correo}</p>
+                  <p className="text-sm">{aprendiz?.correo || "-"}</p>
                 </div>
               </div>
             </CardContent>
@@ -142,7 +180,7 @@ export default function HistoricoAprendizDetailPage() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Programa de Formacion
                 </p>
-                <p className="text-sm">{aprendiz.programaFormacion}</p>
+                <p className="text-sm">{aprendiz?.programaFormacion || "-"}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -150,9 +188,11 @@ export default function HistoricoAprendizDetailPage() {
                     Inicio Lectiva
                   </p>
                   <p className="text-sm">
-                    {new Date(aprendiz.fechaInicioLectiva).toLocaleDateString(
-                      "es-ES",
-                    )}
+                    {aprendiz?.fechaInicioLectiva
+                      ? new Date(aprendiz.fechaInicioLectiva).toLocaleDateString(
+                          "es-ES",
+                        )
+                      : "-"}
                   </p>
                 </div>
                 <div>
@@ -160,11 +200,35 @@ export default function HistoricoAprendizDetailPage() {
                     Fin Lectiva
                   </p>
                   <p className="text-sm">
-                    {new Date(aprendiz.fechaFinLectiva).toLocaleDateString(
-                      "es-ES",
-                    )}
+                    {aprendiz?.fechaFinLectiva
+                      ? new Date(aprendiz.fechaFinLectiva).toLocaleDateString(
+                          "es-ES",
+                        )
+                      : "-"}
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fechas de Contrato</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Fecha Inicio Contrato
+                </p>
+                <p className="text-sm">{fechaInicioContrato || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Fecha Fin Contrato
+                </p>
+                <p className="text-sm">{fechaFinContrato || "-"}</p>
               </div>
             </CardContent>
           </Card>
@@ -178,7 +242,7 @@ export default function HistoricoAprendizDetailPage() {
             <div className="relative">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
               <div className="space-y-6">
-                {aprendiz.pruebas.map((prueba, index) => (
+                {pruebasArray.map((prueba, index) => (
                   <div
                     key={index}
                     className="relative flex items-start gap-4 pl-10"
@@ -207,6 +271,7 @@ export default function HistoricoAprendizDetailPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </main>
     </div>
   );

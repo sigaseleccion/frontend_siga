@@ -33,6 +33,7 @@ import { aprendizService } from "@/features/Convocatorias/services/aprendizServi
 import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
+import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 
 export default function SeleccionPage() {
   const [searchParams] = useSearchParams();
@@ -134,15 +135,6 @@ export default function SeleccionPage() {
     loadData();
   }, []);
 
-  const getNivelFormacionLabel = (nivel) => {
-    const labels = {
-      tecnica: "Tecnica",
-      tecnologia: "Tecnologia",
-      profesional: "Profesional",
-    };
-    return labels[nivel];
-  };
-
   const filteredConvocatorias = convocatorias.filter((conv) =>
     conv.nombreConvocatoria.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -197,7 +189,7 @@ export default function SeleccionPage() {
           <Link to="/seleccion/historico">
             <Button variant="outline">
               <History className="h-4 w-4 mr-2" />
-              Historico
+              Histórico
             </Button>
           </Link>
         </div>

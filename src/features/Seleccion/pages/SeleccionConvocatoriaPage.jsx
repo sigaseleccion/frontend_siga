@@ -16,6 +16,7 @@ import { convocatoriaService } from "@/features/Convocatorias/services/convocato
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
 import { pruebaSeleccionService } from "@/features/Convocatorias/services/pruebaSeleccionService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
+import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 
 export default function SeleccionConvocatoriaPage() {
   const { id: convocatoriaId } = useParams();
@@ -121,13 +122,13 @@ export default function SeleccionConvocatoriaPage() {
             <Link to="/seleccion">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver a Seleccion
+                Volver a Selección
               </Button>
             </Link>
             <Link to={`/seleccion/${convocatoriaId}/reporte-tecnico`}>
               <Button>
                 <FileText className="h-4 w-4 mr-2" />
-                Reporte Tecnico
+                Reporte Técnico
               </Button>
             </Link>
           </div>
@@ -138,8 +139,8 @@ export default function SeleccionConvocatoriaPage() {
                 {convocatoriaInfo.nombreConvocatoria}
               </h1>
               <div className="flex items-center gap-3 mt-2">
-                <Badge variant="outline">
-                  {convocatoriaInfo.nivelFormacion}
+                <Badge>
+                  {getNivelFormacionLabel(convocatoriaInfo.nivelFormacion)}
                 </Badge>
                 <span className="text-muted-foreground">
                   {convocatoriaInfo.idConvocatoria || convocatoriaId}

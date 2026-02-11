@@ -141,7 +141,7 @@ export default function HistoricoConvocatoriaDetailPage() {
                         </td>
                         <td className="py-3 px-4">
                           <Link
-                            to={`/seleccion/${convocatoriaId}/aprendiz/${aprendiz.id}`}
+                            to={`/seleccion/historico/${convocatoriaId}/aprendiz/${aprendiz.id}`}
                           >
                             <Button variant="ghost" size="sm">
                               <Eye className="h-4 w-4 mr-1" />
