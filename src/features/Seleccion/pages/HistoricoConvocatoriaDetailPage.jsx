@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { ArrowLeft, CheckSquare, Eye } from "lucide-react";
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
+import { convocatoriaService } from "@/features/Convocatorias/services/convocatoriaService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { DataTable } from "@/shared/components/DataTable";
 import Spinner from "../../../shared/components/ui/Spinner";
@@ -20,6 +21,7 @@ import Spinner from "../../../shared/components/ui/Spinner";
 export default function HistoricoConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
 
+  const [convocatoria, setConvocatoria] = useState(null);
   const [aprendices, setAprendices] = useState([]);
   const [error, setError] = useState(null);
   const { setHeaderConfig } = useHeader();
@@ -40,10 +42,11 @@ export default function HistoricoConvocatoriaDetailPage() {
       try {
         setError(null);
         setLoading(true);
-        const aps =
-          await aprendizService.obtenerAprendicesPorConvocatoria(
-            convocatoriaId,
-          );
+        const [convData, aps] = await Promise.all([
+          convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId),
+          aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId),
+        ]);
+        setConvocatoria(convData);
         setAprendices(
           aps
             .filter((a) =>
@@ -88,11 +91,15 @@ export default function HistoricoConvocatoriaDetailPage() {
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
-              Detalle Convocatoria Archivada
+              {convocatoria?.nombreConvocatoria
+                ? `${convocatoria.nombreConvocatoria} (Archivada)`
+                : "Detalle Convocatoria Archivada"}
             </h1>
             <div className="flex items-center gap-3 mt-2">
               <Badge variant="secondary">Archivada</Badge>
-              <span className="text-muted-foreground">{convocatoriaId}</span>
+              <span className="text-muted-foreground">
+                {convocatoria?.idConvocatoria || convocatoriaId}
+              </span>
             </div>
           </div>
 

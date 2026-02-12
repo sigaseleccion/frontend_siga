@@ -130,6 +130,15 @@ export default function AprendizDetailPage() {
             </Link>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
           {!loading && (
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
