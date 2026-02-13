@@ -1,15 +1,3 @@
-// import React from "react";
-
-// const HistoricoAprendicesPage = () => {
-//   return (
-//     <h1>Historico de aprendices</h1>
-//   );
-// };
-
-// export default HistoricoAprendicesPage;
-
-'use client';
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
@@ -67,17 +55,14 @@ const HistoricoAprendicesPage = () => {
           {/* Header con botón de retorno */}
           <div className="mb-6">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => navigate("/seguimiento")}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
             >
               <ArrowLeft size={18} />
               Volver a Seguimiento
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Histórico de Aprendices</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Registro de aprendices que culminaron su proceso productivo
-            </p>
+            
           </div>
 
           {/* Buscador */}

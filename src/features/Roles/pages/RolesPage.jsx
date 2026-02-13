@@ -1,5 +1,16 @@
 import React, { useState, useEffect, act } from "react";
-import { Shield, Plus, Edit2, Trash2, Search, ShieldBanIcon, ShieldUser, ShieldX, ShieldCheck } from "lucide-react";
+import {
+  Shield,
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  ShieldBanIcon,
+  ShieldUser,
+  ShieldX,
+  ShieldCheck,
+  PenBoxIcon,
+} from "lucide-react";
 import { useListRole } from "../hooks/useListRole";
 import { useNavigate } from "react-router-dom";
 import { roleService } from "../services/roleService";
@@ -97,10 +108,12 @@ export default function RolesPage() {
             </div>
 
             {/* Botón */}
-            <Button onClick={handleCreateRole} className="ml-auto">
-              <Plus className="h-4 w-4" />
-              Crear Rol
-            </Button>
+            {tienePermiso(auth, "roles", "eliminar") && (
+              <Button onClick={handleCreateRole} className="ml-auto">
+                <Plus className="h-4 w-4" />
+                Crear Rol
+              </Button>
+            )}
           </div>
 
           {error && (
@@ -130,7 +143,9 @@ export default function RolesPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Roles inactivos</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Roles inactivos
+                    </p>
                     <p className="text-3xl font-bold text-gray-900">
                       {roles.filter((r) => !r.activo).length}
                     </p>
@@ -234,14 +249,17 @@ export default function RolesPage() {
 
                       {/* Card Actions */}
                       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
-                        <button
-                          onClick={() => handleEdit(role._id)}
-                          disabled={loading}
-                          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg transition-colors duration-200 font-medium ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
-                        >
-                          <Edit2 size={16} />
-                          Editar
-                        </button>
+                        {tienePermiso(auth, "roles", "editar") && (
+                          <button
+                            onClick={() => handleEdit(role._id)}
+                            disabled={loading}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg transition-colors duration-200 font-medium ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
+                          >
+                            <PenBoxIcon className="h-4 w-4 mr-1"/>
+                            Editar
+                          </button>
+                        )}
+
                         {tienePermiso(auth, "roles", "eliminar") && (
                           <button
                             onClick={() => handleDelete(role._id)}

@@ -2027,10 +2027,10 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
                                     </Select>
                                     {formData.reemplazoId && (
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() => setFormData({ ...formData, reemplazoId: '' })}
-                                            className="text-xs text-gray-500 hover:text-gray-700"
+                                            className="text-xs text-gray-600 hover:text-gray-700"
                                         >
                                             Quitar reemplazo
                                         </Button>

@@ -37,6 +37,8 @@ import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
 import { DataTable } from "../../../shared/components/DataTable";
 import { aprendizService } from "../services/aprendizService";
+import { tienePermiso } from "../../../shared/utils/auth/permissions";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext";
 
 export default function ConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
@@ -57,17 +59,19 @@ export default function ConvocatoriaDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingRecomendados, setLoadingRecomendados] = useState(false);
   const { setHeaderConfig } = useHeader();
+    const { auth } = useAuth();
 
   // Función para cargar los datos completos de aprendices recomendados
   const handleVerRecomendados = async (recomendadosIds) => {
-    console.log('[v0] Cargando aprendices recomendados:', recomendadosIds);
+    console.log("[v0] Cargando aprendices recomendados:", recomendadosIds);
     setLoadingRecomendados(true);
     try {
-      const aprendicesCompletos = await aprendizService.obtenerAprendicesPorIds(recomendadosIds);
-      console.log('[v0] Aprendices completos obtenidos:', aprendicesCompletos);
+      const aprendicesCompletos =
+        await aprendizService.obtenerAprendicesPorIds(recomendadosIds);
+      console.log("[v0] Aprendices completos obtenidos:", aprendicesCompletos);
       setSelectedRecomendados(aprendicesCompletos);
     } catch (error) {
-      console.error('[v0] Error al cargar aprendices recomendados:', error);
+      console.error("[v0] Error al cargar aprendices recomendados:", error);
       errorAlert({
         title: "Error",
         text: "No se pudieron cargar los aprendices recomendados",
@@ -260,17 +264,18 @@ export default function ConvocatoriaDetailPage() {
               </Link>
             </div>
             <div className="flex gap-2">
-              {convocatoria.estado === "en proceso" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExcelModal(true)}
-                  className="bg-transparent"
-                  disabled={actionLoading}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Cargar Excel adicional
-                </Button>
-              )}
+              {convocatoria.estado === "en proceso" &&
+                tienePermiso(auth, "convocatorias", "cargarExcelAdicional") && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowExcelModal(true)}
+                    className="bg-transparent"
+                    disabled={actionLoading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Cargar Excel adicional
+                  </Button>
+                )}
               {convocatoria.estado === "en proceso" ? (
                 <Button onClick={() => setShowCloseDialog(true)}>
                   <Lock className="h-4 w-4 mr-2" />
@@ -364,7 +369,9 @@ export default function ConvocatoriaDetailPage() {
                           onClick={() => handleVerRecomendados(value)}
                           disabled={loadingRecomendados}
                         >
-                          {loadingRecomendados ? 'Cargando...' : `Ver ${value.length} recomendado(s)`}
+                          {loadingRecomendados
+                            ? "Cargando..."
+                            : `Ver ${value.length} recomendado(s)`}
                         </Button>
                       ) : (
                         <span className="text-gray-400">-</span>
