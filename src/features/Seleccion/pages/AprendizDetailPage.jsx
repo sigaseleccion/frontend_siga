@@ -34,9 +34,12 @@ export default function AprendizDetailPage() {
   const [pruebaTecnica, setPruebaTecnica] = useState("pendiente");
   const [fechaInicioContrato, setFechaInicioContrato] = useState("");
   const [fechaFinContrato, setFechaFinContrato] = useState("");
+  const [apReemplazarInfo, setApReemplazarInfo] = useState(null);
   const { setHeaderConfig } = useHeader();
   const [loading, setLoading] = useState(true);
   const MIN_LOADER_MS = 300;
+  const toBogotaDisplay = (d) =>
+    d ? d.split("T")[0].split("-").reverse().join("/") : "-";
 
   useEffect(() => {
     setHeaderConfig({
@@ -54,6 +57,15 @@ export default function AprendizDetailPage() {
         setLoading(true);
         const a = await aprendizService.obtenerAprendizPorId(aprendizId);
         setAprendiz(a);
+        if (a.apReemplazar) {
+          try {
+            const r = await aprendizService.obtenerAprendizPorId(a.apReemplazar);
+            setApReemplazarInfo(r);
+          } catch (e) {
+          }
+        } else {
+          setApReemplazarInfo(null);
+        }
         const inicioC = a.fechaInicioContrato
           ? new Date(a.fechaInicioContrato).toISOString().slice(0, 10)
           : "";
@@ -296,6 +308,13 @@ export default function AprendizDetailPage() {
                   </p>
                   <p className="text-sm">{fechaFinContrato || "-"}</p>
                 </div>
+                {fechaInicioContrato && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-800">
+                      Este aprendiz cambiará al módulo de seguimiento con estado lectiva (Contrato) en la fecha {fechaInicioContrato}.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -380,6 +399,52 @@ export default function AprendizDetailPage() {
               </CardContent>
             </Card>
           </div>
+          )}
+
+          {!loading && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Aprendiz a Reemplazar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {apReemplazarInfo ? (
+                  <div className="text-sm">
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Nombre: </span>
+                        <span>{apReemplazarInfo.nombre}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Documento: </span>
+                        <span>{apReemplazarInfo.tipoDocumento} {apReemplazarInfo.documento}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Fin lectiva: </span>
+                        <span>{toBogotaDisplay(apReemplazarInfo.fechaFinLectiva)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Inicio productiva: </span>
+                        <span>{toBogotaDisplay(apReemplazarInfo.fechaInicioProductiva)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Inicio contrato: </span>
+                        <span>{toBogotaDisplay(apReemplazarInfo.fechaInicioContrato)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Fin productiva: </span>
+                        <span>{toBogotaDisplay(apReemplazarInfo.fechaFinProductiva)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground font-semibold">Fin contrato: </span>
+                        <span>{toBogotaDisplay(apReemplazarInfo.fechaFinContrato)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Sin reemplazo asignado</p>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </main>

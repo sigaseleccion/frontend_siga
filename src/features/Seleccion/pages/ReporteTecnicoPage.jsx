@@ -371,7 +371,7 @@ export default function ReporteTecnicoPage() {
                             Archivo actual
                           </p>
                           <a
-                            href={convocatoria.reporteTecnico.url}
+                            href={convocatoria.reporteTecnico.downloadUrl || convocatoria.reporteTecnico.url}
                             target="_blank"
                             rel="noreferrer"
                             className="text-sm text-blue-600 underline"
