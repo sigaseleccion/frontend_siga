@@ -176,13 +176,8 @@ export default function AprendizEditPage() {
     fechaFinContrato !== "" &&
     apReemplazar !== null &&
     aprendiz?.etapaActual === "seleccion2" &&
-    !(
-      aprobadoLocal ||
-      (todasPruebasAprobadas &&
-        fechaInicioContrato !== "" &&
-        fechaFinContrato !== "" &&
-        apReemplazar !== null)
-    );
+    !aprobadoLocal &&
+    apReemplazarPersistido === null;
 
   const lockSelectors =
     todasPruebasAprobadas &&
@@ -198,10 +193,14 @@ export default function AprendizEditPage() {
   const mostrarAprobadoUI =
     aprobadoLocal ||
     aprendiz?.etapaActual === "lectiva" ||
-    (todasPruebasAprobadas &&
-      fechaInicioContrato !== "" &&
-      fechaFinContrato !== "" &&
-      apReemplazar !== null);
+    apReemplazarPersistido !== null;
+
+  const pendienteConfirmar =
+    !mostrarAprobadoUI &&
+    todasPruebasAprobadas &&
+    fechaInicioContrato !== "" &&
+    fechaFinContrato !== "" &&
+    apReemplazar !== null;
 
   useEffect(() => {
   }, []);
@@ -231,13 +230,23 @@ export default function AprendizEditPage() {
           setError(e.message);
         }
       }
-      setInitialState((prev) => ({
-        ...prev,
+      if (fechaInicioContrato !== "" && fechaFinContrato !== "") {
+        await aprendizService.actualizarAprendiz(aprendizId, {
+          fechaInicioContrato,
+          fechaFinContrato,
+        });
+      }
+      setInitialState({
         pruebas,
-      }));
+        fechaInicioContrato,
+        fechaFinContrato,
+      });
       await successAlert({
         title: "Cambios guardados",
-        text: "Se guardaron las pruebas. Las fechas y el reemplazo se guardarán al aprobar.",
+        text:
+          apReemplazar === null
+            ? "Se guardaron las fechas de contrato. Puede dejar el reemplazo pendiente."
+            : "Se guardaron los cambios.",
       });
     } catch (e) {
       setError(e.message);
@@ -412,12 +421,14 @@ export default function AprendizEditPage() {
             </Link>
 
             <div className="flex gap-4 items-center justify-end flex-wrap">
-              {(mostrarAprobadoUI || !puedeAprobar) && (
+              {(mostrarAprobadoUI || pendienteConfirmar || !puedeAprobar) && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex-1 min-w-[250px]">
                   <p className="text-sm text-yellow-800">
                     {mostrarAprobadoUI
                       ? "Aprendiz aprobado"
-                      : "Complete fechas de contrato y seleccione el reemplazo para habilitar la aprobación"}
+                      : pendienteConfirmar
+                        ? "Pendiente de confirmar aprobación: haga clic en 'Aprobar aprendiz' para guardar"
+                        : "Complete fechas de contrato y seleccione el reemplazo para habilitar la aprobación"}
                   </p>
                 </div>
               )}
@@ -431,17 +442,18 @@ export default function AprendizEditPage() {
                 {mostrarAprobadoUI ? "Aprendiz aprobado" : "Aprobar aprendiz"}
               </Button>
 
-              {hasUnsavedChanges &&
-                !(backendPruebasAprobadas &&
-                  fechaInicioContrato !== "" &&
-                  fechaFinContrato !== "") && (
+              {!mostrarAprobadoUI && apReemplazar === null && (
                 <Button
                   onClick={handleGuardar}
-                  disabled={disablePorEtapa}
+                  disabled={
+                    disablePorEtapa ||
+                    fechaInicioContrato === "" ||
+                    fechaFinContrato === ""
+                  }
                   className="bg-primary hover:bg-primary/90 shadow-md disabled:opacity-50"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar cambios
+                  Guardar fechas
                 </Button>
               )}
             </div>
