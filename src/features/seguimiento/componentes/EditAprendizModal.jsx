@@ -26,13 +26,10 @@ import { Loader2, AlertCircle } from 'lucide-react';
 export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [recomendados, setRecomendados] = useState([]);
-    const [loadingRecomendados, setLoadingRecomendados] = useState(false);
 
     const [formData, setFormData] = useState({
         fechaInicioProductiva: '',
         fechaFinContrato: '',
-        reemplazoId: '',
     });
 
     const [errors, setErrors] = useState({
@@ -49,7 +46,6 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
                 fechaFinContrato: aprendiz.fechaFinContrato
                     ? aprendiz.fechaFinContrato.split('T')[0]
                     : '',
-                reemplazoId: aprendiz.reemplazoId?._id || '',
             });
             // Limpiar errores al cambiar de aprendiz
             setErrors({ fechaInicioProductiva: '', fechaFinContrato: '' });
@@ -144,27 +140,7 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
         }
     }, [formData.fechaInicioProductiva, formData.fechaFinContrato, open, validateFechas]);
 
-    // Cargar recomendados cuando cambia fechaFinContrato (solo para productiva)
-    useEffect(() => {
-        const cargarRecomendados = async () => {
-            if (aprendiz?.etapaActual === 'productiva' && formData.fechaFinContrato) {
-                setLoadingRecomendados(true);
-                try {
-                    const data = await seguimientoService.obtenerRecomendadosReemplazo(formData.fechaFinContrato);
-                    setRecomendados(data);
-                } catch (err) {
-                    console.error('Error cargando recomendados:', err);
-                    setRecomendados([]);
-                } finally {
-                    setLoadingRecomendados(false);
-                }
-            } else {
-                setRecomendados([]);
-            }
-        };
 
-        cargarRecomendados();
-    }, [formData.fechaFinContrato, aprendiz?.etapaActual]);
 
     const handleSubmit = async () => {
         // Validar antes de enviar
@@ -179,16 +155,11 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
 
         setLoading(true);
         try {
-            // 1. Actualizar fechas
+            // Actualizar fechas
             const response = await seguimientoService.actualizarFechas(aprendiz._id, {
                 fechaInicioProductiva: formData.fechaInicioProductiva || null,
                 fechaFinContrato: formData.fechaFinContrato || null,
             });
-
-            // 2. Actualizar reemplazo (solo si está en productiva y cambió)
-            if (aprendiz.etapaActual === 'productiva' && formData.reemplazoId !== (aprendiz.reemplazoId?._id || '')) {
-                await seguimientoService.asignarReemplazo(aprendiz._id, formData.reemplazoId || null);
-            }
 
             // Mostrar toast según si hubo cambio de etapa
             if (response.etapaCambiada) {
@@ -219,8 +190,6 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
     };
 
     if (!aprendiz) return null;
-
-    const esProductiva = aprendiz.etapaActual === 'productiva';
 
     // Calcular restricciones min/max dinámicas
     const minFechaInicioProductiva = aprendiz.fechaInicioContrato
@@ -303,55 +272,6 @@ export const EditAprendizModal = ({ open, onOpenChange, aprendiz, onSuccess }) =
                             </p>
                         )}
                     </div>
-
-                    {/* Reemplazo - SOLO si es productiva */}
-                    {esProductiva && (
-                        <div className="space-y-2">
-                            <Label htmlFor="reemplazo">Reemplazo Recomendado</Label>
-                            {loadingRecomendados ? (
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Buscando recomendados...</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <Select value={formData.reemplazoId} onValueChange={(value) => setFormData({ ...formData, reemplazoId: value })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar reemplazo (opcional)" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {recomendados.map((rec) => (
-                                                <SelectItem key={rec._id} value={rec._id}>
-                                                    {rec.nombre} {rec.apellido || ''} - {rec.tipoDocumento} {rec.documento}
-                                                    <span className="text-xs text-gray-500 ml-2">
-                                                        (Inicio: {rec.fechaInicioProductiva ? (() => {
-                                                            const [year, month, day] = rec.fechaInicioProductiva.split('T')[0].split('-');
-                                                            return `${parseInt(day)}/${parseInt(month)}/${year}`;
-                                                        })() : 'Sin fecha'})
-                                                    </span>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {formData.reemplazoId && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setFormData({ ...formData, reemplazoId: '' })}
-                                            className="text-xs text-gray-600 hover:text-gray-700"
-                                        >
-                                            Quitar reemplazo
-                                        </Button>
-                                    )}
-                                </>
-                            )}
-                            {recomendados.length === 0 && !loadingRecomendados && formData.fechaFinContrato && (
-                                <p className="text-xs text-amber-600">
-                                    No hay reemplazos recomendados para esta fecha
-                                </p>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 <DialogFooter>

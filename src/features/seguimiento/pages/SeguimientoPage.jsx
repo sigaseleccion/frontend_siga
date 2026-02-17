@@ -383,13 +383,12 @@ const SeguimientoPage = () => {
                             </td>
                             <td className="py-4 px-4 text-sm">
                               <span
-                                className={`${
-                                  diasRestantes < 0
-                                    ? "text-red-600"
-                                    : diasRestantes <= 30
-                                      ? "text-amber-600"
-                                      : "text-gray-600"
-                                }`}
+                                className={`${diasRestantes < 0
+                                  ? "text-red-600"
+                                  : diasRestantes <= 30
+                                    ? "text-amber-600"
+                                    : "text-gray-600"
+                                  }`}
                               >
                                 {diasRestantes !== "-"
                                   ? `${diasRestantes} dias`
@@ -403,31 +402,31 @@ const SeguimientoPage = () => {
                                   "seguimiento",
                                   "ver",
                                 ) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleVerAprendiz(aprendiz)}
-                                    className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                  >
-                                    <Eye size={20} />
-                                  </Button>
-                                )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleVerAprendiz(aprendiz)}
+                                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+                                    >
+                                      <Eye size={20} />
+                                    </Button>
+                                  )}
                                 {tienePermiso(
                                   auth,
                                   "seguimiento",
                                   "editar",
                                 ) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleEditarAprendiz(aprendiz)
-                                    }
-                                    className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                  >
-                                    <PenBoxIcon size={16} />
-                                  </Button>
-                                )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleEditarAprendiz(aprendiz)
+                                      }
+                                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+                                    >
+                                      <PenBoxIcon size={16} />
+                                    </Button>
+                                  )}
                               </div>
                             </td>
                           </tr>
