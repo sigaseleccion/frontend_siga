@@ -82,6 +82,7 @@ export default function AprendizEditPage() {
   const [apReemplazar, setApReemplazar] = useState(null);
   const [infoReemplazo, setInfoReemplazo] = useState(null);
   const [apReemplazarPersistido, setApReemplazarPersistido] = useState(null);
+  const [reemplazoElegido, setReemplazoElegido] = useState(true);
 
   useEffect(() => {
     setHeaderConfig({
@@ -174,7 +175,7 @@ export default function AprendizEditPage() {
     todasPruebasAprobadas &&
     fechaInicioContrato !== "" &&
     fechaFinContrato !== "" &&
-    apReemplazar !== null &&
+    reemplazoElegido &&
     aprendiz?.etapaActual === "seleccion2" &&
     !aprobadoLocal &&
     apReemplazarPersistido === null;
@@ -200,7 +201,7 @@ export default function AprendizEditPage() {
     todasPruebasAprobadas &&
     fechaInicioContrato !== "" &&
     fechaFinContrato !== "" &&
-    apReemplazar !== null;
+    reemplazoElegido;
 
   useEffect(() => {
   }, []);
@@ -230,23 +231,13 @@ export default function AprendizEditPage() {
           setError(e.message);
         }
       }
-      if (fechaInicioContrato !== "" && fechaFinContrato !== "") {
-        await aprendizService.actualizarAprendiz(aprendizId, {
-          fechaInicioContrato,
-          fechaFinContrato,
-        });
-      }
-      setInitialState({
+      setInitialState((prev) => ({
+        ...prev,
         pruebas,
-        fechaInicioContrato,
-        fechaFinContrato,
-      });
+      }));
       await successAlert({
         title: "Cambios guardados",
-        text:
-          apReemplazar === null
-            ? "Se guardaron las fechas de contrato. Puede dejar el reemplazo pendiente."
-            : "Se guardaron los cambios.",
+        text: "Se guardaron las pruebas.",
       });
     } catch (e) {
       setError(e.message);
@@ -343,6 +334,7 @@ export default function AprendizEditPage() {
     if (!result.isConfirmed) return;
     try {
       setApReemplazar(id || null);
+      setReemplazoElegido(true);
       if (id) {
         const info = await aprendizService.obtenerAprendizPorId(id);
         setInfoReemplazo(info || null);
@@ -442,18 +434,14 @@ export default function AprendizEditPage() {
                 {mostrarAprobadoUI ? "Aprendiz aprobado" : "Aprobar aprendiz"}
               </Button>
 
-              {!mostrarAprobadoUI && apReemplazar === null && (
+              {!todasPruebasAprobadas && !mostrarAprobadoUI && (
                 <Button
                   onClick={handleGuardar}
-                  disabled={
-                    disablePorEtapa ||
-                    fechaInicioContrato === "" ||
-                    fechaFinContrato === ""
-                  }
+                  disabled={disablePorEtapa}
                   className="bg-primary hover:bg-primary/90 shadow-md disabled:opacity-50"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar fechas
+                  Guardar
                 </Button>
               )}
             </div>
@@ -706,7 +694,7 @@ export default function AprendizEditPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">
-                          Ninguno
+                          Sin reemplazo
                         </SelectItem>
                         {recomendados.map((r) => (
                           <SelectItem key={r._id} value={r._id}>
