@@ -267,6 +267,20 @@ export const seguimientoService = {
     return response.json();
   },
 
+  // Obtener aprendices recomendados por fecha de inicio de contrato (−2 a +20 días)
+  async obtenerRecomendadosPorContrato(fechaInicioContrato) {
+    const params = new URLSearchParams({ fechaInicioContrato });
+    const response = await fetch(`${API_URL}/api/seguimiento/recomendados-contrato?${params}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener recomendados por contrato');
+    }
+    return response.json();
+  },
+
   // Actualizar fechas de aprendiz
   async actualizarFechas(id, fechas) {
     const response = await fetch(`${API_URL}/api/seguimiento/${id}/fechas`, {

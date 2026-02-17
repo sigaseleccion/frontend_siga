@@ -45,6 +45,7 @@ import {
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams();
@@ -64,6 +65,8 @@ export default function ReporteTecnicoPage() {
   const hasUnsavedChanges =
     Object.keys(pendingChanges).length > 0 || Boolean(reporteFile);
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -75,8 +78,10 @@ export default function ReporteTecnicoPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now();
       try {
         setError(null);
+        setLoading(true);
         const conv =
           await convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId);
         setConvocatoria(conv);
@@ -118,6 +123,10 @@ export default function ReporteTecnicoPage() {
         setPendingChanges({});
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     loadData();
@@ -316,6 +325,15 @@ export default function ReporteTecnicoPage() {
             </div>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
           <Tabs
             value={tab}
             onValueChange={(value) => {
@@ -344,7 +362,7 @@ export default function ReporteTecnicoPage() {
                   <CardTitle>Adjuntar reporte técnico</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {convocatoria?.reporteTecnico && !reporteFile ? (
+                  {!loading && convocatoria?.reporteTecnico && !reporteFile ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
                         <FileText className="h-8 w-8 text-primary" />
@@ -353,7 +371,7 @@ export default function ReporteTecnicoPage() {
                             Archivo actual
                           </p>
                           <a
-                            href={convocatoria.reporteTecnico.url}
+                            href={convocatoria.reporteTecnico.downloadUrl || convocatoria.reporteTecnico.url}
                             target="_blank"
                             rel="noreferrer"
                             className="text-sm text-blue-600 underline"
@@ -385,7 +403,7 @@ export default function ReporteTecnicoPage() {
                         </label>
                       </div>
                     </div>
-                  ) : reporteFile ? (
+                  ) : !loading && reporteFile ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
                         {getFileIcon()}

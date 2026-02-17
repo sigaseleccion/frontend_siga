@@ -22,6 +22,8 @@ import {
 import { useHeader } from "../../../shared/contexts/HeaderContext.jsx";
 import { DataTable } from "../../../shared/components/DataTable";
 import Spinner from "../../../shared/components/ui/Spinner";
+import { tienePermiso } from "../../../shared/utils/auth/permissions.js";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext.jsx";
 
 const UsuariosPage = () => {
   const { usuarios, loading: usuariosLoading, refetch } = useUsuarios();
@@ -33,6 +35,7 @@ const UsuariosPage = () => {
   const [selectedUsuario, setSelectedUsuario] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { setHeaderConfig } = useHeader();
+  const { auth } = useAuth();
 
   useEffect(() => {
     setHeaderConfig({
@@ -147,13 +150,15 @@ const UsuariosPage = () => {
               </div>
 
               {/* Botón al final */}
-              <Button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-              >
-                <Plus size={20} />
-                Crear Usuario
-              </Button>
+              {tienePermiso(auth, "usuarios", "crear") && (
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                >
+                  <Plus size={20} />
+                  Crear Usuario
+                </Button>
+              )}
             </div>
           </div>
 
@@ -216,7 +221,9 @@ const UsuariosPage = () => {
                       key: "nombre",
                       header: "Nombre",
                       render: (value) => (
-                        <span className="font-medium text-gray-900">{value}</span>
+                        <span className="font-medium text-gray-900">
+                          {value}
+                        </span>
                       ),
                     },
                     {
@@ -259,23 +266,27 @@ const UsuariosPage = () => {
                       header: "Acciones",
                       render: (value, row) => (
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(row)}
-                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                          >
-                            <Edit2 size={16} className="mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(row)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                          {tienePermiso(auth, "usuarios", "editar") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditClick(row)}
+                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            >
+                              <Edit2 size={16} className="mr-1" />
+                              Editar
+                            </Button>
+                          )}
+                          {tienePermiso(auth, "usuarios", "eliminar") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(row)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          )}
                         </div>
                       ),
                     },

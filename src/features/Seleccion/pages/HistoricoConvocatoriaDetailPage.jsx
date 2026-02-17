@@ -13,15 +13,20 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { ArrowLeft, CheckSquare, Eye } from "lucide-react";
 import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
+import { convocatoriaService } from "@/features/Convocatorias/services/convocatoriaService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { DataTable } from "@/shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
 
 export default function HistoricoConvocatoriaDetailPage() {
   const { id: convocatoriaId } = useParams();
 
+  const [convocatoria, setConvocatoria] = useState(null);
   const [aprendices, setAprendices] = useState([]);
   const [error, setError] = useState(null);
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -33,12 +38,15 @@ export default function HistoricoConvocatoriaDetailPage() {
 
   useEffect(() => {
     const loadAprendices = async () => {
+      const start = Date.now();
       try {
         setError(null);
-        const aps =
-          await aprendizService.obtenerAprendicesPorConvocatoria(
-            convocatoriaId,
-          );
+        setLoading(true);
+        const [convData, aps] = await Promise.all([
+          convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId),
+          aprendizService.obtenerAprendicesPorConvocatoria(convocatoriaId),
+        ]);
+        setConvocatoria(convData);
         setAprendices(
           aps
             .filter((a) =>
@@ -59,6 +67,10 @@ export default function HistoricoConvocatoriaDetailPage() {
         );
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     if (convocatoriaId) loadAprendices();
@@ -79,13 +91,26 @@ export default function HistoricoConvocatoriaDetailPage() {
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
-              Detalle Convocatoria Archivada
+              {convocatoria?.nombreConvocatoria
+                ? `${convocatoria.nombreConvocatoria} (Archivada)`
+                : "Detalle Convocatoria Archivada"}
             </h1>
             <div className="flex items-center gap-3 mt-2">
               <Badge variant="secondary">Archivada</Badge>
-              <span className="text-muted-foreground">{convocatoriaId}</span>
+              <span className="text-muted-foreground">
+                {convocatoria?.idConvocatoria || convocatoriaId}
+              </span>
             </div>
           </div>
+
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
 
           <Card>
             <CardHeader>
@@ -97,7 +122,7 @@ export default function HistoricoConvocatoriaDetailPage() {
                   {error}
                 </div>
               )}
-              <DataTable
+              {!loading && <DataTable
                 columns={[
                   { key: "nombre", header: "Nombre" },
                   { key: "tipoDocumento", header: "Tipo Doc." },
@@ -120,7 +145,7 @@ export default function HistoricoConvocatoriaDetailPage() {
                 data={aprendices}
                 pageSize={5}
                 pageSizeOptions={[5, 10, 20]}
-              />
+              />}
             </CardContent>
           </Card>
         </div>

@@ -34,6 +34,8 @@ import { pruebaSeleccionService } from "@/features/Convocatorias/services/prueba
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
+import { tienePermiso } from "../../../shared/utils/auth/permissions";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext";
 
 export default function SeleccionPage() {
   const [searchParams] = useSearchParams();
@@ -44,6 +46,7 @@ export default function SeleccionPage() {
   const [convocatorias, setConvocatorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { auth } = useAuth();
   const { setHeaderConfig } = useHeader();
 
   useEffect(() => {
@@ -142,8 +145,7 @@ export default function SeleccionPage() {
   const handleArchiveClick = async (convocatoria) => {
     const result = await confirmAlert({
       title: "Archivar Convocatoria",
-      text:
-        `¿Desea archivar la convocatoria "${convocatoria.nombreConvocatoria}"? Este proceso es irreversible.`,
+      text: `¿Desea archivar la convocatoria "${convocatoria.nombreConvocatoria}"? Este proceso es irreversible.`,
       confirmText: "Sí, archivar",
       cancelText: "Cancelar",
       icon: "warning",
@@ -151,9 +153,7 @@ export default function SeleccionPage() {
     if (!result.isConfirmed) return;
     try {
       await convocatoriaService.archivarConvocatoria(convocatoria.id);
-      setConvocatorias(
-        convocatorias.filter((c) => c.id !== convocatoria.id),
-      );
+      setConvocatorias(convocatorias.filter((c) => c.id !== convocatoria.id));
       await successAlert({
         title: "Convocatoria archivada",
         text: "La convocatoria se ha archivado correctamente.",
@@ -255,26 +255,29 @@ export default function SeleccionPage() {
                 </CardContent>
                 <CardFooter className="flex gap-2">
                   <Link to={`/seleccion/${convocatoria.id}`} className="flex-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full bg-transparent"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Aprendices
-                    </Button>
+                    {tienePermiso(auth, "seleccion", "ver") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-transparent"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Aprendices
+                      </Button>
+                    )}
                   </Link>
-                  {isPruebasCompletas(convocatoria) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-transparent"
-                      onClick={() => handleArchiveClick(convocatoria)}
-                      title="Archivar convocatoria"
-                    >
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  )}
+                  {isPruebasCompletas(convocatoria) &&
+                    tienePermiso(auth, "seleccion", "gestionArchivado") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-transparent"
+                        onClick={() => handleArchiveClick(convocatoria)}
+                        title="Archivar convocatoria"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    )}
                 </CardFooter>
               </Card>
             ))}
@@ -290,8 +293,6 @@ export default function SeleccionPage() {
             </CardContent>
           </Card>
         )}
-
-        
       </div>
     </main>
   );

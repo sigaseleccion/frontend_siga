@@ -24,6 +24,7 @@ import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Link } from "react-router-dom";
+import Spinner from "@/shared/components/ui/Spinner";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -63,6 +64,8 @@ const fetchJson = async (url, options = {}) => {
 export default function Dashboard() {
   const { setHeaderConfig } = useHeader();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [bottomLoading, setBottomLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [data, setData] = useState({
@@ -95,7 +98,11 @@ export default function Dashboard() {
   }, []);
 
   const loadDashboard = async () => {
-    setIsLoading(true);
+    const firstLoad = lastUpdatedAt === null;
+    const startAt = Date.now();
+
+    if (firstLoad) setIsLoading(true);
+    else setIsRefreshing(true);
     setErrorMessage(null);
 
     const headers = getAuthHeaders();
@@ -252,11 +259,26 @@ export default function Dashboard() {
     });
 
     setLastUpdatedAt(new Date());
+
+    const minVisibleMs = firstLoad ? 600 : 0;
+    const elapsedMs = Date.now() - startAt;
+    const remainingMs = Math.max(0, minVisibleMs - elapsedMs);
+    if (remainingMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remainingMs));
+    }
+
+    setIsRefreshing(false);
     setIsLoading(false);
   };
 
   useEffect(() => {
     loadDashboard();
+  }, []);
+
+  useEffect(() => {
+    setBottomLoading(true);
+    const t = setTimeout(() => setBottomLoading(false), 2500);
+    return () => clearTimeout(t);
   }, []);
 
   const cuotaBadge = useMemo(() => {
@@ -341,6 +363,263 @@ export default function Dashboard() {
     return "from-red-600 to-red-500";
   };
 
+  const busy = isLoading || isRefreshing;
+
+  const detailsContent = (
+    <div className="grid gap-6 xl:grid-cols-3">
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+        <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-bold text-gray-900">Aprendices por ciudad</CardTitle>
+            <CardDescription>Top 5 por distribución actual</CardDescription>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-5 w-5 text-blue-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 w-40 bg-gray-100 rounded" />
+                      <div className="h-2 bg-gray-100 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : data.ciudades.length === 0 ? (
+                <div className="text-sm text-gray-600">Sin datos</div>
+              ) : (
+                <div className="space-y-5">
+                  {data.ciudades.map((item) => (
+                    <div key={item.ciudad} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100"
+                          >
+                            {item.porcentaje}%
+                          </Badge>
+                        </div>
+                        <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="h-px bg-gray-200" />
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <ClipboardList className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Acciones recomendadas</p>
+                    <p className="text-xs text-gray-600">Enfocado en lo que requiere atención</p>
+                  </div>
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-20 bg-gray-100 rounded-xl" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                        <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
+                      <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
+                        <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
+                      <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
+                        <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
+                      <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+        <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-bold text-gray-900">Próximos vencimientos</CardTitle>
+            <CardDescription>Contratos por vencer (según días restantes)</CardDescription>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+            <CalendarClock className="h-5 w-5 text-red-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 bg-gray-100 rounded-xl" />
+              ))}
+            </div>
+          ) : data.proximosVencimientos.length === 0 ? (
+            <div className="text-sm text-gray-600">Sin vencimientos próximos</div>
+          ) : (
+            <div className="space-y-3">
+              {data.proximosVencimientos.map((apprentice) => (
+                <div
+                  key={apprentice.id || `${apprentice.nombre}-${apprentice.dias}`}
+                  className="flex items-start justify-between gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {apprentice.nombre}
+                      {apprentice.documento ? ` (${apprentice.documento})` : ""}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1 truncate">{apprentice.programa}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="text-xs px-2 py-0 border-gray-200 text-gray-700 bg-gray-50 hover:bg-gray-50"
+                      >
+                        {String(apprentice.etapa).includes("lectiva") ? (
+                          <>
+                            <BookOpen className="h-2.5 w-2.5 mr-1" />
+                            Lectiva
+                          </>
+                        ) : (
+                          <>
+                            <Briefcase className="h-2.5 w-2.5 mr-1" />
+                            {apprentice.etapa || "Etapa"}
+                          </>
+                        )}
+                      </Badge>
+                      {typeof apprentice.dias === "number" &&
+                        (apprentice.dias < 0 ||
+                          (String(apprentice.etapa || "").toLowerCase().includes("lectiva") &&
+                            apprentice.dias <= 62)) && (
+                          <Badge
+                            className={`text-xs text-white ${
+                              apprentice.dias < 0 || apprentice.dias <= 30
+                                ? "bg-red-600 hover:bg-red-600"
+                                : "bg-amber-500 hover:bg-amber-500"
+                            }`}
+                          >
+                            Urgente
+                          </Badge>
+                        )}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {(() => {
+                      const badge = getDaysBadge(apprentice.dias, apprentice.etapa);
+                      return (
+                        <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
+                          {badge.label}
+                        </Badge>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+        <div className="h-1 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-bold text-gray-900">Pruebas de selección</CardTitle>
+            <CardDescription>Porcentaje de aprobación y pendientes</CardDescription>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <TestTubeDiagonal className="h-5 w-5 text-emerald-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 w-44 bg-gray-100 rounded" />
+                  <div className="h-2 bg-gray-100 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {pruebasSummary.map((prueba) => (
+                <div key={prueba.key} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-gray-900">{prueba.label}</span>
+                    </div>
+                    <Badge className="text-xs bg-gray-900 text-white hover:bg-gray-900">{prueba.pct}%</Badge>
+                  </div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r ${getPctBarClass(prueba.pct)} rounded-full transition-all duration-500`}
+                      style={{ width: `${prueba.pct}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                      Aprobados: {prueba.data.aprobados}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
+                      Rechazados: {prueba.data.rechazados}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                      Pendientes: {prueba.data.pendientes}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="p-4 md:p-6">
       <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-purple-50 shadow-sm">
@@ -362,10 +641,18 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={loadDashboard} disabled={isLoading} className="bg-white">
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+              <Button variant="outline" onClick={loadDashboard} disabled={busy} className="bg-white">
+                <RefreshCw className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>
+              {busy && (
+                <div className="bg-white/80 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm border border-gray-200">
+                  <Spinner />
+                  <span className="text-gray-700 font-medium text-sm">
+                    {lastUpdatedAt ? "Actualizando..." : "Cargando..."}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -490,257 +777,15 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
-          <CardHeader className="flex flex-row items-start justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-lg font-bold text-gray-900">Aprendices por ciudad</CardTitle>
-              <CardDescription>Top 5 por distribución actual</CardDescription>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-5 w-5 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="space-y-2">
-                        <div className="h-4 w-40 bg-gray-100 rounded" />
-                        <div className="h-2 bg-gray-100 rounded-full" />
-                      </div>
-                    ))}
-                  </div>
-                ) : data.ciudades.length === 0 ? (
-                  <div className="text-sm text-gray-600">Sin datos</div>
-                ) : (
-                  <div className="space-y-5">
-                    {data.ciudades.map((item) => (
-                      <div key={item.ciudad} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100"
-                            >
-                              {item.porcentaje}%
-                            </Badge>
-                          </div>
-                          <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
-                            style={{ width: `${item.porcentaje}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="h-px bg-gray-200" />
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <ClipboardList className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">Acciones recomendadas</p>
-                      <p className="text-xs text-gray-600">Enfocado en lo que requiere atención</p>
-                    </div>
-                  </div>
-                </div>
-
-                {isLoading ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="h-20 bg-gray-100 rounded-xl" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="destructive" className="text-xs">Urgente</Badge>
-                          <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
-                        <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
-                          <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
-                        <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
-                          <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
-                        <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
-          <CardHeader className="flex flex-row items-start justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-lg font-bold text-gray-900">Próximos vencimientos</CardTitle>
-              <CardDescription>Contratos por vencer (según días restantes)</CardDescription>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-              <CalendarClock className="h-5 w-5 text-red-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-gray-100 rounded-xl" />
-                ))}
-              </div>
-            ) : data.proximosVencimientos.length === 0 ? (
-              <div className="text-sm text-gray-600">Sin vencimientos próximos</div>
-            ) : (
-              <div className="space-y-3">
-                {data.proximosVencimientos.map((apprentice) => (
-                  <div
-                    key={apprentice.id || `${apprentice.nombre}-${apprentice.dias}`}
-                    className="flex items-start justify-between gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {apprentice.nombre}
-                        {apprentice.documento ? ` (${apprentice.documento})` : ""}
-                      </p>
-                      <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1 truncate">{apprentice.programa}</p>
-                      <div className="mt-3 flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-2 py-0 border-gray-200 text-gray-700 bg-gray-50 hover:bg-gray-50"
-                        >
-                          {String(apprentice.etapa).includes("lectiva") ? (
-                            <>
-                              <BookOpen className="h-2.5 w-2.5 mr-1" />
-                              Lectiva
-                            </>
-                          ) : (
-                            <>
-                              <Briefcase className="h-2.5 w-2.5 mr-1" />
-                              {apprentice.etapa || "Etapa"}
-                            </>
-                          )}
-                        </Badge>
-                        {typeof apprentice.dias === "number" &&
-                          (apprentice.dias < 0 ||
-                            (String(apprentice.etapa || "").toLowerCase().includes("lectiva") &&
-                              apprentice.dias <= 62)) && (
-                            <Badge
-                              className={`text-xs text-white ${
-                                apprentice.dias < 0 || apprentice.dias <= 30
-                                  ? "bg-red-600 hover:bg-red-600"
-                                  : "bg-amber-500 hover:bg-amber-500"
-                              }`}
-                            >
-                              Urgente
-                            </Badge>
-                          )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      {(() => {
-                        const badge = getDaysBadge(apprentice.dias, apprentice.etapa);
-                        return (
-                          <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
-                            {badge.label}
-                          </Badge>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
-          <CardHeader className="flex flex-row items-start justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-lg font-bold text-gray-900">Pruebas de selección</CardTitle>
-              <CardDescription>Porcentaje de aprobación y pendientes</CardDescription>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <TestTubeDiagonal className="h-5 w-5 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 w-44 bg-gray-100 rounded" />
-                    <div className="h-2 bg-gray-100 rounded-full" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {pruebasSummary.map((prueba) => (
-                  <div key={prueba.key} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <span className="text-sm font-semibold text-gray-900">{prueba.label}</span>
-                      </div>
-                      <Badge className="text-xs bg-gray-900 text-white hover:bg-gray-900">{prueba.pct}%</Badge>
-                    </div>
-                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full bg-gradient-to-r ${getPctBarClass(prueba.pct)} rounded-full transition-all duration-500`}
-                        style={{ width: `${prueba.pct}%` }}
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                        Aprobados: {prueba.data.aprobados}
-                      </Badge>
-                      <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
-                        Rechazados: {prueba.data.rechazados}
-                      </Badge>
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                        Pendientes: {prueba.data.pendientes}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="mt-6">
+        {bottomLoading ? (
+          <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow-sm border border-gray-200 w-fit">
+            <Spinner />
+            <span className="text-gray-700 font-medium">Cargando...</span>
+          </div>
+        ) : (
+          detailsContent
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import ProtectedRoute from "./shared/components/auth/ProtectedRoute";
 // Auth pages
 import LoginPage from "./features/auth/pages/LoginPage";
 import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
+import VerificarCodigoPage from "./features/auth/pages/VerifyCodePage";
+import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
 import Error403 from "./features/auth/pages/403";
 
 // Dashboard
@@ -36,12 +38,16 @@ import EditRol from "./features/Roles/components/EditRole";
 import UsuariosPage from "./features/Usuarios/pages/UsuariosPage";
 
 
+
+
 export default function AppRoutes() {
   return (
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/recuperar" element={<ForgotPasswordPage />} />
+      <Route path="/login/verificar-codigo" element={<VerificarCodigoPage />} />
+      <Route path="/login/restablecer-contrasena" element={<ResetPasswordPage />} />
       <Route path="/403" element={<Error403 />} />
 
       {/* Main routes */}

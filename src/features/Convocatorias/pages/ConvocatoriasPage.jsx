@@ -26,6 +26,8 @@ import Header from "../../../shared/components/Header";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
 import { DataTable } from "../../../shared/components/DataTable";
+import { tienePermiso } from "../../../shared/utils/auth/permissions";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext";
 
 export default function ConvocatoriasPage() {
   const { convocatorias, loading, error, crearConvocatoria } =
@@ -36,6 +38,7 @@ export default function ConvocatoriasPage() {
   const [searchNombre, setSearchNombre] = useState("");
   const [filterNivel, setFilterNivel] = useState("todas");
   const { setHeaderConfig } = useHeader();
+  const { auth } = useAuth();
 
   useEffect(() => {
     setHeaderConfig({
@@ -114,11 +117,12 @@ export default function ConvocatoriasPage() {
                   <SelectItem value="profesional">Profesional</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button onClick={() => setIsModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Crear convocatoria
-              </Button>
+              {tienePermiso(auth, "convocatorias", "crear") && (
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Crear convocatoria
+                </Button>
+              )}
             </div>
           </div>
 
@@ -149,7 +153,9 @@ export default function ConvocatoriasPage() {
                       key: "idConvocatoria",
                       header: "ID Convocatoria",
                       render: (value) => (
-                        <span className="font-medium text-gray-900">{value}</span>
+                        <span className="font-medium text-gray-900">
+                          {value}
+                        </span>
                       ),
                     },
                     {
@@ -209,14 +215,16 @@ export default function ConvocatoriasPage() {
                       header: "Acciones",
                       render: (value) => (
                         <Link to={`/convocatorias/${value}`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                          >
-                            <PenBoxIcon className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
+                          {tienePermiso(auth, "convocatorias", "editar") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            >
+                              <PenBoxIcon className="h-4 w-4 mr-1" />
+                              Editar
+                            </Button>
+                          )}
                         </Link>
                       ),
                     },

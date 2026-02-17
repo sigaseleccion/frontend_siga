@@ -18,8 +18,12 @@ import { pruebaSeleccionService } from "@/features/Convocatorias/services/prueba
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
+import Spinner from "../../../shared/components/ui/Spinner";
+import { tienePermiso } from "../../../shared/utils/auth/permissions";
+import { useAuth } from "../../../shared/contexts/auth/AuthContext";
 
 export default function SeleccionConvocatoriaPage() {
+  const { auth } = useAuth();
   const { id: convocatoriaId } = useParams();
 
   const [convocatoriaInfo, setConvocatoriaInfo] = useState({
@@ -32,6 +36,8 @@ export default function SeleccionConvocatoriaPage() {
   const [aprendices, setAprendices] = useState([]);
   const [error, setError] = useState(null);
   const { setHeaderConfig } = useHeader();
+  const [loading, setLoading] = useState(true);
+  const MIN_LOADER_MS = 300;
 
   useEffect(() => {
     setHeaderConfig({
@@ -43,8 +49,10 @@ export default function SeleccionConvocatoriaPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const start = Date.now();
       try {
         setError(null);
+        setLoading(true);
         const conv =
           await convocatoriaService.obtenerConvocatoriaPorId(convocatoriaId);
         setConvocatoriaInfo({
@@ -89,6 +97,10 @@ export default function SeleccionConvocatoriaPage() {
         setAprendices(enriched);
       } catch (e) {
         setError(e.message);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+        setTimeout(() => setLoading(false), remaining);
       }
     };
     loadData();
@@ -136,10 +148,12 @@ export default function SeleccionConvocatoriaPage() {
               </Button>
             </Link>
             <Link to={`/seleccion/${convocatoriaId}/reporte-tecnico`}>
-              <Button>
-                <FileText className="h-4 w-4 mr-2" />
-                Reporte Técnico
-              </Button>
+              {tienePermiso(auth, "seleccion", "gestionReporteTecnico") && (
+                <Button>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Reporte Técnico
+                </Button>
+              )}
             </Link>
           </div>
 
@@ -159,74 +173,93 @@ export default function SeleccionConvocatoriaPage() {
             </div>
           </div>
 
+          {loading && (
+            <div className="mb-8 flex items-center justify-center py-10">
+              <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                <Spinner />
+                <span className="text-gray-700 font-medium">Cargando...</span>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Aprendices en Seleccion</CardTitle>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={[
-                  {
-                    key: "nombre",
-                    header: "Nombre",
-                    render: (value, row) => (
-                      <div className="flex items-center">
-                        <span
-                          className={`inline-block h-3 w-3 rounded-full mr-2 ${getDotClass(row)}`}
-                        />
-                        <span className="font-medium">{row.nombre}</span>
-                      </div>
-                    ),
-                  },
-                  { key: "tipoDocumento", header: "Tipo Doc." },
-                  { key: "documento", header: "N. Documento" },
-                  { key: "ciudad", header: "Ciudad" },
-                  { key: "programaFormacion", header: "Programa" },
-                  {
-                    key: "fechaInicioLectiva",
-                    header: "Inicio Lectiva",
-                    render: (value) => <span>{formatDate(value)}</span>,
-                  },
-                  {
-                    key: "fechaFinLectiva",
-                    header: "Fin Lectiva",
-                    render: (value) => <span>{formatDate(value)}</span>,
-                  },
-                  {
-                    key: "fechaInicioProductiva",
-                    header: "Inicio Productiva",
-                    render: (value) => <span>{formatDate(value)}</span>,
-                  },
-                  {
-                    key: "fechaFinProductiva",
-                    header: "Fin Productiva",
-                    render: (value) => <span>{formatDate(value)}</span>,
-                  },
-                  {
-                    key: "acciones",
-                    header: "Acciones",
-                    render: (value, row) => (
-                      <div className="flex gap-2">
-                        <Link to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver
-                          </Button>
-                        </Link>
-                        <Link to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}/editar`}>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
-                        </Link>
-                      </div>
-                    ),
-                  },
-                ]}
-                data={aprendices}
-                pageSize={5}
-                pageSizeOptions={[5, 10, 20]}
-              />
+              {!loading && (
+                <DataTable
+                  columns={[
+                    {
+                      key: "nombre",
+                      header: "Nombre",
+                      render: (value, row) => (
+                        <div className="flex items-center">
+                          <span
+                            className={`inline-block h-3 w-3 rounded-full mr-2 ${getDotClass(row)}`}
+                          />
+                          <span className="font-medium">{row.nombre}</span>
+                        </div>
+                      ),
+                    },
+                    { key: "tipoDocumento", header: "Tipo Doc." },
+                    { key: "documento", header: "N. Documento" },
+                    { key: "ciudad", header: "Ciudad" },
+                    { key: "programaFormacion", header: "Programa" },
+                    {
+                      key: "fechaInicioLectiva",
+                      header: "Inicio Lectiva",
+                      render: (value) => <span>{formatDate(value)}</span>,
+                    },
+                    {
+                      key: "fechaFinLectiva",
+                      header: "Fin Lectiva",
+                      render: (value) => <span>{formatDate(value)}</span>,
+                    },
+                    {
+                      key: "fechaInicioProductiva",
+                      header: "Inicio Productiva",
+                      render: (value) => <span>{formatDate(value)}</span>,
+                    },
+                    {
+                      key: "fechaFinProductiva",
+                      header: "Fin Productiva",
+                      render: (value) => <span>{formatDate(value)}</span>,
+                    },
+                    {
+                      key: "acciones",
+                      header: "Acciones",
+                      render: (value, row) => (
+                        <div className="flex gap-2">
+                          <Link
+                            to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}`}
+                          >
+                            {tienePermiso(auth, "seleccion", "ver") && (
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4 mr-1" />
+                                Ver
+                              </Button>
+                            )}
+                          </Link>
+                          <Link
+                            to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}/editar`}
+                          >
+                            {tienePermiso(auth, "seleccion", "editar") && (
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                            )}
+                          </Link>
+                        </div>
+                      ),
+                    },
+                  ]}
+                  data={aprendices}
+                  pageSize={5}
+                  pageSizeOptions={[5, 10, 20]}
+                />
+              )}
             </CardContent>
           </Card>
         </div>
