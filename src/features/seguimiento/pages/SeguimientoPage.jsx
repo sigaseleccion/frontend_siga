@@ -217,13 +217,14 @@ const SeguimientoPage = () => {
                       Cuota de Aprendices
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      Aprendices {estadisticas.cuota?.actual || 0}/
-                      {estadisticas.cuota?.maximo || 150}
+                      {estadisticas.cuota === null
+                        ? "Aprendices"
+                        : `Aprendices ${estadisticas.cuota.actual}/${estadisticas.cuota.maximo}`}
                     </p>
                     {/* Estado de la cuota */}
-                    {(() => {
-                      const actual = estadisticas.cuota?.actual || 0;
-                      const maximo = estadisticas.cuota?.maximo || 150;
+                    {estadisticas.cuota !== null && (() => {
+                      const actual = estadisticas.cuota.actual;
+                      const maximo = estadisticas.cuota.maximo;
                       const diferencia = maximo - actual;
 
                       if (actual < maximo) {

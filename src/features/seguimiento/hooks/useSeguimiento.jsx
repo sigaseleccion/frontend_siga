@@ -8,7 +8,7 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
   const [estadisticas, setEstadisticas] = useState({
     enEtapaLectiva: 0,
     enEtapaProductiva: 0,
-    cuota: { actual: 0, maximo: 150 },
+    cuota: null,
     aprendicesIncompletos: 0,
   });
   const [loading, setLoading] = useState(false);
