@@ -87,6 +87,10 @@ export default function Dashboard() {
       tecnica: { aprobados: 0, rechazados: 0, pendientes: 0 },
       medica: { aprobados: 0, rechazados: 0, pendientes: 0 },
     },
+    finalizanMesActual: [],
+    finalizanProximoMes: [],
+    mesCurrent: "",
+    mesProximo: "",
   });
 
   useEffect(() => {
@@ -107,13 +111,14 @@ export default function Dashboard() {
 
     const headers = getAuthHeaders();
 
-    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult] =
+    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult, finalizanMesResult] =
       await Promise.allSettled([
         fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/convocatorias/archivadas`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/seguimiento/finalizan-mes-actual`, { method: "GET", headers }),
       ]);
 
     const convocatorias =
@@ -144,12 +149,18 @@ export default function Dashboard() {
         ? pruebasResult.value
         : [];
 
+    const finalizanMesData =
+      finalizanMesResult.status === "fulfilled" && finalizanMesResult.value
+        ? finalizanMesResult.value
+        : { aprendices: [], mes: "", total: 0 };
+
     if (
       convocatoriasResult.status === "rejected" &&
       convocatoriasArchivadasResult.status === "rejected" &&
       estadisticasResult.status === "rejected" &&
       seguimientoResult.status === "rejected" &&
-      pruebasResult.status === "rejected"
+      pruebasResult.status === "rejected" &&
+      finalizanMesResult.status === "rejected"
     ) {
       setErrorMessage("No se pudieron cargar los datos del dashboard");
     }
@@ -256,6 +267,10 @@ export default function Dashboard() {
       proximosVencimientos,
       ciudades: ciudadesWithPct,
       pruebas: agg,
+      finalizanMesActual: finalizanMesData.aprendices || [],
+      finalizanProximoMes: finalizanMesData.aprendicesProximoMes || [],
+      mesCurrent: finalizanMesData.mes || "",
+      mesProximo: finalizanMesData.proximoMes || "",
     });
 
     setLastUpdatedAt(new Date());
@@ -364,6 +379,39 @@ export default function Dashboard() {
   };
 
   const busy = isLoading || isRefreshing;
+
+  const getUrgenciaBadge = (dias) => {
+    if (dias <= 7) {
+      return {
+        variant: "destructive",
+        className: "",
+        label: `${dias} día${dias !== 1 ? 's' : ''}`,
+        borderColor: "border-red-600",
+      };
+    }
+    if (dias <= 15) {
+      return {
+        variant: "secondary",
+        className: "bg-orange-100 text-orange-800 hover:bg-orange-100",
+        label: `${dias} días`,
+        borderColor: "border-orange-500",
+      };
+    }
+    if (dias <= 30) {
+      return {
+        variant: "secondary",
+        className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+        label: `${dias} días`,
+        borderColor: "border-yellow-500",
+      };
+    }
+    return {
+      variant: "secondary",
+      className: "bg-green-100 text-green-800 hover:bg-green-100",
+      label: `${dias} días`,
+      borderColor: "border-green-500",
+    };
+  };
 
   const detailsContent = (
     <div className="grid gap-6 xl:grid-cols-3">
@@ -477,6 +525,232 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+        <div className="h-1 w-full bg-gradient-to-r from-red-600 to-pink-500" />
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-bold text-gray-900">Movimientos del mes</CardTitle>
+            <CardDescription>
+              {data.mesCurrent || "Mes actual"} · Total: {data.finalizanMesActual.length} cambios
+            </CardDescription>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+            <CalendarClock className="h-5 w-5 text-red-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Leyenda de tipos de movimientos */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-semibold text-gray-700 mb-2">Tipos de movimientos:</p>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-red-100 text-red-800 hover:bg-red-100">
+                  Finaliza
+                </Badge>
+                <span className="text-[10px] text-gray-600">Sale de productiva</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-800 hover:bg-purple-100">
+                  Pasa a Productiva
+                </Badge>
+                <span className="text-[10px] text-gray-600">Desde lectiva</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-green-100 text-green-800 hover:bg-green-100">
+                  Inicia Contrato
+                </Badge>
+                <span className="text-[10px] text-gray-600">Desde selección</span>
+              </div>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 bg-gray-100 rounded-xl" />
+              ))}
+            </div>
+          ) : data.finalizanMesActual.length === 0 ? (
+            <>
+              <div className="flex items-center justify-center p-8 bg-green-50 rounded-xl border border-green-200">
+                <div className="text-center">
+                  <div className="text-3xl mb-2">✅</div>
+                  <p className="text-sm font-semibold text-green-800">Sin movimientos este mes</p>
+                  <p className="text-xs text-green-600 mt-1">No hay cambios de etapa programados en {data.mesCurrent}</p>
+                </div>
+              </div>
+
+              {/* Mostrar próximo mes si hay datos */}
+              {data.finalizanProximoMes && data.finalizanProximoMes.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-px flex-1 bg-gray-200"></div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Próximo mes: {data.mesProximo}
+                    </p>
+                    <div className="h-px flex-1 bg-gray-200"></div>
+                  </div>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {data.finalizanProximoMes.slice(0, 5).map((aprendiz, index) => {
+                      const badge = getUrgenciaBadge(aprendiz.diasRestantes);
+                      
+                      const getMovimientoBadge = (tipo) => {
+                        if (tipo === 'finaliza') {
+                          return {
+                            label: 'Finaliza',
+                            className: 'bg-red-100 text-red-800 hover:bg-red-100',
+                            etapaLabel: 'Productiva'
+                          };
+                        }
+                        if (tipo === 'pasa_productiva') {
+                          return {
+                            label: 'Pasa a Productiva',
+                            className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+                            etapaLabel: 'Lectiva'
+                          };
+                        }
+                        if (tipo === 'inicia_contrato') {
+                          return {
+                            label: 'Inicia Contrato',
+                            className: 'bg-green-100 text-green-800 hover:bg-green-100',
+                            etapaLabel: 'Selección 2'
+                          };
+                        }
+                        return {
+                          label: aprendiz.etapaActual || 'N/A',
+                          className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+                          etapaLabel: aprendiz.etapaActual || 'N/A'
+                        };
+                      };
+                      
+                      const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
+                      
+                      return (
+                        <div
+                          key={aprendiz._id || index}
+                          className={`flex items-start justify-between gap-4 p-3 rounded-xl bg-gray-50 border-l-4 ${badge.borderColor} border border-gray-200 transition-all`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {aprendiz.nombre}
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                              >
+                                {movimiento.label}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-gray-600">
+                              {aprendiz.tipoDocumento} {aprendiz.documento}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-1 truncate">
+                              <span className="font-semibold">Etapa:</span> {movimiento.etapaLabel}
+                              {aprendiz.programaFormacion && ` · ${aprendiz.programaFormacion}`}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <Badge variant={badge.variant} className={`font-semibold text-[10px] ${badge.className}`}>
+                              {badge.label}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {data.finalizanProximoMes.length > 5 && (
+                      <p className="text-xs text-center text-gray-500 pt-2">
+                        Y {data.finalizanProximoMes.length - 5} más...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              {data.finalizanMesActual.map((aprendiz, index) => {
+                const badge = getUrgenciaBadge(aprendiz.diasRestantes);
+                
+                // Determinar badge de tipo de movimiento
+                const getMovimientoBadge = (tipo, etapa) => {
+                  if (tipo === 'finaliza') {
+                    return {
+                      label: 'Finaliza',
+                      className: 'bg-red-100 text-red-800 hover:bg-red-100',
+                      etapaLabel: 'Productiva'
+                    };
+                  }
+                  if (tipo === 'pasa_productiva') {
+                    return {
+                      label: 'Pasa a Productiva',
+                      className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+                      etapaLabel: 'Lectiva'
+                    };
+                  }
+                  if (tipo === 'inicia_contrato') {
+                    return {
+                      label: 'Inicia Contrato',
+                      className: 'bg-green-100 text-green-800 hover:bg-green-100',
+                      etapaLabel: 'Selección 2'
+                    };
+                  }
+                  return {
+                    label: etapa || 'N/A',
+                    className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+                    etapaLabel: etapa || 'N/A'
+                  };
+                };
+                
+                const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento, aprendiz.etapaActual);
+                
+                return (
+                  <div
+                    key={aprendiz._id || index}
+                    className={`flex items-start justify-between gap-4 p-4 rounded-xl bg-white border-l-4 ${badge.borderColor} border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {aprendiz.nombre}
+                        </p>
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                        >
+                          {movimiento.label}
+                        </Badge>
+                        {aprendiz.tieneReemplazo && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-2 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          >
+                            ✓ Reemplazo
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        {aprendiz.tipoDocumento} {aprendiz.documento}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-1 truncate">
+                        <span className="font-semibold">Etapa actual:</span> {movimiento.etapaLabel}
+                        {aprendiz.programaFormacion && ` · ${aprendiz.programaFormacion}`}
+                        {aprendiz.ciudad && ` · ${aprendiz.ciudad}`}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
+                        {badge.label}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
