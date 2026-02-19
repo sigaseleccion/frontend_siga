@@ -132,11 +132,6 @@ export default function AprendizEditPage() {
         }
         const inicioC = toBogotaInput(a.fechaInicioContrato);
         const finC = toBogotaInput(a.fechaFinContrato);
-        setInitialState((prev) => ({
-          ...prev,
-          fechaInicioContrato: inicioC,
-          fechaFinContrato: finC,
-        }));
         setFechaInicioContrato(inicioC);
         setFechaFinContrato(finC);
         if (a.pruebaSeleccionId) {
@@ -144,19 +139,29 @@ export default function AprendizEditPage() {
             const ps = await pruebaSeleccionService.obtenerPorId(
               a.pruebaSeleccionId,
             );
-            setPruebas({
-              psicologica: ps.pruebaPsicologica || "pendiente",
-              medica: ps.examenesMedicos || "pendiente",
-            });
+            const psicologica = ps.pruebaPsicologica || "pendiente";
+            const medica = ps.examenesMedicos || "pendiente";
+            setPruebas({ psicologica, medica });
             setPruebaTecnica(ps.pruebaTecnica || "pendiente");
             const ok =
-              (ps.pruebaPsicologica || "pendiente") === "aprobado" &&
-              (ps.examenesMedicos || "pendiente") === "aprobado" &&
+              psicologica === "aprobado" &&
+              medica === "aprobado" &&
               (ps.pruebaTecnica || "pendiente") === "aprobado";
             setBackendPruebasAprobadas(ok);
+            setInitialState({
+              pruebas: { psicologica, medica },
+              fechaInicioContrato: inicioC,
+              fechaFinContrato: finC,
+            });
           } catch (e) {
             setError(e.message);
           }
+        } else {
+          setInitialState({
+            pruebas: { psicologica: "pendiente", medica: "pendiente" },
+            fechaInicioContrato: inicioC,
+            fechaFinContrato: finC,
+          });
         }
       } catch (e) {
         setError(e.message);
@@ -178,7 +183,8 @@ export default function AprendizEditPage() {
     reemplazoElegido &&
     aprendiz?.etapaActual === "seleccion2" &&
     !aprobadoLocal &&
-    apReemplazarPersistido === null;
+    apReemplazarPersistido === null &&
+    !(aprendiz?.fechaInicioContrato && aprendiz?.fechaFinContrato);
 
   const lockSelectors =
     todasPruebasAprobadas &&
@@ -194,7 +200,8 @@ export default function AprendizEditPage() {
   const mostrarAprobadoUI =
     aprobadoLocal ||
     aprendiz?.etapaActual === "lectiva" ||
-    apReemplazarPersistido !== null;
+    apReemplazarPersistido !== null ||
+    (aprendiz?.fechaInicioContrato && aprendiz?.fechaFinContrato);
 
   const pendienteConfirmar =
     !mostrarAprobadoUI &&
@@ -250,9 +257,12 @@ export default function AprendizEditPage() {
 
   const handleAprobar = async () => {
     if (!puedeAprobar) return;
+    const textoReemplazo = apReemplazar
+      ? "Se asociará el reemplazo seleccionado"
+      : "Se asociará sin reemplazo";
     const result = await confirmAlert({
       title: "Aprobar aprendiz",
-      text: `¿Desea aprobar al aprendiz ${aprendiz?.nombre || ""}? Se asociará el reemplazo seleccionado y cambiará a lectiva en la fecha de contrato.`,
+      text: `¿Desea aprobar al aprendiz ${aprendiz?.nombre || ""}? ${textoReemplazo} y cambiará a lectiva en la fecha de contrato.`,
       confirmText: "Sí, aprobar",
       cancelText: "Cancelar",
       icon: "warning",
@@ -264,6 +274,15 @@ export default function AprendizEditPage() {
         fechaFinContrato: fechaFinContrato || null,
         apReemplazar: apReemplazar || null,
       });
+      if (apReemplazar) {
+        try {
+          await aprendizService.actualizarAprendiz(apReemplazar, {
+            reemplazoId: aprendizId,
+          });
+        } catch (e) {
+          // Ignorar fallo de enlace inverso para no bloquear la aprobación
+        }
+      }
       try {
         const actualizado = await aprendizService.obtenerAprendizPorId(aprendizId);
         setAprendiz(actualizado);
@@ -288,7 +307,7 @@ export default function AprendizEditPage() {
         title: "Aprendiz aprobado",
         text: "El aprendiz ha sido aprobado. Cambiará a etapa lectiva en la fecha de inicio de contrato.",
       });
-      // Permanecer en esta vista mostrando el estado aprobado
+      window.location.reload();
     } catch (e) {
       setError(e.message);
       await errorAlert({
@@ -457,105 +476,105 @@ export default function AprendizEditPage() {
           )}
 
           {!loading && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">
-                  Información del aprendiz
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-3 bg-muted/50 rounded-lg break-words">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Nombre
-                    </p>
-                    <p className="text-sm font-medium text-foreground break-words">
-                      {aprendiz?.nombre || "-"}
-                    </p>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="border-border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold">
+                    Información del aprendiz
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted/50 rounded-lg break-words">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Nombre
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-words">
+                        {aprendiz?.nombre || "-"}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg break-words">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Documento
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-words">
+                        {aprendiz?.tipoDocumento || "-"}{" "}
+                        {aprendiz?.documento || ""}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg break-all overflow-hidden">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Correo
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-all">
+                        {aprendiz?.correo || "-"}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg break-words">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Teléfono
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-words">
+                        {aprendiz?.telefono || "-"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-3 bg-muted/50 rounded-lg break-words">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Documento
-                    </p>
-                    <p className="text-sm font-medium text-foreground break-words">
-                      {aprendiz?.tipoDocumento || "-"}{" "}
-                      {aprendiz?.documento || ""}
-                    </p>
+                </CardContent>
+              </Card>
+              <Card className="border-border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold">
+                    Fechas de contrato
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label
+                      htmlFor="fecha-inicio"
+                      className="text-sm font-semibold"
+                    >
+                      Fecha inicio de contrato
+                    </Label>
+                    <Input
+                      id="fecha-inicio"
+                      type="date"
+                      value={fechaInicioContrato}
+                      onChange={(e) => setFechaInicioContrato(e.target.value)}
+                      disabled={!todasPruebasAprobadas || disablePorEtapa || mostrarAprobadoUI}
+                      className="mt-2"
+                    />
                   </div>
-                  <div className="p-3 bg-muted/50 rounded-lg break-all overflow-hidden">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Correo
-                    </p>
-                    <p className="text-sm font-medium text-foreground break-all">
-                      {aprendiz?.correo || "-"}
-                    </p>
+                  <div>
+                    <Label htmlFor="fecha-fin" className="text-sm font-semibold">
+                      Fecha fin de contrato
+                    </Label>
+                    <Input
+                      id="fecha-fin"
+                      type="date"
+                      value={fechaFinContrato}
+                      onChange={(e) => setFechaFinContrato(e.target.value)}
+                      disabled={!todasPruebasAprobadas || disablePorEtapa || mostrarAprobadoUI}
+                      className="mt-2"
+                    />
                   </div>
-                  <div className="p-3 bg-muted/50 rounded-lg break-words">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Teléfono
-                    </p>
-                    <p className="text-sm font-medium text-foreground break-words">
-                      {aprendiz?.telefono || "-"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">
-                  Fechas de contrato
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label
-                    htmlFor="fecha-inicio"
-                    className="text-sm font-semibold"
-                  >
-                    Fecha inicio de contrato
-                  </Label>
-                  <Input
-                    id="fecha-inicio"
-                    type="date"
-                    value={fechaInicioContrato}
-                    onChange={(e) => setFechaInicioContrato(e.target.value)}
-                    disabled={!todasPruebasAprobadas || disablePorEtapa}
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fecha-fin" className="text-sm font-semibold">
-                    Fecha fin de contrato
-                  </Label>
-                  <Input
-                    id="fecha-fin"
-                    type="date"
-                    value={fechaFinContrato}
-                    onChange={(e) => setFechaFinContrato(e.target.value)}
-                    disabled={!todasPruebasAprobadas || disablePorEtapa}
-                    className="mt-2"
-                  />
-                </div>
-                {!todasPruebasAprobadas && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-xs text-yellow-800">
-                      Las fechas se habilitarán cuando todas las pruebas estén
-                      aprobadas.
-                    </p>
-                  </div>
-                )}
-                {fechaInicioContrato && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs text-blue-800">
-                      Este aprendiz cambiará al módulo de seguimiento con estado lectiva (Contrato) en la fecha {fechaInicioContrato}.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  {!todasPruebasAprobadas && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-xs text-yellow-800">
+                        Las fechas se habilitarán cuando todas las pruebas estén
+                        aprobadas.
+                      </p>
+                    </div>
+                  )}
+                  {fechaInicioContrato && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-800">
+                        Este aprendiz cambiará al módulo de seguimiento con estado lectiva (Contrato) en la fecha {fechaInicioContrato}.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {!loading && (
@@ -686,7 +705,7 @@ export default function AprendizEditPage() {
                         !todasPruebasAprobadas ||
                         !fechaInicioContrato ||
                         apReemplazarPersistido !== null ||
-                        aprobadoLocal
+                        mostrarAprobadoUI
                       }
                     >
                       <SelectTrigger className="w-full sm:w-[320px]">
