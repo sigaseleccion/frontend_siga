@@ -158,10 +158,19 @@ const formatMonthLabel = (date = new Date()) => {
   }
 }
 
+const getMonthLabelWithDate = (date = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(date)
+  } catch (e) {
+    return getMonthKey(date)
+  }
+}
+
 const getDotClassName = (type) => {
   if (type === 'urgent') return 'bg-red-500'
   if (type === 'urgent_warning') return 'bg-amber-500'
   if (type === 'important') return 'bg-primary'
+  if (type === 'quota_ok') return 'bg-emerald-600'
   if (type === 'quota_under') return 'bg-amber-500'
   if (type === 'quota_over') return 'bg-fuchsia-600'
   return 'bg-secondary'
@@ -170,6 +179,7 @@ const getDotClassName = (type) => {
 const getToastClassName = (type) => {
   if (type === 'urgent') return 'bg-red-600 text-white border-red-700'
   if (type === 'urgent_warning') return 'bg-amber-500 text-white border-amber-600'
+  if (type === 'quota_ok') return 'bg-emerald-600 text-white border-emerald-700'
   if (type === 'quota_under') return 'bg-amber-500 text-white border-amber-600'
   if (type === 'quota_over') return 'bg-fuchsia-600 text-white border-fuchsia-700'
   if (type === 'important') return 'bg-blue-600 text-white border-blue-700'
@@ -282,41 +292,69 @@ function NotificationsBell({ onNavigate }) {
       setErrorMessage('No se pudieron cargar notificaciones')
     }
 
+    const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
+    const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
+    const cuotaActual =
+      typeof estadisticas?.totalActivos === 'number'
+        ? estadisticas.totalActivos
+        : typeof estadisticas?.totalEnSeguimiento === 'number'
+          ? estadisticas.totalEnSeguimiento
+          : 0
+    const nowDate = new Date()
+    const monthLabel = getMonthLabelWithDate(nowDate)
+    const monthKey = getMonthKey()
+
+    const shouldNotifyReplacement = cuotaActual < cuotaMaxima
+
     const urgentNotifications = Array.isArray(aprendicesSeguimiento)
       ? aprendicesSeguimiento
           .filter((a) => {
             const dias = a?.diasRestantes
-            if (typeof dias !== 'number' || dias < 0) return false
+            if (typeof dias !== 'number') return false
+
             const etapa = String(a?.etapaActual || '').toLowerCase()
             const isLectiva = etapa.includes('lectiva')
-            if (isLectiva) return dias <= 62
+
+            if (isLectiva) {
+              if (!shouldNotifyReplacement) return false
+              if (dias === -1) return true
+              return dias >= 0 && dias <= 62
+            }
+
+            if (dias < 0) return false
             return dias <= 7
           })
-          .sort((a, b) => (a?.diasRestantes ?? 999999) - (b?.diasRestantes ?? 999999))
+          .sort((a, b) => {
+            const da = a?.diasRestantes
+            const db = b?.diasRestantes
+            const na = da === -1 ? -9999 : (da ?? 999999)
+            const nb = db === -1 ? -9999 : (db ?? 999999)
+            return na - nb
+          })
           .map((a) => {
             const dias = a?.diasRestantes
             const etapa = String(a?.etapaActual || '').toLowerCase()
             const isLectiva = etapa.includes('lectiva')
-            const isRed = isLectiva ? dias <= 30 : dias <= 7
+
+            const isReplacement = isLectiva && (dias === -1 || (typeof dias === 'number' && dias >= 0 && dias <= 62))
+            const isRed = isReplacement ? (dias === -1 || dias <= 30) : (dias <= 7)
 
             const type = isRed ? 'urgent' : 'urgent_warning'
             const badgeVariant = isRed ? 'destructive' : 'secondary'
             const badgeClassName = isRed ? null : 'bg-amber-500 text-white hover:bg-amber-500'
 
-            const description = typeof dias === 'number'
-              ? isLectiva
-                ? dias === 0
-                  ? 'Pasa a etapa productiva hoy'
-                  : `Pasa a etapa productiva en ${dias} días`
+            const description = isReplacement
+              ? dias === -1
+                ? 'Sin reemplazo para prácticas · Buscar reemplazo'
                 : dias === 0
-                  ? 'El contrato vence hoy'
-                  : `El contrato vence en ${dias} días`
-              : isLectiva
-                ? 'Paso a productiva próximo'
-                : 'Contrato por vencer'
+                  ? 'Inicia prácticas hoy · Buscar reemplazo'
+                  : `Inicia prácticas en ${dias} días · Buscar reemplazo`
+              : dias === 0
+                ? 'El contrato vence hoy'
+                : `El contrato vence en ${dias} días`
 
             return {
-              id: `urgent:${a._id}`,
+              id: isReplacement ? `urgent_replacement:${a._id}` : `urgent_contract:${a._id}`,
               type,
               badge: 'Urgente',
               badgeVariant,
@@ -329,39 +367,40 @@ function NotificationsBell({ onNavigate }) {
           })
       : []
 
-    const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
-    const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
-    const cuotaActual =
-      typeof estadisticas?.totalActivos === 'number'
-        ? estadisticas.totalActivos
-        : typeof estadisticas?.totalEnSeguimiento === 'number'
-          ? estadisticas.totalEnSeguimiento
-          : 0
-    const monthLabel = formatMonthLabel()
-    const monthKey = getMonthKey()
-
     const quotaNotifications =
-      cuotaActual !== cuotaMaxima
-        ? [
-            {
-              id: `quota:${monthKey}`,
-              type: cuotaActual < cuotaMaxima ? 'quota_under' : 'quota_over',
-              badge: 'Cuota',
-              badgeVariant: 'secondary',
-              badgeClassName:
-                cuotaActual < cuotaMaxima
-                  ? 'bg-amber-500 text-white hover:bg-amber-500'
-                  : 'bg-fuchsia-600 text-white hover:bg-fuchsia-600',
-              title: cuotaActual < cuotaMaxima ? 'Cuota de aprendices no cumplida' : 'Cuota de aprendices excedida',
-              description:
-                cuotaActual < cuotaMaxima
-                  ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima}`
-                  : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima})`,
-              href: '/seguimiento',
-              priority: 2,
-            },
-          ]
-        : []
+      [
+        {
+          id: `quota:${monthKey}`,
+          type:
+            cuotaActual === cuotaMaxima
+              ? 'quota_ok'
+              : cuotaActual < cuotaMaxima
+                ? 'quota_under'
+                : 'quota_over',
+          badge: 'Cuota',
+          badgeVariant: 'secondary',
+          badgeClassName:
+            cuotaActual === cuotaMaxima
+              ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+              : cuotaActual < cuotaMaxima
+                ? 'bg-amber-500 text-white hover:bg-amber-500'
+                : 'bg-fuchsia-600 text-white hover:bg-fuchsia-600',
+          title:
+            cuotaActual === cuotaMaxima
+              ? 'Cuota de aprendices cumplida'
+              : cuotaActual < cuotaMaxima
+                ? 'Cuota de aprendices no cumplida'
+                : 'Cuota de aprendices excedida',
+          description:
+            cuotaActual === cuotaMaxima
+              ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · ¡Excelente!`
+              : cuotaActual < cuotaMaxima
+                ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima}`
+                : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima})`,
+          href: '/seguimiento',
+          priority: 2,
+        },
+      ]
 
     const importantNotifications = Array.isArray(pruebas)
       ? pruebas
@@ -412,16 +451,54 @@ function NotificationsBell({ onNavigate }) {
         }))
       : []
 
+    const contractEndNotifications = (() => {
+      if (!Array.isArray(aprendicesSeguimiento)) return []
+      const dayOfMonth = nowDate.getDate()
+      if (dayOfMonth < 1 || dayOfMonth > 15) return []
+
+      const endingThisMonth = aprendicesSeguimiento
+        .filter((a) => {
+          const dias = a?.diasRestantes
+          if (typeof dias !== 'number' || dias < 0) return false
+          const endAt = new Date(nowDate)
+          endAt.setDate(endAt.getDate() + dias)
+          return getMonthKey(endAt) === monthKey
+        })
+        .sort((a, b) => (a?.diasRestantes ?? 999999) - (b?.diasRestantes ?? 999999))
+
+      if (endingThisMonth.length === 0) return []
+
+      const preview = endingThisMonth.slice(0, 5).map((a) => {
+        const name = a?.nombre || 'Aprendiz'
+        const dias = typeof a?.diasRestantes === 'number' ? a.diasRestantes : null
+        return dias === null ? name : `${name} (${dias}d)`
+      })
+      const remaining = endingThisMonth.length - preview.length
+      const suffix = remaining > 0 ? ` y ${remaining} más` : ''
+
+      return [
+        {
+          id: `contract_end:${monthKey}`,
+          type: 'important',
+          badge: 'Importante',
+          badgeVariant: 'default',
+          title: `Fin de contrato (${monthLabel})`,
+          description: `${endingThisMonth.length} aprendiz(es) finalizan contrato este mes: ${preview.join(', ')}${suffix}`,
+          href: '/seguimiento',
+          priority: 2,
+        },
+      ]
+    })()
+
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
-    const nextNotifications = [...urgentNotifications, ...quotaNotifications, ...importantNotifications, ...infoNotifications]
+    const nextNotifications = [...urgentNotifications, ...quotaNotifications, ...contractEndNotifications, ...importantNotifications, ...infoNotifications]
       .filter((n) => !dismissedSet.has(n.id))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority - b.priority
         return String(a.title).localeCompare(String(b.title), 'es')
       })
 
-    const nowDate = new Date()
     const withinWindow = isWithinSendWindow(nowDate)
     const previousSignatures = knownSignaturesRef.current
     const nextSignatures = new Map()
