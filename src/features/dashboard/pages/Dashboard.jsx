@@ -381,11 +381,23 @@ export default function Dashboard() {
   const busy = isLoading || isRefreshing;
 
   const getUrgenciaBadge = (dias) => {
+    // Si ya venció (días negativos)
+    if (dias < 0) {
+      const diasAbsolutos = Math.abs(dias);
+      return {
+        variant: "secondary",
+        className: "bg-gray-100 text-gray-700 hover:bg-gray-100",
+        label: `hace ${diasAbsolutos} día${diasAbsolutos !== 1 ? 's' : ''}`,
+        borderColor: "border-gray-400",
+      };
+    }
+    
+    // Por vencer (días positivos)
     if (dias <= 7) {
       return {
         variant: "destructive",
         className: "",
-        label: `${dias} día${dias !== 1 ? 's' : ''}`,
+        label: `en ${dias} día${dias !== 1 ? 's' : ''}`,
         borderColor: "border-red-600",
       };
     }
@@ -393,7 +405,7 @@ export default function Dashboard() {
       return {
         variant: "secondary",
         className: "bg-orange-100 text-orange-800 hover:bg-orange-100",
-        label: `${dias} días`,
+        label: `en ${dias} días`,
         borderColor: "border-orange-500",
       };
     }
@@ -401,14 +413,14 @@ export default function Dashboard() {
       return {
         variant: "secondary",
         className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-        label: `${dias} días`,
+        label: `en ${dias} días`,
         borderColor: "border-yellow-500",
       };
     }
     return {
       variant: "secondary",
       className: "bg-green-100 text-green-800 hover:bg-green-100",
-      label: `${dias} días`,
+      label: `en ${dias} días`,
       borderColor: "border-green-500",
     };
   };
