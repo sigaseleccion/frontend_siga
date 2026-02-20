@@ -371,12 +371,10 @@ export default function ReporteTecnicoPage() {
                             Archivo actual
                           </p>
                           <a
-                            href={convocatoria.reporteTecnico.downloadUrl || convocatoria.reporteTecnico.url}
-                            target="_blank"
-                            rel="noreferrer"
+                            href={`${API_URL}/api/convocatorias/${convocatoria._id}/reporte/descargar`}
                             className="text-sm text-blue-600 underline"
                           >
-                            Ver archivo
+                            Descargar archivo
                           </a>
                         </div>
                       </div>
