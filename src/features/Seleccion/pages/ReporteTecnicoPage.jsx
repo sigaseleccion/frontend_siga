@@ -513,7 +513,7 @@ export default function ReporteTecnicoPage() {
                               handlePruebaTecnicaChange(row.id, v)
                             }
                           >
-                            <SelectTrigger className="w-[150px]">
+                            <SelectTrigger className="w-37.5">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
