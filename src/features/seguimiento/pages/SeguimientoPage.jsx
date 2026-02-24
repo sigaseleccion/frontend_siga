@@ -58,6 +58,9 @@ const SeguimientoPage = () => {
   const { setHeaderConfig } = useHeader();
   const { auth } = useAuth();
 
+  // La cuota solo se puede editar en los primeros 15 días del mes
+  const esPeriodoEdicionCuota = new Date().getDate() <= 15;
+
   useEffect(() => {
     setHeaderConfig({
       title: "Seguimiento",
@@ -263,15 +266,28 @@ const SeguimientoPage = () => {
                       <Users className="text-pink-600" size={24} />
                     </div>
                     {tienePermiso(auth, "seguimiento", "editar") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsEditCuotaOpen(true)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <PenBoxIcon className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
+                      esPeriodoEdicionCuota ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditCuotaOpen(true)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <PenBoxIcon className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled
+                          title="La cuota solo puede editarse durante los primeros 15 días del mes"
+                          className="text-gray-300 cursor-not-allowed"
+                        >
+                          <PenBoxIcon className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
