@@ -74,6 +74,7 @@ export default function Dashboard() {
     totalActivos: 0,
     enLectiva: 0,
     enProductiva: 0,
+    enSeleccion2: 0,
     cuota: 150,
     cuotaStatus: "ok",
     cuotaDelta: 0,
@@ -174,8 +175,12 @@ export default function Dashboard() {
     const enLectiva = typeof estadisticas?.enLectiva === "number" ? estadisticas.enLectiva : 0;
     const enProductiva =
       typeof estadisticas?.enProductiva === "number" ? estadisticas.enProductiva : 0;
+    // Usar totalEnSeguimiento (igual que Seguimiento): incluye lectiva + productiva + selección2 con fechas
     const totalActivos =
-      typeof estadisticas?.totalActivos === "number" ? estadisticas.totalActivos : enLectiva + enProductiva;
+      typeof estadisticas?.totalEnSeguimiento === "number" ? estadisticas.totalEnSeguimiento :
+      typeof estadisticas?.totalActivos === "number" ? estadisticas.totalActivos :
+      enLectiva + enProductiva;
+    const enSeleccion2 = typeof estadisticas?.enSeleccion2 === "number" ? estadisticas.enSeleccion2 : 0;
 
     const cuotaRaw = typeof estadisticas?.cuota === "number" ? estadisticas.cuota : null;
     const cuota = typeof cuotaRaw === "number" && cuotaRaw > 0 ? cuotaRaw : 150;
@@ -258,6 +263,7 @@ export default function Dashboard() {
       totalActivos,
       enLectiva,
       enProductiva,
+      enSeleccion2,
       cuota,
       cuotaStatus,
       cuotaDelta,
@@ -1025,7 +1031,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.totalActivos}</div>
             <p className="text-xs text-gray-600 mt-2">
-              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva}
+              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva}{!isLoading && data.enSeleccion2 > 0 ? ` · Selección 2: ${data.enSeleccion2}` : ""}
             </p>
           </CardContent>
         </Card>
