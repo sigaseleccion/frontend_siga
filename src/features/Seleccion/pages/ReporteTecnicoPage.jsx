@@ -339,15 +339,21 @@ export default function ReporteTecnicoPage() {
           <Tabs
             value={tab}
             onValueChange={(value) => {
-              if (
-                value === "estado" &&
-                !(reporteFile || convocatoria?.reporteTecnico)
-              ) {
-                warningAlert({
-                  title: "Acceso restringido",
-                  text: "Debe adjuntar un reporte técnico antes de acceder a Estado Aprendices.",
-                });
-                return;
+              if (value === "estado") {
+                if (reporteFile) {
+                  warningAlert({
+                    title: "Reporte sin guardar",
+                    text: "Debe guardar el archivo adjuntado antes de acceder a Estado Aprendices.",
+                  });
+                  return;
+                }
+                if (!convocatoria?.reporteTecnico) {
+                  warningAlert({
+                    title: "Acceso restringido",
+                    text: "Debe adjuntar y guardar un reporte técnico antes de acceder a Estado Aprendices.",
+                  });
+                  return;
+                }
               }
               setTab(value);
             }}
@@ -355,8 +361,18 @@ export default function ReporteTecnicoPage() {
           >
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="adjuntar">Adjuntar Reporte</TabsTrigger>
-              <TabsTrigger value="estado">Estado Aprendices</TabsTrigger>
+              <TabsTrigger
+                value="estado"
+                disabled={Boolean(reporteFile) || !convocatoria?.reporteTecnico}
+              >
+                Estado Aprendices
+              </TabsTrigger>
             </TabsList>
+            {(Boolean(reporteFile) || !convocatoria?.reporteTecnico) && (
+              <div className="mt-2">
+                <Badge variant="secondary">Guardar para continuar</Badge>
+              </div>
+            )}
 
             <TabsContent value="adjuntar">
               <Card>

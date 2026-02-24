@@ -123,9 +123,12 @@ export default function SeleccionConvocatoriaPage() {
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     try {
-      return new Date(dateStr).toLocaleDateString("es-ES");
+      const iso =
+        typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString();
+      const [y, m, d] = iso.slice(0, 10).split("-");
+      return `${d}/${m}/${y}`;
     } catch {
-      return dateStr;
+      return "-";
     }
   };
 
