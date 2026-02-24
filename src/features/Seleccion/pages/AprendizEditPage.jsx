@@ -518,6 +518,22 @@ export default function AprendizEditPage() {
                         {aprendiz?.telefono || "-"}
                       </p>
                     </div>
+                    <div className="p-3 bg-muted/50 rounded-lg break-words">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Inicio productiva
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-words">
+                        {toBogotaDisplay(aprendiz?.fechaInicioProductiva)}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg break-words">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        Fin productiva
+                      </p>
+                      <p className="text-sm font-medium text-foreground break-words">
+                        {toBogotaDisplay(aprendiz?.fechaFinProductiva)}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
