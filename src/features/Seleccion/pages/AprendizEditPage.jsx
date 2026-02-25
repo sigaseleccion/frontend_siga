@@ -372,9 +372,11 @@ export default function AprendizEditPage() {
         }
         // Unificar y eliminar duplicados por _id
         const map = new Map();
-        [...(porContrato || []), ...(porFinContrato || [])].forEach((a) => {
-          if (a && a._id && !map.has(a._id)) map.set(a._id, a);
-        });
+        [...(porContrato || []), ...(porFinContrato || [])]
+          .filter((a) => !a?.reemplazoId) // excluir ya reemplazados
+          .forEach((a) => {
+            if (a && a._id && !map.has(a._id)) map.set(a._id, a);
+          });
         setRecomendados(Array.from(map.values()));
       } catch (e) {
         setError(e.message);
