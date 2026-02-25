@@ -27,6 +27,11 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import Spinner from "../../../shared/components/ui/Spinner";
+import {
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../../../shared/components/ui/card";
 
 export default function RolesPage() {
   const { auth } = useAuth();
@@ -124,7 +129,7 @@ export default function RolesPage() {
 
           {/* Métricas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -139,7 +144,7 @@ export default function RolesPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -150,13 +155,13 @@ export default function RolesPage() {
                       {roles.filter((r) => !r.activo).length}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
-                    <ShieldX className="text-red-600" size={24} />
+                  <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                    <ShieldX className="text-purple-600" size={24} />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -198,79 +203,84 @@ export default function RolesPage() {
                   }`}
                 >
                   {rolesFiltrados.map((role) => (
-                    <div
-                      key={role._id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                          <Shield className="text-blue-600" size={24} />
-                        </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            role.activo === true
-                              ? "bg-blue-600 text-white"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {role.activo === true ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
+                    <Card key={role._id} className="flex flex-col h-full">
+                      {/* HEADER */}
+                      <CardHeader>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Shield className="text-blue-600" size={20} />
+                            </div>
 
-                      {/* Card Content */}
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {role.nombre}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-3">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                role.activo
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-red-500 text-white"
+                              }`}
+                            >
+                              {role.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <CardTitle className="text-lg">{role.nombre}</CardTitle>
+                        <p className="text-sm text-gray-600">
                           {role.descripcion}
                         </p>
-                      </div>
+                      </CardHeader>
 
-                      <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
-                        <div>
-                          <span className="block text-xs text-gray-400">
-                            Permisos
-                          </span>
-                          <span className="font-medium">
-                            {role.permisos?.length || 0}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-xs text-gray-400">
-                            Usuarios
-                          </span>
-                          <span className="font-medium">
-                            {role.usersCount || 0}
-                          </span>
-                        </div>
-                      </div>
+                      {/* CONTENT */}
+                      <CardContent className="flex-1">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Permisos */}
+                          <div className="rounded-xl bg-blue-50/70 border border-blue-100 p-4 text-center transition hover:shadow-sm">
+                            <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">
+                              Permisos
+                            </p>
+                            <p className="text-2xl font-bold text-blue-700">
+                              {role.permisos?.length || 0}
+                            </p>
+                          </div>
 
-                      {/* Card Actions */}
-                      <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+                          {/* Usuarios */}
+                          <div className="rounded-xl bg-purple-50/70 border border-purple-100 p-4 text-center transition hover:shadow-sm">
+                            <p className="text-xs font-medium text-purple-600 uppercase tracking-wide mb-1">
+                              Usuarios
+                            </p>
+                            <p className="text-2xl font-bold text-purple-700">
+                              {role.usersCount || 0}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+
+                      {/* FOOTER */}
+                      <CardFooter className="flex gap-2">
                         {tienePermiso(auth, "roles", "editar") && (
-                          <button
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
                             onClick={() => handleEdit(role._id)}
                             disabled={loading}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg transition-colors duration-200 font-medium ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
                           >
-                            <PenBoxIcon className="h-4 w-4 mr-1"/>
+                            <PenBoxIcon className="h-4 w-4 mr-2" />
                             Editar
-                          </button>
+                          </Button>
                         )}
 
                         {tienePermiso(auth, "roles", "eliminar") && (
-                          <button
+                          <Button
+                            size="sm"
                             onClick={() => handleDelete(role._id)}
                             disabled={loading}
-                            className={`p-2 text-red-600 rounded-lg transition-colors duration-200 ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50"}`}
                           >
-                            <Trash2 size={18} />
-                          </button>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
-                      </div>
-                    </div>
+                      </CardFooter>
+                    </Card>
                   ))}
                 </div>
               )}

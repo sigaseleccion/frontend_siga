@@ -187,7 +187,7 @@ export default function SeleccionPage() {
             />
           </div>
           <Link to="/seleccion/historico">
-            <Button variant="outline">
+            <Button>
               <History className="h-4 w-4 mr-2" />
               Histórico
             </Button>
@@ -213,10 +213,7 @@ export default function SeleccionPage() {
         {!loading && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredConvocatorias.map((convocatoria) => (
-              <Card
-                key={convocatoria.id}
-                className="flex flex-col hover:shadow-lg transition-shadow"
-              >
+              <Card key={convocatoria.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between mb-2">
                     <Badge>
@@ -239,7 +236,7 @@ export default function SeleccionPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
+                      <Badge className="bg-purple-600 text-white hover:bg-purple-600">
                         {convocatoria.aprendicesConPruebasCompletas}/
                         {convocatoria.totalAprendices * 3 || 0} pruebas
                         aprobadas
@@ -269,9 +266,7 @@ export default function SeleccionPage() {
                   {isPruebasCompletas(convocatoria) &&
                     tienePermiso(auth, "seleccion", "gestionArchivado") && (
                       <Button
-                        variant="outline"
                         size="sm"
-                        className="bg-transparent"
                         onClick={() => handleArchiveClick(convocatoria)}
                         title="Archivar convocatoria"
                       >

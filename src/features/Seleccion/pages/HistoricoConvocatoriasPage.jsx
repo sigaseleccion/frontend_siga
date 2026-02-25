@@ -14,7 +14,7 @@ import { Input } from "@/shared/components/ui/input";
 import { ArrowLeft, Archive, Eye, CheckSquare } from "lucide-react";
 import { convocatoriaService } from "@/features/Convocatorias/services/convocatoriaService";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
-import { aprendizService } from '@/features/Convocatorias/services/aprendizService'
+import { aprendizService } from "@/features/Convocatorias/services/aprendizService";
 import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
 import Spinner from "../../../shared/components/ui/Spinner";
@@ -39,15 +39,23 @@ export default function HistoricoConvocatoriasPage() {
     const loadArchived = async () => {
       const start = Date.now();
       try {
-        setError(null)
+        setError(null);
         setLoading(true);
-        const data = await convocatoriaService.obtenerConvocatoriasArchivadas()
+        const data = await convocatoriaService.obtenerConvocatoriasArchivadas();
         const enriched = await Promise.all(
           data.map(async (c) => {
             try {
-              const aprendices = await aprendizService.obtenerAprendicesPorConvocatoria(c._id)
-              const validStates = ['seleccion2', 'lectiva', 'productiva', 'finalizado']
-              const filtered = aprendices.filter((a) => validStates.includes(a.etapaActual))
+              const aprendices =
+                await aprendizService.obtenerAprendicesPorConvocatoria(c._id);
+              const validStates = [
+                "seleccion2",
+                "lectiva",
+                "productiva",
+                "finalizado",
+              ];
+              const filtered = aprendices.filter((a) =>
+                validStates.includes(a.etapaActual),
+              );
               return {
                 id: c._id,
                 idConvocatoria: c.idConvocatoria,
@@ -56,7 +64,7 @@ export default function HistoricoConvocatoriasPage() {
                 nivelFormacion: c.nivelFormacion,
                 totalAprendices: filtered.length,
                 fechaArchivado: c.fechaArchivado,
-              }
+              };
             } catch {
               return {
                 id: c._id,
@@ -66,11 +74,11 @@ export default function HistoricoConvocatoriasPage() {
                 nivelFormacion: c.nivelFormacion,
                 totalAprendices: c.totalAprendices || 0,
                 fechaArchivado: c.fechaArchivado,
-              }
+              };
             }
-          })
-        )
-        setArchivedConvocatorias(enriched)
+          }),
+        );
+        setArchivedConvocatorias(enriched);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -128,75 +136,89 @@ export default function HistoricoConvocatoriasPage() {
               <CardTitle>Convocatorias Archivadas</CardTitle>
             </CardHeader>
             <CardContent>
-              {!loading && (() => {
-                const term = searchTerm.toLowerCase().trim();
-                const filtered = term
-                  ? archivedConvocatorias.filter((c) => {
-                      const idStr = String(c.idConvocatoria || c.id || "").toLowerCase();
-                      const nombre = String(c.nombreConvocatoria || "").toLowerCase();
-                      const programa = String(c.programa || "").toLowerCase();
-                      const nivel = String(getNivelFormacionLabel(c.nivelFormacion) || "").toLowerCase();
-                      return (
-                        idStr.includes(term) ||
-                        nombre.includes(term) ||
-                        programa.includes(term) ||
-                        nivel.includes(term)
-                      );
-                    })
-                  : archivedConvocatorias;
+              {!loading &&
+                (() => {
+                  const term = searchTerm.toLowerCase().trim();
+                  const filtered = term
+                    ? archivedConvocatorias.filter((c) => {
+                        const idStr = String(
+                          c.idConvocatoria || c.id || "",
+                        ).toLowerCase();
+                        const nombre = String(
+                          c.nombreConvocatoria || "",
+                        ).toLowerCase();
+                        const programa = String(c.programa || "").toLowerCase();
+                        const nivel = String(
+                          getNivelFormacionLabel(c.nivelFormacion) || "",
+                        ).toLowerCase();
+                        return (
+                          idStr.includes(term) ||
+                          nombre.includes(term) ||
+                          programa.includes(term) ||
+                          nivel.includes(term)
+                        );
+                      })
+                    : archivedConvocatorias;
 
-                return filtered.length > 0 ? (
-                  <DataTable
-                    columns={[
-                      {
-                        key: "idConvocatoria",
-                        header: "ID Convocatoria",
-                        render: (value, row) => (
-                          <span className="font-medium">
-                            {row.idConvocatoria || row.id}
-                          </span>
-                        ),
-                      },
-                      { key: "nombreConvocatoria", header: "Nombre Convocatoria" },
-                      { key: "programa", header: "Programa" },
-                      {
-                        key: "nivelFormacion",
-                        header: "Nivel Formacion",
-                        render: (value) => getNivelFormacionLabel(value),
-                      },
-                      { key: "totalAprendices", header: "Total Aprendices" },
-                      {
-                        key: "fechaArchivado",
-                        header: "Fecha Archivado",
-                        render: (value) =>
-                          new Date(value).toLocaleDateString("es-ES"),
-                      },
-                      {
-                        key: "acciones",
-                        header: "Acciones",
-                        render: (value, row) => (
-                          <Link to={`/seleccion/historico/${row.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver Detalle
-                            </Button>
-                          </Link>
-                        ),
-                      },
-                    ]}
-                    data={filtered}
-                    pageSize={5}
-                    emptyMessage="No hay convocatorias archivadas"
-                  />
-                ) : (
-                  <div className="py-12 text-center">
-                    <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                      No hay convocatorias archivadas
-                    </p>
-                  </div>
-                );
-              })()}
+                  return filtered.length > 0 ? (
+                    <DataTable
+                      columns={[
+                        {
+                          key: "idConvocatoria",
+                          header: "ID Convocatoria",
+                          render: (value, row) => (
+                            <span className="font-medium">
+                              {row.idConvocatoria || row.id}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "nombreConvocatoria",
+                          header: "Nombre Convocatoria",
+                        },
+                        { key: "programa", header: "Programa" },
+                        {
+                          key: "nivelFormacion",
+                          header: "Nivel Formacion",
+                          render: (value) => getNivelFormacionLabel(value),
+                        },
+                        { key: "totalAprendices", header: "Total Aprendices" },
+                        {
+                          key: "fechaArchivado",
+                          header: "Fecha Archivado",
+                          render: (value) =>
+                            new Date(value).toLocaleDateString("es-ES"),
+                        },
+                        {
+                          key: "acciones",
+                          header: "Acciones",
+                          render: (value, row) => (
+                            <Link to={`/seleccion/historico/${row.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Ver detalle"
+                                className="h-9 w-9 rounded-xl text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 transition-all duration-200"
+                              >
+                                <Eye size={20} />
+                              </Button>
+                            </Link>
+                          ),
+                        },
+                      ]}
+                      data={filtered}
+                      pageSize={5}
+                      emptyMessage="No hay convocatorias archivadas"
+                    />
+                  ) : (
+                    <div className="py-12 text-center">
+                      <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">
+                        No hay convocatorias archivadas
+                      </p>
+                    </div>
+                  );
+                })()}
             </CardContent>
           </Card>
         </div>

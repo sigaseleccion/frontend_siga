@@ -424,7 +424,7 @@ export default function ConvocatoriaDetailPage() {
                 emptyMessage="No hay aprendices registrados en esta convocatoria"
                 rowClassName={(row) =>
                   `border-b border-gray-100 last:border-0 hover:bg-gray-50 ${
-                    row.etapaActual === "seleccion2" ? "bg-gray-100" : ""
+                    row.etapaActual === "seleccion2" ? "" : ""
                   }`
                 }
               />

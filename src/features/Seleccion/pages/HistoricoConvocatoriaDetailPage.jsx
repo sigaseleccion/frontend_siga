@@ -122,30 +122,38 @@ export default function HistoricoConvocatoriaDetailPage() {
                   {error}
                 </div>
               )}
-              {!loading && <DataTable
-                columns={[
-                  { key: "nombre", header: "Nombre" },
-                  { key: "tipoDocumento", header: "Tipo Doc." },
-                  { key: "documento", header: "N. Documento" },
-                  { key: "ciudad", header: "Ciudad" },
-                  { key: "programaFormacion", header: "Programa" },
-                  {
-                    key: "acciones",
-                    header: "Acciones",
-                    render: (value, row) => (
-                      <Link to={`/seleccion/historico/${convocatoriaId}/aprendiz/${row.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
-                      </Link>
-                    ),
-                  },
-                ]}
-                data={aprendices}
-                pageSize={5}
-                pageSizeOptions={[5, 10, 20]}
-              />}
+              {!loading && (
+                <DataTable
+                  columns={[
+                    { key: "nombre", header: "Nombre" },
+                    { key: "tipoDocumento", header: "Tipo Doc." },
+                    { key: "documento", header: "N. Documento" },
+                    { key: "ciudad", header: "Ciudad" },
+                    { key: "programaFormacion", header: "Programa" },
+                    {
+                      key: "acciones",
+                      header: "Acciones",
+                      render: (value, row) => (
+                        <Link
+                          to={`/seleccion/historico/${convocatoriaId}/aprendiz/${row.id}`}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Ver detalle"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 transition-all duration-200"
+                          >
+                            <Eye size={20} />
+                          </Button>
+                        </Link>
+                      ),
+                    },
+                  ]}
+                  data={aprendices}
+                  pageSize={5}
+                  pageSizeOptions={[5, 10, 20]}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

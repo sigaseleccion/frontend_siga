@@ -107,7 +107,7 @@ export default function ConvocatoriasPage() {
                 value={filterNivel}
                 onValueChange={(v) => setFilterNivel(v)}
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="Nivel de formación" />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,14 +165,7 @@ export default function ConvocatoriasPage() {
                     {
                       key: "programa",
                       header: "Programa",
-                      render: (value) => (
-                        <span
-                          className="max-w-[200px] truncate block"
-                          title={value}
-                        >
-                          {value}
-                        </span>
-                      ),
+                      render: (value, row) => value || row.programa || "-",
                     },
                     {
                       key: "nivelFormacion",
@@ -198,17 +191,22 @@ export default function ConvocatoriasPage() {
                     {
                       key: "estado",
                       header: "Estado",
-                      render: (value) => (
-                        <Badge
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            value === "en proceso"
-                              ? "bg-blue-600 text-white hover:bg-blue-600"
-                              : "bg-pink-500 text-white hover:bg-pink-500"
-                          }`}
-                        >
-                          {value}
-                        </Badge>
-                      ),
+                      render: (value) => {
+                        const formatted =
+                          value?.charAt(0).toUpperCase() + value?.slice(1);
+
+                        return (
+                          <Badge
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${
+                              value === "en proceso"
+                                ? "bg-blue-600 text-white hover:bg-blue-600"
+                                : "bg-purple-600 text-white hover:bg-purple-600"
+                            }`}
+                          >
+                            {formatted}
+                          </Badge>
+                        );
+                      },
                     },
                     {
                       key: "_id",
@@ -218,11 +216,11 @@ export default function ConvocatoriasPage() {
                           {tienePermiso(auth, "convocatorias", "editar") && (
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                              size="icon"
+                              title="Editar convocatoria"
+                              className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                             >
-                              <PenBoxIcon className="h-4 w-4 mr-1" />
-                              Editar
+                              <PenBoxIcon className="h-4 w-4" />
                             </Button>
                           )}
                         </Link>

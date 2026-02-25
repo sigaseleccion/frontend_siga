@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
           {/* Icon */}
           <div className="flex justify-center">
             <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary via-accent to-primary flex items-center justify-center shadow-lg">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-500 flex items-center justify-center shadow-lg">
                 <KeyRound className="h-10 w-10 text-primary-foreground" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-secondary rounded-full border-4 border-background" />

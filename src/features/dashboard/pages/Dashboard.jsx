@@ -432,8 +432,8 @@ export default function Dashboard() {
   };
 
   const detailsContent = (
-    <div className="grid gap-6 xl:grid-cols-3">
-      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+    <div className="grid gap-6 md:grid-cols-2">
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
@@ -546,7 +546,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-red-600 to-pink-500" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
@@ -772,7 +772,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
@@ -793,7 +793,7 @@ export default function Dashboard() {
           ) : data.proximosVencimientos.length === 0 ? (
             <div className="text-sm text-gray-600">Sin vencimientos próximos</div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {data.proximosVencimientos.map((apprentice) => (
                 <div
                   key={apprentice.id || `${apprentice.nombre}-${apprentice.dias}`}
@@ -855,7 +855,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 xl:col-span-1 overflow-hidden">
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
@@ -933,7 +933,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={loadDashboard} disabled={busy} className="bg-white">
+              <Button onClick={loadDashboard} disabled={busy}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`} />
                 Actualizar
               </Button>

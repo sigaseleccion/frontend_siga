@@ -58,12 +58,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-purple-100 p-4 relative overflow-hidden">
       {/* Decorative gradient circles */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-20 -right-20 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div
+          className="absolute -bottom-20 -right-20 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
       </div>
 
       <Card className="w-full max-w-md relative z-10 shadow-2xl border-border/50 backdrop-blur-sm">
@@ -71,8 +77,10 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="flex justify-center">
             <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center shadow-lg">
-                <span className="text-3xl font-bold text-primary-foreground">SIGA</span>
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-500 flex items-center justify-center shadow-lg">
+                <span className="text-3xl font-bold text-primary-foreground">
+                  SIGA
+                </span>
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-accent rounded-full border-4 border-background" />
             </div>
@@ -80,7 +88,7 @@ export default function LoginPage() {
 
           {/* Title */}
           <div className="space-y-2">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 bg-clip-text text-transparent">
               Bienvenido de nuevo
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
@@ -93,7 +101,10 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Input */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-foreground">
+              <Label
+                htmlFor="email"
+                className="text-sm font-medium text-foreground"
+              >
                 Correo electrónico
               </Label>
               <div className="relative">
@@ -112,7 +123,10 @@ export default function LoginPage() {
 
             {/* Password Input */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-foreground"
+              >
                 Contraseña
               </Label>
               <div className="relative">
@@ -143,8 +157,18 @@ export default function LoginPage() {
             {/* Error Message */}
             {errorMessage && (
               <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-4 rounded-lg flex items-start gap-2">
-                <svg className="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="h-5 w-5 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <span>{errorMessage}</span>
               </div>
@@ -157,8 +181,18 @@ export default function LoginPage() {
                 className="text-sm text-primary hover:text-secondary transition-colors font-medium inline-flex items-center gap-1 group"
               >
                 ¿Olvidaste tu contraseña?
-                <svg className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="h-4 w-4 group-hover:translate-x-0.5 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </Link>
             </div>
@@ -166,7 +200,9 @@ export default function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-12 bg-gradient-to-r from-primary via-secondary to-primary hover:from-primary/90 hover:via-secondary/90 hover:to-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02]"
+              className="w-full h-12 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-600 text-white font-semibold shadow-lg shadow-purple-600/30 transition-all duration-300
+              hover:shadow-xl hover:shadow-purple-600/40
+              hover:scale-[1.02]"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -202,11 +238,15 @@ export default function LoginPage() {
           <div className="pt-6 border-t border-border space-y-3">
             <div className="flex items-center justify-center gap-2">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-              <p className="text-xs text-muted-foreground font-medium">Sistema de Gestión de Aprendices</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                Sistema de Gestión de Aprendices
+              </p>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
             </div>
             <div className="text-center space-y-1">
-              <p className="text-xs text-muted-foreground">© 2026 SIGA - Todos los derechos reservados</p>
+              <p className="text-xs text-muted-foreground">
+                © 2026 SIGA - Todos los derechos reservados
+              </p>
             </div>
           </div>
         </CardContent>

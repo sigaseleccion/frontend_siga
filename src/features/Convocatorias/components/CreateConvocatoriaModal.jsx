@@ -188,14 +188,6 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md [&>button]:hidden">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Cerrar</span>
-        </button>
         <DialogHeader>
           <DialogTitle>Crear Nueva Convocatoria</DialogTitle>
           <DialogDescription>
@@ -313,7 +305,7 @@ export function CreateConvocatoriaModal({ open, onOpenChange, onSubmit, loading 
             </Button>
           </label>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleCancel} disabled={loading}>
+            <Button variant="outline" onClick={handleCancel} disabled={loading}>
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>

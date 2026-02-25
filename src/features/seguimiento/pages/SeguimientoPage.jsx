@@ -35,6 +35,7 @@ import Spinner from "@/shared/components/ui/Spinner";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { tienePermiso } from "../../../shared/utils/auth/permissions";
 import { useAuth } from "../../../shared/contexts/auth/AuthContext";
+import { DataTable } from "../../../shared/components/DataTable";
 
 const SeguimientoPage = () => {
   const navigate = useNavigate();
@@ -151,7 +152,7 @@ const SeguimientoPage = () => {
             </div>
             <div className="flex items-center gap-3 ml-auto">
               <Select value={etapaFilter} onValueChange={handleEtapaChange}>
-                <SelectTrigger className="w-[200px] bg-white">
+                <SelectTrigger className="w-50 bg-white">
                   <SelectValue placeholder="Todas las etapas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,12 +162,11 @@ const SeguimientoPage = () => {
                 </SelectContent>
               </Select>
               <Button
-                variant="outline"
                 onClick={() => navigate("/seguimiento/historico")}
                 className="flex items-center gap-2"
               >
                 <History size={18} />
-                Historico
+                Histórico
               </Button>
             </div>
           </div>
@@ -174,7 +174,7 @@ const SeguimientoPage = () => {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* En Etapa Lectiva */}
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -193,7 +193,7 @@ const SeguimientoPage = () => {
             </Card>
 
             {/* En Etapa Productiva */}
-            <Card className="border border-purple-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -212,7 +212,7 @@ const SeguimientoPage = () => {
             </Card>
 
             {/* Cuota de Aprendices */}
-            <Card className="border border-gray-200">
+            <Card variant="colorful" showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
@@ -225,48 +225,49 @@ const SeguimientoPage = () => {
                         : `Aprendices ${estadisticas.cuota.actual}/${estadisticas.cuota.maximo}`}
                     </p>
                     {/* Estado de la cuota */}
-                    {estadisticas.cuota !== null && (() => {
-                      const actual = estadisticas.cuota.actual;
-                      const maximo = estadisticas.cuota.maximo;
-                      const diferencia = maximo - actual;
+                    {estadisticas.cuota !== null &&
+                      (() => {
+                        const actual = estadisticas.cuota.actual;
+                        const maximo = estadisticas.cuota.maximo;
+                        const diferencia = maximo - actual;
 
-                      if (actual < maximo) {
-                        // Cuota NO cumplida
-                        return (
-                          <div className="flex items-center gap-1.5 text-amber-600 text-sm mt-2">
-                            <AlertTriangle size={14} />
-                            <span>
-                              Faltan {diferencia} aprendices para cumplir la
-                              cuota
-                            </span>
-                          </div>
-                        );
-                      } else if (actual === maximo) {
-                        // Cuota CUMPLIDA
-                        return (
-                          <div className="flex items-center gap-1.5 text-green-600 text-sm mt-2">
-                            <CheckCircle size={14} />
-                            <span>Cuota cumplida</span>
-                          </div>
-                        );
-                      } else {
-                        // Cuota EXCEDIDA
-                        const exceso = actual - maximo;
-                        return (
-                          <div className="flex items-center gap-1.5 text-red-600 text-sm mt-2">
-                            <TrendingUp size={14} />
-                            <span>Cuota excedida (+{exceso})</span>
-                          </div>
-                        );
-                      }
-                    })()}
+                        if (actual < maximo) {
+                          // Cuota NO cumplida
+                          return (
+                            <div className="flex items-center gap-1.5 text-amber-600 text-sm mt-2">
+                              <AlertTriangle size={14} />
+                              <span>
+                                Faltan {diferencia} aprendices para cumplir la
+                                cuota
+                              </span>
+                            </div>
+                          );
+                        } else if (actual === maximo) {
+                          // Cuota CUMPLIDA
+                          return (
+                            <div className="flex items-center gap-1.5 text-green-600 text-sm mt-2">
+                              <CheckCircle size={14} />
+                              <span>Cuota cumplida</span>
+                            </div>
+                          );
+                        } else {
+                          // Cuota EXCEDIDA
+                          const exceso = actual - maximo;
+                          return (
+                            <div className="flex items-center gap-1.5 text-red-600 text-sm mt-2">
+                              <TrendingUp size={14} />
+                              <span>Cuota excedida (+{exceso})</span>
+                            </div>
+                          );
+                        }
+                      })()}
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <div className="w-12 h-12 bg-pink-50 rounded-lg flex items-center justify-center">
-                      <Users className="text-pink-600" size={24} />
+                    <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                      <Users className="text-purple-600" size={24} />
                     </div>
-                    {tienePermiso(auth, "seguimiento", "editar") && (
-                      esPeriodoEdicionCuota ? (
+                    {tienePermiso(auth, "seguimiento", "editar") &&
+                      (esPeriodoEdicionCuota ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -282,13 +283,12 @@ const SeguimientoPage = () => {
                           size="sm"
                           disabled
                           title="La cuota solo puede editarse durante los primeros 15 días del mes"
-                          className="text-gray-300 cursor-not-allowed"
+                          className="text-gray-600 cursor-not-allowed"
                         >
                           <PenBoxIcon className="h-4 w-4 mr-1" />
                           Editar
                         </Button>
-                      )
-                    )}
+                      ))}
                   </div>
                 </div>
               </CardContent>
@@ -301,170 +301,145 @@ const SeguimientoPage = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Listado de Aprendices
               </h2>
-              <div className="overflow-x-auto relative">
-                {aprendices.length === 0 && !loading ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">
-                      No hay aprendices en seguimiento
-                    </p>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+                    <Spinner />
+                    <span className="text-gray-700 font-medium">
+                      Cargando...
+                    </span>
                   </div>
-                ) : (
-                  <table className={`w-full ${loading ? "opacity-50" : ""}`}>
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Nombre
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Etapa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Programa
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Ciudad
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Inicio Productiva
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Fin Contrato
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Reemplazo
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Dias Restantes
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {aprendices.map((aprendiz) => {
-                        // Calcular días restantes según la etapa
+                </div>
+              ) : (
+                <DataTable
+                  columns={[
+                    {
+                      key: "nombreCompleto",
+                      header: "Nombre",
+                      render: (_, row) => (
+                        <span className="font-medium text-gray-900">
+                          {row.nombre} {row.apellido}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "etapaActual",
+                      header: "Etapa",
+                      render: (value) => (
+                        <Badge
+                          className={`${getEtapaBadgeStyle(
+                            value,
+                          )} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
+                        >
+                          {getEtapaIcon(value)}
+                          {value === "lectiva"
+                            ? "Lectiva"
+                            : value === "productiva"
+                              ? "Productiva"
+                              : "Finalizado"}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "programaFormacion",
+                      header: "Programa",
+                      render: (value, row) => value || row.programa || "-",
+                    },
+                    {
+                      key: "ciudad",
+                      header: "Ciudad",
+                      render: (value) => value || "-",
+                    },
+                    {
+                      key: "fechaInicioContrato",
+                      header: "Inicio Contrato",
+                      render: (value) => formatDate(value),
+                    },
+                    {
+                      key: "fechaInicioProductiva",
+                      header: "Inicio Productiva",
+                      render: (value) => formatDate(value),
+                    },
+                    {
+                      key: "fechaFinContrato",
+                      header: "Fin Contrato",
+                      render: (value) => formatDate(value),
+                    },
+                    {
+                      key: "reemplazoId",
+                      header: "Reemplazo",
+                      render: (value) =>
+                        value ? (
+                          <span className="inline-flex items-center rounded-full text-blue-700 px-3 py-1 text-xs font-medium">
+                            {value.nombre} {value.documento || ""}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        ),
+                    },
+                    {
+                      key: "diasRestantes",
+                      header: "Días Restantes",
+                      render: (_, row) => {
                         const fechaReferencia =
-                          aprendiz.etapaActual === "lectiva"
-                            ? aprendiz.fechaInicioProductiva
-                            : aprendiz.fechaFinContrato;
+                          row.etapaActual === "lectiva"
+                            ? row.fechaInicioProductiva
+                            : row.fechaFinContrato;
 
                         const diasRestantes =
                           calcularDiasRestantes(fechaReferencia);
-                        return (
-                          <tr
-                            key={aprendiz._id}
-                            className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                          >
-                            <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                              {aprendiz.nombre} {aprendiz.apellido}
-                            </td>
-                            <td className="py-4 px-4">
-                              <Badge
-                                className={`${getEtapaBadgeStyle(
-                                  aprendiz.etapaActual,
-                                )} rounded-full px-3 py-1 text-xs font-medium flex items-center w-fit`}
-                              >
-                                {getEtapaIcon(aprendiz.etapaActual)}
-                                {aprendiz.etapaActual === "lectiva"
-                                  ? "Lectiva"
-                                  : aprendiz.etapaActual === "productiva"
-                                    ? "Productiva"
-                                    : "Finalizado"}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.programaFormacion ||
-                                aprendiz.programa ||
-                                "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {aprendiz.ciudad || "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaInicioContrato)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaInicioProductiva)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-gray-600">
-                              {formatDate(aprendiz.fechaFinContrato)}
-                            </td>
-                            <td className="py-4 px-4 text-sm text-blue-600">
-                              {aprendiz.reemplazoId
-                                ? `${aprendiz.reemplazoId.nombre} ${aprendiz.reemplazoId.documento || ""}`
-                                : "-"}
-                            </td>
-                            <td className="py-4 px-4 text-sm">
-                              <span
-                                className={`${diasRestantes < 0
-                                  ? "text-red-600"
-                                  : diasRestantes <= 30
-                                    ? "text-amber-600"
-                                    : "text-gray-600"
-                                  }`}
-                              >
-                                {diasRestantes !== "-"
-                                  ? `${diasRestantes} dias`
-                                  : "-"}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center gap-1">
-                                {tienePermiso(
-                                  auth,
-                                  "seguimiento",
-                                  "ver",
-                                ) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleVerAprendiz(aprendiz)}
-                                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                    >
-                                      <Eye size={20} />
-                                    </Button>
-                                  )}
-                                {tienePermiso(
-                                  auth,
-                                  "seguimiento",
-                                  "editar",
-                                ) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleEditarAprendiz(aprendiz)
-                                      }
-                                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
-                                    >
-                                      <PenBoxIcon size={16} />
-                                    </Button>
-                                  )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
 
-                {/* LOADER */}
-                {loading && (
-                  <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                    <div className="bg-white/90 rounded-lg p-4 flex items-center gap-3 shadow-lg">
-                      <Spinner />
-                      <span className="text-gray-700 font-medium">
-                        Cargando aprendices...
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                        return (
+                          <span
+                            className={
+                              diasRestantes < 0
+                                ? "text-red-600"
+                                : diasRestantes <= 30
+                                  ? "text-amber-600"
+                                  : "text-gray-600"
+                            }
+                          >
+                            {diasRestantes !== "-"
+                              ? `${diasRestantes} dias`
+                              : "-"}
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: "_id",
+                      header: "Acciones",
+                      render: (_, row) => (
+                        <div className="flex items-center gap-1">
+                          {tienePermiso(auth, "seguimiento", "ver") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVerAprendiz(row)}
+                              className="h-9 w-9 rounded-xl text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 transition-all duration-200"
+                            >
+                              <Eye size={20} />
+                            </Button>
+                          )}
+                          {tienePermiso(auth, "seguimiento", "editar") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditarAprendiz(row)}
+                              className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                            >
+                              <PenBoxIcon size={16} />
+                            </Button>
+                          )}
+                        </div>
+                      ),
+                    },
+                  ]}
+                  data={aprendices}
+                  pageSize={5}
+                  emptyMessage="No hay aprendices en seguimiento"
+                />
+              )}
             </CardContent>
           </Card>
         </div>

@@ -12,7 +12,17 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
-import { Plus, Search, Users, Edit2, Trash2, UserCog } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Users,
+  Edit2,
+  Trash2,
+  UserCog,
+  PenBoxIcon,
+  Trash2Icon,
+  Trash,
+} from "lucide-react";
 import { useUsuarios, useRoles } from "../hooks/index.js";
 import {
   CreateUsuarioModal,
@@ -123,8 +133,11 @@ const UsuariosPage = () => {
     return (
       <>
         <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-600">Cargando...</p>
+          <div>
+            <div className="bg-white/80 rounded-lg p-4 flex items-center gap-3 shadow">
+              <Spinner />
+              <span className="text-gray-700 font-medium">Cargando...</span>
+            </div>
           </div>
         </main>
       </>
@@ -151,10 +164,7 @@ const UsuariosPage = () => {
 
               {/* Botón al final */}
               {tienePermiso(auth, "usuarios", "crear") && (
-                <Button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                >
+                <Button onClick={() => setIsCreateModalOpen(true)}>
                   <Plus size={20} />
                   Crear Usuario
                 </Button>
@@ -164,7 +174,7 @@ const UsuariosPage = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -173,14 +183,14 @@ const UsuariosPage = () => {
                       {totalUsuarios}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <Users className="text-blue-600" size={24} />
+                  <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                    <Users className="text-purple-600" size={24} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border border-gray-200">
+            <Card showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -191,8 +201,8 @@ const UsuariosPage = () => {
                       {usuariosActivos}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                    <Users className="text-green-600" size={24} />
+                  <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <Users className="text-blue-600" size={24} />
                   </div>
                 </div>
               </CardContent>
@@ -271,10 +281,10 @@ const UsuariosPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditClick(row)}
-                              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                              title="Editar Usuario"
+                              className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                             >
-                              <Edit2 size={16} className="mr-1" />
-                              Editar
+                              <PenBoxIcon className="h-4 w-4" />
                             </Button>
                           )}
                           {tienePermiso(auth, "usuarios", "eliminar") && (
@@ -282,7 +292,8 @@ const UsuariosPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteClick(row)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="Eliminar Usuario"
+                              className="h-9 w-9 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
                             >
                               <Trash2 size={16} />
                             </Button>
