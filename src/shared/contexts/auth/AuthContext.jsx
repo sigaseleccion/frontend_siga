@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('auth', JSON.stringify(authData))
     setAuth(authData)
     setManualLogout(false)
+    sessionStorage.setItem('siga.just_logged_in', '1')
     navigate('/')
   }
 

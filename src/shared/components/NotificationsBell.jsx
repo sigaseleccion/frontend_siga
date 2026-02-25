@@ -53,11 +53,8 @@ const fetchJson = async (url, options = {}) => {
 }
 
 const DISMISSED_NOTIFICATIONS_KEY = 'siga.notifications.dismissed'
-const SENT_SLOTS_KEY = 'siga.notifications.sentSlots'
 const DISMISSED_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DISMISSED_MAX_ITEMS = 500
-const SENT_MAX_ITEMS = 1000
-const CHANGE_TOAST_MIN_INTERVAL_MS = 30_000
 
 const readDismissedMap = () => {
   try {
@@ -88,74 +85,10 @@ const writeDismissedMap = (map) => {
   }
 }
 
-const readSentSlotsMap = () => {
-  try {
-    const raw = localStorage.getItem(SENT_SLOTS_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
-    return parsed
-  } catch (e) {
-    return {}
-  }
-}
-
-const pruneSentSlotsMap = (map) => {
-  const entries = Object.entries(map)
-    .filter(([, slotKey]) => typeof slotKey === 'string' && slotKey.length <= 32)
-    .slice(-SENT_MAX_ITEMS)
-  return Object.fromEntries(entries)
-}
-
-const writeSentSlotsMap = (map) => {
-  try {
-    localStorage.setItem(SENT_SLOTS_KEY, JSON.stringify(map))
-  } catch (e) {
-  }
-}
-
-const getDateKey = (date = new Date()) => {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
 const getMonthKey = (date = new Date()) => {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   return `${y}-${m}`
-}
-
-const isWithinSendWindow = (now = new Date()) => {
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const d = now.getDate()
-
-  const start = new Date(y, m, d, 8, 0, 0, 0)
-  const end = new Date(y, m, d, 16, 0, 0, 0)
-  return now.getTime() >= start.getTime() && now.getTime() <= end.getTime()
-}
-
-const getNextSendTrigger = (now = new Date()) => {
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const d = now.getDate()
-
-  const todayAt8 = new Date(y, m, d, 8, 0, 0, 0)
-  const todayAt16 = new Date(y, m, d, 16, 0, 0, 0)
-
-  if (now.getTime() < todayAt8.getTime()) return { at: todayAt8, slot: '08' }
-  if (now.getTime() < todayAt16.getTime()) return { at: todayAt16, slot: '16' }
-  return { at: new Date(y, m, d + 1, 8, 0, 0, 0), slot: '08' }
-}
-
-const formatMonthLabel = (date = new Date()) => {
-  try {
-    return new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(date)
-  } catch (e) {
-    return getMonthKey(date)
-  }
 }
 
 const getMonthLabelWithDate = (date = new Date()) => {
@@ -186,16 +119,6 @@ const getToastClassName = (type) => {
   return 'bg-slate-800 text-white border-slate-900'
 }
 
-const getNotificationSignature = (notification) => {
-  return [
-    notification?.type,
-    notification?.badge,
-    notification?.title,
-    notification?.description,
-    notification?.href,
-  ].join('|')
-}
-
 function NotificationsBell({ onNavigate }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -209,11 +132,7 @@ function NotificationsBell({ onNavigate }) {
     return initial
   })
   const lastLoadedAtRef = useRef(0)
-  const sendTimerRef = useRef(null)
   const pollTimerRef = useRef(null)
-  const hasLoadedOnceRef = useRef(false)
-  const knownSignaturesRef = useRef(new Map())
-  const lastChangeToastAtRef = useRef(new Map())
 
   const previewLimit = 8
 
@@ -225,19 +144,17 @@ function NotificationsBell({ onNavigate }) {
   )
 
   const groupedNotifications = useMemo(() => {
-    const urgent = []
-    const important = []
-    const quota = []
-    const info = []
+    const cuota = []
+    const proyeccion = []
+    const salientes = []
 
     for (const n of notifications) {
-      if (String(n.type).startsWith('urgent')) urgent.push(n)
-      else if (n.type === 'important') important.push(n)
-      else if (String(n.type).startsWith('quota_')) quota.push(n)
-      else info.push(n)
+      if (String(n.id).startsWith('quota:')) cuota.push(n)
+      else if (String(n.id).startsWith('proyeccion:')) proyeccion.push(n)
+      else if (String(n.id).startsWith('salientes:')) salientes.push(n)
     }
 
-    return { urgent, quota, important, info }
+    return { cuota, proyeccion, salientes }
   }, [notifications])
 
   const dismissNotification = (id) => {
@@ -261,7 +178,7 @@ function NotificationsBell({ onNavigate }) {
     else navigate(notification.href)
   }
 
-  const loadNotifications = async ({ force = false, reason = 'poll', slot = null } = {}) => {
+  const loadNotifications = async ({ force = false, reason = 'init' } = {}) => {
     const now = Date.now()
     if (isLoading) return
     if (!force && now - lastLoadedAtRef.current < 15_000) return
@@ -271,24 +188,15 @@ function NotificationsBell({ onNavigate }) {
 
     const headers = getAuthHeaders()
 
-    const [seguimientoResult, estadisticasResult, incompletosResult, pruebasResult] = await Promise.allSettled([
+    const [seguimientoResult, estadisticasResult] = await Promise.allSettled([
       fetchJson(`${API_URL}/api/seguimiento`, { method: 'GET', headers }),
       fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: 'GET', headers }),
-      fetchJson(`${API_URL}/api/seguimiento/incompletos`, { method: 'GET', headers }),
-      fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: 'GET', headers }),
     ])
 
     const aprendicesSeguimiento = seguimientoResult.status === 'fulfilled' ? seguimientoResult.value : []
     const estadisticas = estadisticasResult.status === 'fulfilled' ? (estadisticasResult.value?.data || estadisticasResult.value) : null
-    const incompletos = incompletosResult.status === 'fulfilled' ? incompletosResult.value : []
-    const pruebas = pruebasResult.status === 'fulfilled' ? pruebasResult.value : []
 
-    if (
-      seguimientoResult.status === 'rejected' &&
-      estadisticasResult.status === 'rejected' &&
-      incompletosResult.status === 'rejected' &&
-      pruebasResult.status === 'rejected'
-    ) {
+    if (seguimientoResult.status === 'rejected' && estadisticasResult.status === 'rejected') {
       setErrorMessage('No se pudieron cargar notificaciones')
     }
 
@@ -303,160 +211,65 @@ function NotificationsBell({ onNavigate }) {
     const nowDate = new Date()
     const monthLabel = getMonthLabelWithDate(nowDate)
     const monthKey = getMonthKey()
+    const dayOfMonth = nowDate.getDate()
 
-    const shouldNotifyReplacement = cuotaActual < cuotaMaxima
-
-    const urgentNotifications = Array.isArray(aprendicesSeguimiento)
-      ? aprendicesSeguimiento
-          .filter((a) => {
-            const dias = a?.diasRestantes
-            if (typeof dias !== 'number') return false
-
-            const etapa = String(a?.etapaActual || '').toLowerCase()
-            const isLectiva = etapa.includes('lectiva')
-
-            if (isLectiva) {
-              if (!shouldNotifyReplacement) return false
-              if (dias === -1) return true
-              return dias >= 0 && dias <= 62
-            }
-
-            if (dias < 0) return false
-            return dias <= 7
-          })
-          .sort((a, b) => {
-            const da = a?.diasRestantes
-            const db = b?.diasRestantes
-            const na = da === -1 ? -9999 : (da ?? 999999)
-            const nb = db === -1 ? -9999 : (db ?? 999999)
-            return na - nb
-          })
-          .map((a) => {
-            const dias = a?.diasRestantes
-            const etapa = String(a?.etapaActual || '').toLowerCase()
-            const isLectiva = etapa.includes('lectiva')
-
-            const isReplacement = isLectiva && (dias === -1 || (typeof dias === 'number' && dias >= 0 && dias <= 62))
-            const isRed = isReplacement ? (dias === -1 || dias <= 30) : (dias <= 7)
-
-            const type = isRed ? 'urgent' : 'urgent_warning'
-            const badgeVariant = isRed ? 'destructive' : 'secondary'
-            const badgeClassName = isRed ? null : 'bg-amber-500 text-white hover:bg-amber-500'
-
-            const description = isReplacement
-              ? dias === -1
-                ? 'Sin reemplazo para prácticas · Buscar reemplazo'
-                : dias === 0
-                  ? 'Inicia prácticas hoy · Buscar reemplazo'
-                  : `Inicia prácticas en ${dias} días · Buscar reemplazo`
-              : dias === 0
-                ? 'El contrato vence hoy'
-                : `El contrato vence en ${dias} días`
-
-            return {
-              id: isReplacement ? `urgent_replacement:${a._id}` : `urgent_contract:${a._id}`,
-              type,
-              badge: 'Urgente',
-              badgeVariant,
-              ...(badgeClassName ? { badgeClassName } : {}),
-              title: `${a?.nombre || 'Aprendiz'}${a?.documento ? ` (${a.documento})` : ''}`,
-              description,
-              href: '/seguimiento',
-              priority: 1,
-            }
-          })
+    // Alerta 1: Cuota urgente actual (siempre visible, desde que falta 1 aprendiz)
+    const cuotaNotifications = cuotaActual < cuotaMaxima
+      ? [
+          {
+            id: `quota:${monthKey}`,
+            type: 'quota_under',
+            badge: 'Cuota',
+            badgeVariant: 'secondary',
+            badgeClassName: 'bg-amber-500 text-white hover:bg-amber-500',
+            title: 'Cuota de aprendices no cumplida',
+            description: `Faltan ${cuotaMaxima - cuotaActual} aprendiz(es) para completar la cuota · Actual: ${cuotaActual} / Meta: ${cuotaMaxima}`,
+            href: '/seguimiento',
+            priority: 1,
+          },
+        ]
       : []
 
-    const quotaNotifications =
-      [
+    // Alerta 2: Proyección de cuota a fin de mes (solo días 1 al 15)
+    const proyeccionNotifications = (() => {
+      if (dayOfMonth < 1 || dayOfMonth > 15) return []
+      if (!Array.isArray(aprendicesSeguimiento)) return []
+
+      const terminanEsteMes = aprendicesSeguimiento.filter((a) => {
+        const dias = a?.diasRestantes
+        if (typeof dias !== 'number' || dias < 0) return false
+        const endAt = new Date(nowDate)
+        endAt.setDate(endAt.getDate() + dias)
+        return getMonthKey(endAt) === monthKey
+      })
+
+      const proyeccion = cuotaActual - terminanEsteMes.length
+      const cumple = proyeccion >= cuotaMaxima
+
+      return [
         {
-          id: `quota:${monthKey}`,
-          type:
-            cuotaActual === cuotaMaxima
-              ? 'quota_ok'
-              : cuotaActual < cuotaMaxima
-                ? 'quota_under'
-                : 'quota_over',
-          badge: 'Cuota',
+          id: `proyeccion:${monthKey}`,
+          type: cumple ? 'quota_ok' : 'quota_under',
+          badge: 'Proyección',
           badgeVariant: 'secondary',
-          badgeClassName:
-            cuotaActual === cuotaMaxima
-              ? 'bg-emerald-600 text-white hover:bg-emerald-600'
-              : cuotaActual < cuotaMaxima
-                ? 'bg-amber-500 text-white hover:bg-amber-500'
-                : 'bg-fuchsia-600 text-white hover:bg-fuchsia-600',
-          title:
-            cuotaActual === cuotaMaxima
-              ? 'Cuota de aprendices cumplida'
-              : cuotaActual < cuotaMaxima
-                ? 'Cuota de aprendices no cumplida'
-                : 'Cuota de aprendices excedida',
-          description:
-            cuotaActual === cuotaMaxima
-              ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · ¡Excelente!`
-              : cuotaActual < cuotaMaxima
-                ? `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima}`
-                : `Mes: ${monthLabel} · Actual: ${cuotaActual} / Meta: ${cuotaMaxima} · Excedida (+${cuotaActual - cuotaMaxima})`,
+          badgeClassName: cumple
+            ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+            : 'bg-amber-500 text-white hover:bg-amber-500',
+          title: cumple ? 'La cuota se mantendrá este mes' : 'La cuota no se cumplirá a fin de mes',
+          description: cumple
+            ? `${terminanEsteMes.length} aprendiz(es) terminan este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima}`
+            : `${terminanEsteMes.length} aprendiz(es) terminan contrato este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima} · Faltan ${cuotaMaxima - proyeccion} adicionales`,
           href: '/seguimiento',
           priority: 2,
         },
       ]
+    })()
 
-    const importantNotifications = Array.isArray(pruebas)
-      ? pruebas
-          .map((p) => {
-            const pendingParts = []
-            if (p?.pruebaPsicologica === 'pendiente') pendingParts.push('Psicológica')
-            if (p?.pruebaTecnica === 'pendiente') pendingParts.push('Técnica')
-            if (p?.examenesMedicos === 'pendiente') pendingParts.push('Médicos')
-
-            if (pendingParts.length === 0) return null
-
-            const aprendizId =
-              typeof p?.aprendizId === 'string' ? p.aprendizId : p?.aprendizId?._id
-            const aprendizNombre =
-              typeof p?.aprendizId === 'object' ? p?.aprendizId?.nombre : null
-            const convocatoriaId =
-              typeof p?.convocatoriaId === 'string' ? p.convocatoriaId : p?.convocatoriaId?._id
-
-            const href =
-              aprendizId && convocatoriaId
-                ? `/seleccion/${convocatoriaId}/aprendiz/${aprendizId}`
-                : '/seleccion'
-
-            return {
-              id: `important:${p?._id || `${aprendizId || 'apr'}:${convocatoriaId || 'conv'}`}`,
-              type: 'important',
-              badge: 'Importante',
-              badgeVariant: 'default',
-              title: `Pruebas pendientes${aprendizNombre ? ` · ${aprendizNombre}` : ''}`,
-              description: `Pendiente: ${pendingParts.join(', ')}`,
-              href,
-              priority: 2,
-            }
-          })
-          .filter(Boolean)
-      : []
-
-    const infoNotifications = Array.isArray(incompletos)
-      ? incompletos.map((a) => ({
-          id: `info:${a._id}`,
-          type: 'info',
-          badge: 'Información',
-          badgeVariant: 'secondary',
-          title: `${a?.nombre || 'Aprendiz'}${a?.documento ? ` (${a.documento})` : ''}`,
-          description: `Datos incompletos${a?.etapaActual ? ` · Etapa: ${a.etapaActual}` : ''}`,
-          href: '/seguimiento',
-          priority: 3,
-        }))
-      : []
-
-    const contractEndNotifications = (() => {
+    // Alerta 3: Aprendices que terminan contrato este mes (visible todo el mes)
+    const salientesMesNotifications = (() => {
       if (!Array.isArray(aprendicesSeguimiento)) return []
-      const dayOfMonth = nowDate.getDate()
-      if (dayOfMonth < 1 || dayOfMonth > 15) return []
 
-      const endingThisMonth = aprendicesSeguimiento
+      const terminanEsteMes = aprendicesSeguimiento
         .filter((a) => {
           const dias = a?.diasRestantes
           if (typeof dias !== 'number' || dias < 0) return false
@@ -466,116 +279,72 @@ function NotificationsBell({ onNavigate }) {
         })
         .sort((a, b) => (a?.diasRestantes ?? 999999) - (b?.diasRestantes ?? 999999))
 
-      if (endingThisMonth.length === 0) return []
+      if (terminanEsteMes.length === 0) return []
 
-      const preview = endingThisMonth.slice(0, 5).map((a) => {
+      const preview = terminanEsteMes.slice(0, 5).map((a) => {
         const name = a?.nombre || 'Aprendiz'
-        const dias = typeof a?.diasRestantes === 'number' ? a.diasRestantes : null
-        return dias === null ? name : `${name} (${dias}d)`
+        const dias = a?.diasRestantes
+        return dias === 0 ? `${name} (hoy)` : `${name} (${dias}d)`
       })
-      const remaining = endingThisMonth.length - preview.length
+      const remaining = terminanEsteMes.length - preview.length
       const suffix = remaining > 0 ? ` y ${remaining} más` : ''
 
       return [
         {
-          id: `contract_end:${monthKey}`,
+          id: `salientes:${monthKey}`,
           type: 'important',
-          badge: 'Importante',
+          badge: 'Fin de contrato',
           badgeVariant: 'default',
-          title: `Fin de contrato (${monthLabel})`,
-          description: `${endingThisMonth.length} aprendiz(es) finalizan contrato este mes: ${preview.join(', ')}${suffix}`,
+          title: `${terminanEsteMes.length} aprendiz(es) terminan este mes`,
+          description: `${monthLabel}: ${preview.join(', ')}${suffix}`,
           href: '/seguimiento',
-          priority: 2,
+          priority: 3,
         },
       ]
     })()
 
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
-    const nextNotifications = [...urgentNotifications, ...quotaNotifications, ...contractEndNotifications, ...importantNotifications, ...infoNotifications]
+    const nextNotifications = [
+      ...cuotaNotifications,
+      ...proyeccionNotifications,
+      ...salientesMesNotifications,
+    ]
       .filter((n) => !dismissedSet.has(n.id))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority - b.priority
         return String(a.title).localeCompare(String(b.title), 'es')
       })
 
-    const withinWindow = isWithinSendWindow(nowDate)
-    const previousSignatures = knownSignaturesRef.current
-    const nextSignatures = new Map()
-
-    const newItems = []
-    const changedItems = []
-
-    for (const n of nextNotifications) {
-      const signature = getNotificationSignature(n)
-      nextSignatures.set(n.id, signature)
-
-      const prevSignature = previousSignatures.get(n.id)
-      if (!prevSignature) newItems.push(n)
-      else if (prevSignature !== signature) changedItems.push(n)
-    }
-
-    const sendScheduled = reason === 'schedule' && (slot === '08' || slot === '16')
-    if (sendScheduled) {
-      const slotKey = `${getDateKey(nowDate)}:${slot}`
-      const sentMap = pruneSentSlotsMap(readSentSlotsMap())
-      let sentCount = 0
-      const maxToasts = 3
-      for (const n of nextNotifications) {
-        if (sentCount >= maxToasts) break
-        if (sentMap[n.id] === slotKey) continue
-        toast({
-          title: n.title,
-          description: n.description,
-          className: getToastClassName(n.type),
-          duration: 5000,
+    // Disparar toasts solo al iniciar sesión (una vez por login)
+    if (reason === 'init') {
+      const justLoggedIn = sessionStorage.getItem('siga.just_logged_in') === '1'
+      if (justLoggedIn) {
+        sessionStorage.removeItem('siga.just_logged_in')
+        const maxToasts = 3
+        const toSend = nextNotifications.slice(0, maxToasts)
+        toSend.forEach((n) => {
+          toast({
+            title: n.title,
+            description: n.description,
+            className: getToastClassName(n.type),
+            duration: 6000,
+          })
         })
-        sentMap[n.id] = slotKey
-        sentCount += 1
-      }
-      if (nextNotifications.length - sentCount > 0) {
-        toast({
-          title: 'Notificaciones',
-          description: `Y ${nextNotifications.length - sentCount} más`,
-          className: getToastClassName('important'),
-          duration: 5000,
-        })
-      }
-      writeSentSlotsMap(sentMap)
-    } else if (hasLoadedOnceRef.current && withinWindow && (newItems.length > 0 || changedItems.length > 0)) {
-      const candidates = changedItems.length > 0 ? changedItems : newItems
-      const main = candidates[0]
-      const total = candidates.length
-
-      const lastToastAt = lastChangeToastAtRef.current.get(main.id) || 0
-      if (Date.now() - lastToastAt >= CHANGE_TOAST_MIN_INTERVAL_MS) {
-        toast({
-          title: total > 1 ? `${total} notificaciones actualizadas` : main.title,
-          description: main.description,
-          className: getToastClassName(main.type),
-          duration: 5000,
-        })
-        lastChangeToastAtRef.current.set(main.id, Date.now())
+        if (nextNotifications.length > maxToasts) {
+          toast({
+            title: 'Notificaciones',
+            description: `Y ${nextNotifications.length - maxToasts} más`,
+            className: getToastClassName('important'),
+            duration: 6000,
+          })
+        }
       }
     }
 
-    knownSignaturesRef.current = nextSignatures
-    hasLoadedOnceRef.current = true
     setNotifications(nextNotifications)
-
     lastLoadedAtRef.current = now
     setIsLoading(false)
-
-    if (sendTimerRef.current) {
-      clearTimeout(sendTimerRef.current)
-      sendTimerRef.current = null
-    }
-
-    const nextTrigger = getNextSendTrigger(new Date())
-    const delayMs = Math.max(1_000, nextTrigger.at.getTime() - Date.now() + 1_000)
-    sendTimerRef.current = setTimeout(() => {
-      loadNotifications({ force: true, reason: 'schedule', slot: nextTrigger.slot })
-    }, delayMs)
   }
 
   useEffect(() => {
@@ -584,10 +353,6 @@ function NotificationsBell({ onNavigate }) {
 
   useEffect(() => {
     return () => {
-      if (sendTimerRef.current) {
-        clearTimeout(sendTimerRef.current)
-        sendTimerRef.current = null
-      }
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current)
         pollTimerRef.current = null
@@ -776,32 +541,25 @@ function NotificationsBell({ onNavigate }) {
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
             <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Urgentes</p>
+              <p className="text-xs font-semibold text-muted-foreground">Cuota actual</p>
             </div>
             <NotificationsList
-              items={groupedNotifications.urgent}
-              emptyText="Sin alertas urgentes"
+              items={groupedNotifications.cuota}
+              emptyText="Cuota de aprendices cumplida"
             />
             <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Cuota de aprendices</p>
+              <p className="text-xs font-semibold text-muted-foreground">Proyección este mes</p>
             </div>
             <NotificationsList
-              items={groupedNotifications.quota}
-              emptyText="Cuota cumplida"
+              items={groupedNotifications.proyeccion}
+              emptyText="Sin proyección disponible (solo días 1–15)"
             />
             <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Pruebas pendientes</p>
+              <p className="text-xs font-semibold text-muted-foreground">Fin de contrato este mes</p>
             </div>
             <NotificationsList
-              items={groupedNotifications.important}
-              emptyText="Sin pruebas pendientes"
-            />
-            <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Datos incompletos</p>
-            </div>
-            <NotificationsList
-              items={groupedNotifications.info}
-              emptyText="Sin registros incompletos"
+              items={groupedNotifications.salientes}
+              emptyText="Sin contratos finalizando este mes"
             />
           </div>
         </DialogContent>
