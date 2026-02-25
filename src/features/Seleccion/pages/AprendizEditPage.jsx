@@ -22,6 +22,7 @@ import {
   confirmAlert,
   errorAlert,
   successAlert,
+  warningAlert,
 } from "../../../shared/components/ui/SweetAlert";
 import {
   ArrowLeft,
@@ -83,6 +84,7 @@ export default function AprendizEditPage() {
   const [infoReemplazo, setInfoReemplazo] = useState(null);
   const [apReemplazarPersistido, setApReemplazarPersistido] = useState(null);
   const [reemplazoElegido, setReemplazoElegido] = useState(true);
+  const [errorsContrato, setErrorsContrato] = useState({ inicio: "", fin: "" });
 
   useEffect(() => {
     setHeaderConfig({
@@ -175,11 +177,34 @@ export default function AprendizEditPage() {
   }, [aprendizId]);
 
   const todasPruebasAprobadas = backendPruebasAprobadas;
+  const lectivaInicioInput = toBogotaInput(aprendiz?.fechaInicioLectiva);
+
+  const validateInicioContrato = (value) => {
+    let msg = "";
+    if (lectivaInicioInput && value && value < lectivaInicioInput) {
+      msg =
+        "La fecha de inicio de contrato no puede ser menor a la fecha de inicio lectiva.";
+    }
+    setErrorsContrato((prev) => ({ ...prev, inicio: msg }));
+    return !msg;
+  };
+
+  const validateFinContrato = (value, inicio = fechaInicioContrato) => {
+    let msg = "";
+    if (value && inicio && value < inicio) {
+      msg =
+        "La fecha de fin de contrato no puede ser menor a la fecha de inicio de contrato.";
+    }
+    setErrorsContrato((prev) => ({ ...prev, fin: msg }));
+    return !msg;
+  };
 
   const puedeAprobar =
     todasPruebasAprobadas &&
     fechaInicioContrato !== "" &&
     fechaFinContrato !== "" &&
+    !errorsContrato.inicio &&
+    !errorsContrato.fin &&
     reemplazoElegido &&
     aprendiz?.etapaActual === "seleccion2" &&
     !aprobadoLocal &&
@@ -256,7 +281,18 @@ export default function AprendizEditPage() {
   };
 
   const handleAprobar = async () => {
-    if (!puedeAprobar) return;
+    if (!puedeAprobar) {
+      if (errorsContrato.inicio || errorsContrato.fin) {
+        await errorAlert({
+          title: "Fechas inválidas",
+          text:
+            errorsContrato.inicio ||
+            errorsContrato.fin ||
+            "Revise las fechas de contrato.",
+        });
+      }
+      return;
+    }
     const textoReemplazo = apReemplazar
       ? "Se asociará el reemplazo seleccionado"
       : "Se asociará sin reemplazo";
@@ -317,7 +353,7 @@ export default function AprendizEditPage() {
     }
   };
 
-  // Cargar recomendados por fecha de inicio de contrato cuando haya fechas válidas y pruebas aprobadas
+  // Cargar recomendados por inicio de PRODUCTIVA ±62 días contra el inicio de CONTRATO seleccionado
   useEffect(() => {
     const cargarRecomendados = async () => {
       if (!todasPruebasAprobadas || !fechaInicioContrato) {
@@ -326,6 +362,7 @@ export default function AprendizEditPage() {
       }
       try {
         setLoadingRecomendados(true);
+        // Backend filtra por inicio de productiva en ventana ±62 respecto a fechaInicioContrato
         const data = await seguimientoService.obtenerRecomendadosPorContrato(fechaInicioContrato);
         setRecomendados(data || []);
       } catch (e) {
@@ -555,10 +592,39 @@ export default function AprendizEditPage() {
                       id="fecha-inicio"
                       type="date"
                       value={fechaInicioContrato}
-                      onChange={(e) => setFechaInicioContrato(e.target.value)}
+                      min={lectivaInicioInput || undefined}
+                      title="No puede ser menor que la fecha de inicio lectiva"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFechaInicioContrato(v);
+                        validateInicioContrato(v);
+                        if (fechaFinContrato) {
+                          validateFinContrato(fechaFinContrato, v);
+                        }
+                      }}
+                      onBlur={async (e) => {
+                        const v = e.target.value;
+                        if (lectivaInicioInput && v && v < lectivaInicioInput) {
+                          const corregida = lectivaInicioInput;
+                          setFechaInicioContrato(corregida);
+                          validateInicioContrato(corregida);
+                          if (fechaFinContrato) {
+                            validateFinContrato(fechaFinContrato, corregida);
+                          }
+                          await warningAlert({
+                            title: "Fecha ajustada",
+                            text: "Se ajustó la fecha de inicio de contrato a la fecha mínima permitida (inicio lectiva).",
+                          });
+                        }
+                      }}
                       disabled={!todasPruebasAprobadas || disablePorEtapa || mostrarAprobadoUI}
                       className="mt-2"
                     />
+                    {errorsContrato.inicio && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errorsContrato.inicio}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="fecha-fin" className="text-sm font-semibold">
@@ -568,10 +634,33 @@ export default function AprendizEditPage() {
                       id="fecha-fin"
                       type="date"
                       value={fechaFinContrato}
-                      onChange={(e) => setFechaFinContrato(e.target.value)}
+                      min={fechaInicioContrato || undefined}
+                      title="No puede ser menor que la fecha de inicio de contrato"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFechaFinContrato(v);
+                        validateFinContrato(v);
+                      }}
+                      onBlur={async (e) => {
+                        const v = e.target.value;
+                        if (v && fechaInicioContrato && v < fechaInicioContrato) {
+                          const corregida = fechaInicioContrato;
+                          setFechaFinContrato(corregida);
+                          validateFinContrato(corregida);
+                          await warningAlert({
+                            title: "Fecha ajustada",
+                            text: "Se ajustó la fecha de fin de contrato a la fecha mínima permitida (inicio de contrato).",
+                          });
+                        }
+                      }}
                       disabled={!todasPruebasAprobadas || disablePorEtapa || mostrarAprobadoUI}
                       className="mt-2"
                     />
+                    {errorsContrato.fin && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errorsContrato.fin}
+                      </p>
+                    )}
                   </div>
                   {!todasPruebasAprobadas && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -734,6 +823,8 @@ export default function AprendizEditPage() {
                         {recomendados.map((r) => (
                           <SelectItem key={r._id} value={r._id}>
                             {r.nombre} • {r.tipoDocumento} {r.documento}
+                            {" • Inicio prod.: "}
+                            {toBogotaDisplay(r.fechaInicioProductiva)}
                           </SelectItem>
                         ))}
                       </SelectContent>
