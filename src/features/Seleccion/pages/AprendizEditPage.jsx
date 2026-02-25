@@ -362,9 +362,20 @@ export default function AprendizEditPage() {
       }
       try {
         setLoadingRecomendados(true);
-        // Backend filtra por inicio de productiva en ventana ±62 respecto a fechaInicioContrato
-        const data = await seguimientoService.obtenerRecomendadosPorContrato(fechaInicioContrato);
-        setRecomendados(data || []);
+        // Regla A: candidatos por inicio de productiva ±62 vs inicio de contrato
+        const porContrato = await seguimientoService.obtenerRecomendadosPorContrato(fechaInicioContrato);
+        // Regla B: candidatos cuyo fin de contrato ±62 vs inicio de productiva del aprendiz a aprobar (si existe)
+        const inicioProdAprobado = toBogotaInput(aprendiz?.fechaInicioProductiva);
+        let porFinContrato = [];
+        if (inicioProdAprobado) {
+          porFinContrato = await seguimientoService.obtenerReemplazosPorFinContrato(inicioProdAprobado);
+        }
+        // Unificar y eliminar duplicados por _id
+        const map = new Map();
+        [...(porContrato || []), ...(porFinContrato || [])].forEach((a) => {
+          if (a && a._id && !map.has(a._id)) map.set(a._id, a);
+        });
+        setRecomendados(Array.from(map.values()));
       } catch (e) {
         setError(e.message);
         setRecomendados([]);
@@ -825,6 +836,8 @@ export default function AprendizEditPage() {
                             {r.nombre} • {r.tipoDocumento} {r.documento}
                             {" • Inicio prod.: "}
                             {toBogotaDisplay(r.fechaInicioProductiva)}
+                            {" • Fin prod.: "}
+                            {toBogotaDisplay(r.fechaFinProductiva)}
                           </SelectItem>
                         ))}
                       </SelectContent>

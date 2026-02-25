@@ -281,6 +281,20 @@ export const seguimientoService = {
     return response.json();
   },
 
+  // Obtener candidatos cuyo fin de contrato se alinea a un inicio de productiva (ventana ±62 días)
+  async obtenerReemplazosPorFinContrato(fechaInicioProductiva) {
+    const params = new URLSearchParams({ fechaInicioProductiva });
+    const response = await fetch(`${API_URL}/api/seguimiento/reemplazos-fin-contrato?${params}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al obtener reemplazos por fin de contrato');
+    }
+    return response.json();
+  },
+
   // Actualizar fechas de aprendiz
   async actualizarFechas(id, fechas) {
     const response = await fetch(`${API_URL}/api/seguimiento/${id}/fechas`, {
