@@ -315,6 +315,17 @@ function NotificationsBell({ onNavigate }) {
     const monthLabel = getMonthLabelWithDate(nowDate)
     const monthKey = getMonthKey()
     const dayOfMonth = nowDate.getDate()
+    const periodoCuota = calcularPeriodoCuotaActual(nowDate)
+    const normalizeId = (value) => {
+      if (!value) return null
+      if (typeof value === 'string') return value
+      if (typeof value === 'object' && typeof value._id === 'string') return value._id
+      return null
+    }
+    const contratacionCuentaMesKey = dayOfMonth <= 15
+      ? monthKey
+      : getMonthKey(new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 1))
+    const contratacionCuentaMesLabel = getMonthLabelWithDate(new Date(`${contratacionCuentaMesKey}-01T00:00:00`))
 
     // Alerta 1: Cuota urgente actual (siempre visible, desde que falta 1 aprendiz)
     const cuotaNotifications = cuotaActual < cuotaMaxima
@@ -406,12 +417,102 @@ function NotificationsBell({ onNavigate }) {
       ]
     })()
 
+    const contratacionPredictivaNotifications = (() => {
+      if (!Array.isArray(aprendicesSeguimiento)) return []
+
+      const thresholdDays = 60
+      const byId = new Map(aprendicesSeguimiento.map((a) => [a?._id, a]))
+      const chainMap = new Map()
+      const out = []
+
+      for (const a of aprendicesSeguimiento) {
+        const idA = a?._id
+        if (!idA) continue
+        const etapaA = String(a?.etapaActual || '').toLowerCase()
+        if (!etapaA.includes('lectiva')) continue
+
+        const dias = a?.diasRestantes
+        if (typeof dias !== 'number') continue
+        if (!(dias === -1 || (dias >= 0 && dias <= thresholdDays))) continue
+
+        const replacementId = normalizeId(a?.reemplazoId)
+        const replacement = replacementId ? byId.get(replacementId) : null
+        const etapaB = String(replacement?.etapaActual || '').toLowerCase()
+        const isLectivaB = Boolean(replacement && etapaB.includes('lectiva'))
+
+        if (isLectivaB) {
+          const idB = replacement?._id
+          const bHasReplacement = Boolean(normalizeId(replacement?.reemplazoId))
+          if (!idB || bHasReplacement) continue
+
+          const prev = chainMap.get(idB)
+          if (!prev || (typeof prev.dias === 'number' ? dias < prev.dias : true)) {
+            chainMap.set(idB, { a, b: replacement, dias })
+          }
+          continue
+        }
+
+        if (replacementId) continue
+
+        const type = dias === -1 || dias <= 30 ? 'urgent' : 'urgent_warning'
+        const badgeVariant = type === 'urgent' ? 'destructive' : 'secondary'
+        const badgeClassName = type === 'urgent' ? null : 'bg-amber-500 text-white hover:bg-amber-500'
+        const description =
+          dias === -1
+            ? `Pasa a productiva sin reemplazo · Contratar para mantener cuota (Cuenta para ${contratacionCuentaMesLabel})`
+            : `Pasa a productiva en ${dias} días · Contratar para mantener cuota (Cuenta para ${contratacionCuentaMesLabel})`
+
+        out.push({
+          id: `hiring_predictive:no_direct:${idA}`,
+          type,
+          badge: 'Contratación',
+          badgeVariant,
+          ...(badgeClassName ? { badgeClassName } : {}),
+          title: `${a?.nombre || 'Aprendiz'}${a?.documento ? ` (${a.documento})` : ''}`,
+          description,
+          href: '/seguimiento',
+          priority: 1,
+        })
+      }
+
+      for (const [idB, info] of chainMap.entries()) {
+        const a = info.a
+        const b = info.b
+        const dias = info.dias
+        const type = dias === -1 || dias <= 30 ? 'urgent' : 'urgent_warning'
+        const badgeVariant = type === 'urgent' ? 'destructive' : 'secondary'
+        const badgeClassName = type === 'urgent' ? null : 'bg-amber-500 text-white hover:bg-amber-500'
+
+        const bDoc = b?.documento ? ` (${b.documento})` : ''
+        const aDoc = a?.documento ? ` (${a.documento})` : ''
+        const description =
+          dias === -1
+            ? `Reemplazo en cadena · ${a?.nombre || 'Aprendiz'}${aDoc} pasa a productiva sin reemplazo · Contratar reemplazo de ${b?.nombre || 'Aprendiz'}${bDoc} (Cuenta para ${contratacionCuentaMesLabel})`
+            : `Reemplazo en cadena · ${a?.nombre || 'Aprendiz'}${aDoc} pasa a productiva en ${dias} días · Contratar reemplazo de ${b?.nombre || 'Aprendiz'}${bDoc} (Cuenta para ${contratacionCuentaMesLabel})`
+
+        out.push({
+          id: `hiring_predictive:chain:${idB}`,
+          type,
+          badge: 'Contratación',
+          badgeVariant,
+          ...(badgeClassName ? { badgeClassName } : {}),
+          title: `${b?.nombre || 'Aprendiz'}${bDoc}`,
+          description,
+          href: '/seguimiento',
+          priority: 1,
+        })
+      }
+
+      return out
+    })()
+
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
     const nextNotifications = [
       ...cuotaNotifications,
+      ...contratacionPredictivaNotifications,
       ...proyeccionNotifications,
-      ...salientesPeriodoNotifications,
+      ...salientesMesNotifications,
     ]
       .filter((n) => !dismissedSet.has(n.id))
       .sort((a, b) => {
