@@ -19,6 +19,8 @@ import {
   MapPin,
   CalendarClock,
   TestTubeDiagonal,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useHeader } from "../../../shared/contexts/HeaderContext";
 import { useEffect, useMemo, useState } from "react";
@@ -68,6 +70,7 @@ export default function Dashboard() {
   const [bottomLoading, setBottomLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [mostrarPredicciones, setMostrarPredicciones] = useState(false);
   const [data, setData] = useState({
     convocatoriasActivas: 0,
     convocatoriasArchivadas: 0,
@@ -92,6 +95,9 @@ export default function Dashboard() {
     finalizanProximoMes: [],
     mesCurrent: "",
     mesProximo: "",
+    predicciones: null,
+    periodo2: "",
+    aprendicesPeriodo2: []
   });
 
   useEffect(() => {
@@ -112,7 +118,7 @@ export default function Dashboard() {
 
     const headers = getAuthHeaders();
 
-    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult, finalizanMesResult] =
+    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult, finalizanMesResult, prediccionesResult] =
       await Promise.allSettled([
         fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/convocatorias/archivadas`, { method: "GET", headers }),
@@ -120,6 +126,7 @@ export default function Dashboard() {
         fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
         fetchJson(`${API_URL}/api/seguimiento/finalizan-mes-actual`, { method: "GET", headers }),
+        fetchJson(`${API_URL}/api/seguimiento/predicciones-cuota`, { method: "GET", headers })
       ]);
 
     const convocatorias =
@@ -153,7 +160,12 @@ export default function Dashboard() {
     const finalizanMesData =
       finalizanMesResult.status === "fulfilled" && finalizanMesResult.value
         ? finalizanMesResult.value
-        : { aprendices: [], mes: "", total: 0 };
+        : { aprendices: [], periodo: "", total: 0 };
+
+    const prediccionesData =
+      prediccionesResult.status === "fulfilled" && prediccionesResult.value
+        ? prediccionesResult.value
+        : null;
 
     if (
       convocatoriasResult.status === "rejected" &&
@@ -274,9 +286,12 @@ export default function Dashboard() {
       ciudades: ciudadesWithPct,
       pruebas: agg,
       finalizanMesActual: finalizanMesData.aprendices || [],
-      finalizanProximoMes: finalizanMesData.aprendicesProximoMes || [],
-      mesCurrent: finalizanMesData.mes || "",
-      mesProximo: finalizanMesData.proximoMes || "",
+      finalizanProximoMes: finalizanMesData.aprendicesProximoPeriodo || [],
+      mesCurrent: finalizanMesData.periodo || "",
+      mesProximo: finalizanMesData.proximoPeriodo || "",
+      predicciones: prediccionesData ? prediccionesData.predicciones : null,
+      periodo2: finalizanMesData.periodo2 || "",
+      aprendicesPeriodo2: finalizanMesData.aprendicesPeriodo2 || []
     });
 
     setLastUpdatedAt(new Date());
@@ -433,6 +448,156 @@ export default function Dashboard() {
 
   const detailsContent = (
     <div className="grid gap-6 md:grid-cols-2">
+      {/* Cards de Predicciones */}
+      {mostrarPredicciones && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
+        <>
+          {data.predicciones.map((prediccion, predIdx) => {
+            const porcentajeProyectado = prediccion.porcentajeCumplimiento || 0;
+            const cumpleCuota = prediccion.cumpleCuota;
+            const diferencia = prediccion.diferencia || 0;
+            
+            // Determinar estado basado en cumpleCuota y diferencia
+            let estado = "no_cumple";
+            if (cumpleCuota) {
+              estado = diferencia >= 0 && diferencia <= 10 ? "probable" : "exacta";
+            }
+
+            const getMovimientoBadge = (tipo) => {
+              if (tipo === 'finaliza') {
+                return {
+                  label: 'Finaliza',
+                  className: 'bg-red-100 text-red-800 hover:bg-red-100',
+                  etapaLabel: 'Productiva'
+                };
+              }
+              if (tipo === 'pasa_productiva') {
+                return {
+                  label: 'Pasa a Productiva',
+                  className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
+                  etapaLabel: 'Lectiva'
+                };
+              }
+              if (tipo === 'inicia_contrato') {
+                return {
+                  label: 'Inicia Contrato',
+                  className: 'bg-green-100 text-green-800 hover:bg-green-100',
+                  etapaLabel: 'Selección 2'
+                };
+              }
+              return {
+                label: 'N/A',
+                className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+                etapaLabel: 'N/A'
+              };
+            };
+
+            return (
+              <Card key={predIdx} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
+                <div className={`h-1 w-full ${estado === "exacta" ? "bg-gradient-to-r from-emerald-600 to-green-500" : estado === "probable" ? "bg-gradient-to-r from-amber-600 to-yellow-500" : "bg-gradient-to-r from-red-600 to-pink-500"}`} />
+                <CardHeader className="flex flex-row items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-lg font-bold text-gray-900">
+                      Predicción: {prediccion.periodo}
+                    </CardTitle>
+                    <CardDescription>
+                      Proyección: {prediccion.proyeccion || 0} aprendices ({porcentajeProyectado}%) · 
+                      <Badge
+                        variant={estado === "exacta" ? "default" : estado === "probable" ? "warning" : "destructive"}
+                        className="ml-2 text-xs"
+                      >
+                        {estado === "exacta" ? "✓ Cumple" : estado === "probable" ? "⚠ Cercano" : "✗ No cumple"}
+                      </Badge>
+                    </CardDescription>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Resumen de movimientos */}
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Base</p>
+                        <p className="text-2xl font-bold text-gray-900">{prediccion.aprendicesIniciales || 0}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Entran</p>
+                        <p className="text-2xl font-bold text-emerald-700">+{prediccion.entran || 0}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Salen</p>
+                        <p className="text-2xl font-bold text-red-700">-{prediccion.salen || 0}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Salidas */}
+                  {prediccion.aprendicesSalen && prediccion.aprendicesSalen.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-semibold text-red-800">Aprendices que salen ({prediccion.aprendicesSalen.length})</h4>
+                      </div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {prediccion.aprendicesSalen.map((aprendiz, idx) => {
+                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
+                                    {movimiento.label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Entradas */}
+                  {prediccion.aprendicesEntran && prediccion.aprendicesEntran.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-semibold text-emerald-800">Aprendices que entran ({prediccion.aprendicesEntran.length})</h4>
+                      </div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {prediccion.aprendicesEntran.map((aprendiz, idx) => {
+                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
+                                    {movimiento.label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </>
+      )}
+
       <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
@@ -550,9 +715,9 @@ export default function Dashboard() {
         <div className="h-1 w-full bg-gradient-to-r from-red-600 to-pink-500" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg font-bold text-gray-900">Movimientos del mes</CardTitle>
+            <CardTitle className="text-lg font-bold text-gray-900">Movimientos del período</CardTitle>
             <CardDescription>
-              {data.mesCurrent || "Mes actual"} · Total: {data.finalizanMesActual.length} cambios
+              {data.mesCurrent || "Período actual"} · Total: {data.finalizanMesActual.length} cambios
             </CardDescription>
           </div>
           <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
@@ -596,18 +761,18 @@ export default function Dashboard() {
               <div className="flex items-center justify-center p-8 bg-green-50 rounded-xl border border-green-200">
                 <div className="text-center">
                   <div className="text-3xl mb-2">✅</div>
-                  <p className="text-sm font-semibold text-green-800">Sin movimientos este mes</p>
+                  <p className="text-sm font-semibold text-green-800">Sin movimientos este período</p>
                   <p className="text-xs text-green-600 mt-1">No hay cambios de etapa programados en {data.mesCurrent}</p>
                 </div>
               </div>
 
-              {/* Mostrar próximo mes si hay datos */}
+              {/* Mostrar próximo período si hay datos */}
               {data.finalizanProximoMes && data.finalizanProximoMes.length > 0 && (
                 <div className="mt-6">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-px flex-1 bg-gray-200"></div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Próximo mes: {data.mesProximo}
+                      Próximo período: {data.mesProximo}
                     </p>
                     <div className="h-px flex-1 bg-gray-200"></div>
                   </div>
@@ -1039,7 +1204,7 @@ export default function Dashboard() {
         <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
           <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-emerald-600" />
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-600">Cuota del mes</CardTitle>
+            <CardTitle className="text-sm font-semibold text-gray-600">Cuota del período</CardTitle>
             <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center">
               <Target className="h-5 w-5 text-amber-600" />
             </div>
@@ -1065,6 +1230,23 @@ export default function Dashboard() {
                 }}
               />
             </div>
+
+            {/* Botón para mostrar predicciones */}
+            {!isLoading && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
+              <div className="mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMostrarPredicciones(!mostrarPredicciones)}
+                  className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900"
+                >
+                  {mostrarPredicciones ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <span className="text-sm font-medium">
+                    {mostrarPredicciones ? "Ocultar predicciones" : "Ver predicciones"}
+                  </span>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

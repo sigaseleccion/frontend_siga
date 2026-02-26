@@ -56,6 +56,10 @@ const DISMISSED_NOTIFICATIONS_KEY = 'siga.notifications.dismissed'
 const DISMISSED_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DISMISSED_MAX_ITEMS = 500
 
+const SENT_SLOTS_KEY = 'siga.notifications.sentSlots'
+const SENT_SLOTS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+const SENT_SLOTS_MAX_ITEMS = 200
+
 const readDismissedMap = () => {
   try {
     const raw = localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY)
@@ -83,6 +87,75 @@ const writeDismissedMap = (map) => {
     localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(map))
   } catch (e) {
   }
+}
+
+const readSentSlotsMap = () => {
+  try {
+    const raw = localStorage.getItem(SENT_SLOTS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return parsed
+  } catch (e) {
+    return {}
+  }
+}
+
+const pruneSentSlotsMap = (map) => {
+  const now = Date.now()
+  const entries = Object.entries(map)
+    .filter(([, slotKey]) => {
+      if (typeof slotKey !== 'string') return false
+      const parts = slotKey.split(':')
+      if (parts.length < 1) return false
+      const dateStr = parts[0]
+      try {
+        const slotDate = new Date(dateStr)
+        return now - slotDate.getTime() <= SENT_SLOTS_MAX_AGE_MS
+      } catch (e) {
+        return false
+      }
+    })
+    .slice(0, SENT_SLOTS_MAX_ITEMS)
+
+  return Object.fromEntries(entries)
+}
+
+const writeSentSlotsMap = (map) => {
+  try {
+    localStorage.setItem(SENT_SLOTS_KEY, JSON.stringify(map))
+  } catch (e) {
+  }
+}
+
+const getDateKey = (date = new Date()) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const isWithinSendWindow = (now = new Date()) => {
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const d = now.getDate()
+
+  const start = new Date(y, m, d, 8, 0, 0, 0)
+  const end = new Date(y, m, d, 16, 0, 0, 0)
+  return now.getTime() >= start.getTime() && now.getTime() < end.getTime()
+}
+
+const getNextSendTrigger = (now = new Date()) => {
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const d = now.getDate()
+
+  const todayAt8 = new Date(y, m, d, 8, 0, 0, 0)
+  const todayAt16 = new Date(y, m, d, 16, 0, 0, 0)
+
+  if (now.getTime() < todayAt8.getTime()) return { at: todayAt8, slot: '08' }
+  if (now.getTime() < todayAt16.getTime()) return { at: todayAt16, slot: '16' }
+  return { at: new Date(y, m, d + 1, 8, 0, 0, 0), slot: '08' }
 }
 
 const getMonthKey = (date = new Date()) => {
@@ -119,6 +192,35 @@ const getToastClassName = (type) => {
   return 'bg-slate-800 text-white border-slate-900'
 }
 
+/**
+ * Calcula el período de cuota actual (15 al 15)
+ */
+const calcularPeriodoCuotaActual = (fecha = new Date()) => {
+  const diaDelMes = fecha.getDate();
+  const mes = fecha.getMonth();
+  const anio = fecha.getFullYear();
+
+  let inicio, fin;
+
+  if (diaDelMes < 15) {
+    inicio = new Date(anio, mes - 1, 15, 0, 0, 0, 0);
+    fin = new Date(anio, mes, 14, 23, 59, 59, 999);
+  } else {
+    inicio = new Date(anio, mes, 15, 0, 0, 0, 0);
+    fin = new Date(anio, mes + 1, 14, 23, 59, 59, 999);
+  }
+
+  return { inicio, fin };
+};
+
+/**
+ * Verifica si una fecha está dentro del período de cuota actual
+ */
+const estaEnPeriodoActual = (fecha, periodoActual) => {
+  const f = new Date(fecha);
+  return f >= periodoActual.inicio && f <= periodoActual.fin;
+};
+
 function NotificationsBell({ onNavigate }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -132,6 +234,7 @@ function NotificationsBell({ onNavigate }) {
     return initial
   })
   const lastLoadedAtRef = useRef(0)
+  const sendTimerRef = useRef(null)
   const pollTimerRef = useRef(null)
 
   const previewLimit = 8
@@ -178,7 +281,7 @@ function NotificationsBell({ onNavigate }) {
     else navigate(notification.href)
   }
 
-  const loadNotifications = async ({ force = false, reason = 'init' } = {}) => {
+  const loadNotifications = async ({ force = false, reason = 'init', slot = null } = {}) => {
     const now = Date.now()
     if (isLoading) return
     if (!force && now - lastLoadedAtRef.current < 15_000) return
@@ -308,7 +411,7 @@ function NotificationsBell({ onNavigate }) {
     const nextNotifications = [
       ...cuotaNotifications,
       ...proyeccionNotifications,
-      ...salientesMesNotifications,
+      ...salientesPeriodoNotifications,
     ]
       .filter((n) => !dismissedSet.has(n.id))
       .sort((a, b) => {
@@ -316,10 +419,45 @@ function NotificationsBell({ onNavigate }) {
         return String(a.title).localeCompare(String(b.title), 'es')
       })
 
-    // Disparar toasts solo al iniciar sesión (una vez por login)
-    if (reason === 'init') {
+    // Sistema de toasts: al iniciar sesión O en slots programados (8 AM, 4 PM)
+    const sendScheduled = reason === 'schedule' && (slot === '08' || slot === '16')
+    
+    if (sendScheduled) {
+      // Toast automático en slot programado (8 AM o 4 PM)
+      const slotKey = `${getDateKey(nowDate)}:${slot}`
+      const sentMap = pruneSentSlotsMap(readSentSlotsMap())
+      let sentCount = 0
+      const maxToasts = 3
+      
+      for (const n of nextNotifications) {
+        if (sentCount >= maxToasts) break
+        if (sentMap[n.id] === slotKey) continue // Ya enviado en este slot
+        
+        toast({
+          title: n.title,
+          description: n.description,
+          className: getToastClassName(n.type),
+          duration: 6000,
+        })
+        sentMap[n.id] = slotKey
+        sentCount += 1
+      }
+      
+      if (nextNotifications.length - sentCount > 0) {
+        toast({
+          title: 'Notificaciones',
+          description: `Y ${nextNotifications.length - sentCount} más`,
+          className: getToastClassName('important'),
+          duration: 6000,
+        })
+      }
+      writeSentSlotsMap(sentMap)
+    } else if (reason === 'init') {
+      // Toast al iniciar sesión (solo si está en horario laboral)
       const justLoggedIn = sessionStorage.getItem('siga.just_logged_in') === '1'
-      if (justLoggedIn) {
+      const enHorarioLaboral = isWithinSendWindow(nowDate)
+      
+      if (justLoggedIn && enHorarioLaboral) {
         sessionStorage.removeItem('siga.just_logged_in')
         const maxToasts = 3
         const toSend = nextNotifications.slice(0, maxToasts)
@@ -345,6 +483,18 @@ function NotificationsBell({ onNavigate }) {
     setNotifications(nextNotifications)
     lastLoadedAtRef.current = now
     setIsLoading(false)
+
+    // Programar próximo slot (8 AM o 4 PM)
+    if (sendTimerRef.current) {
+      clearTimeout(sendTimerRef.current)
+      sendTimerRef.current = null
+    }
+
+    const nextTrigger = getNextSendTrigger(new Date())
+    const delayMs = Math.max(1000, nextTrigger.at.getTime() - Date.now() + 1000)
+    sendTimerRef.current = setTimeout(() => {
+      loadNotifications({ force: true, reason: 'schedule', slot: nextTrigger.slot })
+    }, delayMs)
   }
 
   useEffect(() => {
@@ -353,6 +503,10 @@ function NotificationsBell({ onNavigate }) {
 
   useEffect(() => {
     return () => {
+      if (sendTimerRef.current) {
+        clearTimeout(sendTimerRef.current)
+        sendTimerRef.current = null
+      }
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current)
         pollTimerRef.current = null
@@ -545,21 +699,21 @@ function NotificationsBell({ onNavigate }) {
             </div>
             <NotificationsList
               items={groupedNotifications.cuota}
-              emptyText="Cuota de aprendices cumplida"
+              emptyText="Sin alertas de cuota"
             />
             <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Proyección este mes</p>
+              <p className="text-xs font-semibold text-muted-foreground">Proyección del período</p>
             </div>
             <NotificationsList
               items={groupedNotifications.proyeccion}
-              emptyText="Sin proyección disponible (solo días 1–15)"
+              emptyText="Sin proyección disponible (solo días 15-22 o 1-8)"
             />
             <div className="px-6 pt-5 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground">Fin de contrato este mes</p>
+              <p className="text-xs font-semibold text-muted-foreground">Fin de contrato este período</p>
             </div>
             <NotificationsList
               items={groupedNotifications.salientes}
-              emptyText="Sin contratos finalizando este mes"
+              emptyText="Sin contratos finalizando este período"
             />
           </div>
         </DialogContent>
