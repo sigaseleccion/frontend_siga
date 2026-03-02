@@ -96,6 +96,7 @@ export default function Dashboard() {
     mesCurrent: "",
     mesProximo: "",
     predicciones: null,
+    movimientosPeriodoActual: null,
     periodo2: "",
     aprendicesPeriodo2: [],
     periodoActual: ""
@@ -291,6 +292,7 @@ export default function Dashboard() {
       mesCurrent: finalizanMesData.periodo || "",
       mesProximo: finalizanMesData.proximoPeriodo || "",
       predicciones: prediccionesData ? prediccionesData.predicciones : null,
+      movimientosPeriodoActual: prediccionesData ? prediccionesData.periodoActual : null,
       periodo2: finalizanMesData.periodo2 || "",
       aprendicesPeriodo2: finalizanMesData.aprendicesPeriodo2 || [],
       periodoActual: estadisticas?.periodoActual || ""
@@ -450,6 +452,91 @@ export default function Dashboard() {
 
   const detailsContent = (
     <div className="grid gap-6 md:grid-cols-2">
+      {/* Movimientos del Período Actual */}
+      {mostrarPredicciones && data.movimientosPeriodoActual && 
+       (data.movimientosPeriodoActual.entran?.length > 0 || data.movimientosPeriodoActual.salen?.length > 0) && (
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
+          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+          <CardHeader>
+            <CardTitle className="text-lg font-bold text-gray-900">
+              Período Actual: {data.movimientosPeriodoActual.periodo}
+            </CardTitle>
+            <CardDescription>
+              Cuota de este período: {data.movimientosPeriodoActual.cuotaPeriodo || 0} aprendices · 
+              Los movimientos mostrados abajo NO cuentan para este período
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Resumen visual de la cuota */}
+            <div className="mb-4 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
+              <div className="text-center">
+                <p className="text-sm text-indigo-700 font-semibold mb-2">CUOTA QUE CUENTA PARA ESTE PERÍODO</p>
+                <p className="text-4xl font-bold text-indigo-900">
+                  {data.movimientosPeriodoActual.cuotaPeriodo || 0}
+                </p>
+                <p className="text-xs text-indigo-600 mt-1">aprendices</p>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Entran en período actual */}
+              {data.movimientosPeriodoActual.entran && data.movimientosPeriodoActual.entran.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-emerald-800">
+                      Inician contrato ({data.movimientosPeriodoActual.entran.length})
+                    </h4>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800">
+                      Solo cuentan en siguiente período
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                    {data.movimientosPeriodoActual.entran.map((aprendiz, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
+                      >
+                        <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Salen en período actual */}
+              {data.movimientosPeriodoActual.salen && data.movimientosPeriodoActual.salen.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-red-800">
+                      Finalizan contrato ({data.movimientosPeriodoActual.salen.length})
+                    </h4>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800">
+                      NO cuentan en este período
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                    {data.movimientosPeriodoActual.salen.map((aprendiz, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
+                      >
+                        <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cards de Predicciones */}
       {mostrarPredicciones && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
         <>
@@ -458,11 +545,8 @@ export default function Dashboard() {
             const cumpleCuota = prediccion.cumpleCuota;
             const diferencia = prediccion.diferencia || 0;
             
-            // Determinar estado basado en cumpleCuota y diferencia
-            let estado = "no_cumple";
-            if (cumpleCuota) {
-              estado = diferencia >= 0 && diferencia <= 10 ? "probable" : "exacta";
-            }
+            // Determinar estado basado en cumpleCuota
+            const estado = cumpleCuota ? "exacta" : "no_cumple";
 
             const getMovimientoBadge = (tipo) => {
               if (tipo === 'finaliza') {
@@ -486,6 +570,13 @@ export default function Dashboard() {
                   etapaLabel: 'Selección 2'
                 };
               }
+              if (tipo === 'se_suma') {
+                return {
+                  label: 'Se suma al período',
+                  className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+                  etapaLabel: 'Desde anterior'
+                };
+              }
               return {
                 label: 'N/A',
                 className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
@@ -495,19 +586,23 @@ export default function Dashboard() {
 
             return (
               <Card key={predIdx} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
-                <div className={`h-1 w-full ${estado === "exacta" ? "bg-gradient-to-r from-emerald-600 to-green-500" : estado === "probable" ? "bg-gradient-to-r from-amber-600 to-yellow-500" : "bg-gradient-to-r from-red-600 to-pink-500"}`} />
+                <div className={`h-1 w-full ${estado === "exacta" ? "bg-gradient-to-r from-emerald-600 to-green-500" : "bg-gradient-to-r from-red-600 to-pink-500"}`} />
                 <CardHeader className="flex flex-row items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-lg font-bold text-gray-900">
                       Predicción: {prediccion.periodo}
                     </CardTitle>
                     <CardDescription>
-                      Proyección: {prediccion.proyeccion || 0} aprendices ({porcentajeProyectado}%) · 
+                      Cuota del período: {prediccion.proyeccion || 0} aprendices ({porcentajeProyectado}%) · 
                       <Badge
-                        variant={estado === "exacta" ? "default" : estado === "probable" ? "warning" : "destructive"}
-                        className="ml-2 text-xs"
+                        variant="default"
+                        className={`ml-2 text-xs ${
+                          estado === "exacta" 
+                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" 
+                            : "bg-red-100 text-red-800 hover:bg-red-100"
+                        }`}
                       >
-                        {estado === "exacta" ? "✓ Cumple" : estado === "probable" ? "⚠ Cercano" : "✗ No cumple"}
+                        {estado === "exacta" ? "✓ Cumple" : "✗ No cumple"}
                       </Badge>
                     </CardDescription>
                   </div>
@@ -516,29 +611,73 @@ export default function Dashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Nota informativa */}
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-xs text-blue-800">
+                      <strong>Nota:</strong> Los que salen durante el período NO cuentan para la cuota. Los que entran durante el período cuentan para el siguiente.
+                    </p>
+                  </div>
+
                   {/* Resumen de movimientos */}
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="grid grid-cols-3 gap-4">
+                  <div className="mb-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Base</p>
-                        <p className="text-2xl font-bold text-gray-900">{prediccion.aprendicesIniciales || 0}</p>
+                        <p className="text-xs text-gray-500 mb-1">Cuota</p>
+                        <p className="text-lg font-bold text-gray-700">
+                          {prediccion.proyeccion || 0} / {prediccion.cuotaObjetivo || 0}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Entran</p>
-                        <p className="text-2xl font-bold text-emerald-700">+{prediccion.entran || 0}</p>
+                        <p className="text-lg font-bold text-emerald-600">+{prediccion.seSuman || 0}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Salen</p>
-                        <p className="text-2xl font-bold text-red-700">-{prediccion.salen || 0}</p>
+                        <p className="text-lg font-bold text-red-600">-{prediccion.salen || 0}</p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Los que ya están en seguimiento (iniciaron en período anterior) */}
+                  {prediccion.aprendicesSeSuman && prediccion.aprendicesSeSuman.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-semibold text-blue-800">Iniciaron en período anterior ({prediccion.aprendicesSeSuman.length})</h4>
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-blue-100 text-blue-700">
+                          Ya cuentan en cuota
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {prediccion.aprendicesSeSuman.map((aprendiz, idx) => {
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 border border-blue-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                                  <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-blue-100 text-blue-800 hover:bg-blue-100">
+                                    Inició: {aprendiz.fechaInicioContrato ? new Date(aprendiz.fechaInicioContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Salidas */}
                   {prediccion.aprendicesSalen && prediccion.aprendicesSalen.length > 0 && (
                     <div className="mb-6">
                       <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-red-800">Aprendices que salen ({prediccion.aprendicesSalen.length})</h4>
+                        <h4 className="text-sm font-semibold text-red-800">Salen durante el período ({prediccion.aprendicesSalen.length})</h4>
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-red-100 text-red-700">
+                          NO cuentan aquí
+                        </Badge>
                       </div>
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {prediccion.aprendicesSalen.map((aprendiz, idx) => {
@@ -566,9 +705,12 @@ export default function Dashboard() {
 
                   {/* Entradas */}
                   {prediccion.aprendicesEntran && prediccion.aprendicesEntran.length > 0 && (
-                    <div>
+                    <div className="mb-6">
                       <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-emerald-800">Aprendices que entran ({prediccion.aprendicesEntran.length})</h4>
+                        <h4 className="text-sm font-semibold text-emerald-800">Entran durante el período ({prediccion.aprendicesEntran.length})</h4>
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-emerald-100 text-emerald-700">
+                          Cuentan en siguiente
+                        </Badge>
                       </div>
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {prediccion.aprendicesEntran.map((aprendiz, idx) => {
@@ -577,6 +719,39 @@ export default function Dashboard() {
                             <div
                               key={idx}
                               className="flex items-start justify-between gap-4 p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
+                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
+                                    {movimiento.label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cambios de Etapa (solo informativo) */}
+                  {prediccion.aprendicesCambianEtapa && prediccion.aprendicesCambianEtapa.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-semibold text-purple-800">Pasan a Productiva ({prediccion.aprendicesCambianEtapa.length})</h4>
+                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-700">
+                          Ya cuentan en cuota
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {prediccion.aprendicesCambianEtapa.map((aprendiz, idx) => {
+                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 border border-purple-200"
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1220,6 +1395,9 @@ export default function Dashboard() {
               </div>
               {!isLoading && cuotaBadge}
             </div>
+            <p className="text-[10px] text-gray-500 mt-1 italic">
+              Excluye salidas durante el período
+            </p>
             <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
@@ -1239,10 +1417,10 @@ export default function Dashboard() {
             {!isLoading && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
               <div className="mt-4">
                 <Button
-                  variant="ghost"
+                  
                   size="sm"
                   onClick={() => setMostrarPredicciones(!mostrarPredicciones)}
-                  className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900"
+                  className="w-full flex items-center justify-center gap-2 text-white hover:text-white"
                 >
                   {mostrarPredicciones ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   <span className="text-sm font-medium">
