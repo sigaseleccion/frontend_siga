@@ -97,7 +97,8 @@ export default function Dashboard() {
     mesProximo: "",
     predicciones: null,
     periodo2: "",
-    aprendicesPeriodo2: []
+    aprendicesPeriodo2: [],
+    periodoActual: ""
   });
 
   useEffect(() => {
@@ -291,7 +292,8 @@ export default function Dashboard() {
       mesProximo: finalizanMesData.proximoPeriodo || "",
       predicciones: prediccionesData ? prediccionesData.predicciones : null,
       periodo2: finalizanMesData.periodo2 || "",
-      aprendicesPeriodo2: finalizanMesData.aprendicesPeriodo2 || []
+      aprendicesPeriodo2: finalizanMesData.aprendicesPeriodo2 || [],
+      periodoActual: estadisticas?.periodoActual || ""
     });
 
     setLastUpdatedAt(new Date());
@@ -1196,7 +1198,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.totalActivos}</div>
             <p className="text-xs text-gray-600 mt-2">
-              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva}{!isLoading && data.enSeleccion2 > 0 ? ` · Selección 2: ${data.enSeleccion2}` : ""}
+              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva} · Selección 2: {isLoading ? "—" : data.enSeleccion2}
             </p>
           </CardContent>
         </Card>
@@ -1204,7 +1206,9 @@ export default function Dashboard() {
         <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
           <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-emerald-600" />
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-600">Cuota del período</CardTitle>
+            <CardTitle className="text-sm font-semibold text-gray-600">
+              Cuota del período{!isLoading && data.periodoActual ? ` (${data.periodoActual})` : ""}
+            </CardTitle>
             <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center">
               <Target className="h-5 w-5 text-amber-600" />
             </div>
