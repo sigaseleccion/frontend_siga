@@ -337,7 +337,6 @@ export const EditUsuarioModal = ({ open, onOpenChange, usuario, onSuccess, roles
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading}
           >
             {loading ? 'Guardando...' : 'Guardar Cambios'}

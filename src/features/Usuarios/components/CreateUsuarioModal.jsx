@@ -302,7 +302,6 @@ export const CreateUsuarioModal = ({ open, onOpenChange, onSuccess, roles }) => 
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading}
           >
             {loading ? 'Creando...' : 'Crear Usuario'}

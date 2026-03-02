@@ -49,6 +49,20 @@ const getAuthHeaders = () => {
   };
 };
 
+const formatDateUTC = (
+  dateValue,
+  options = { day: "2-digit", month: "short", year: "numeric" },
+) => {
+  if (!dateValue) return "N/A";
+  const d = new Date(dateValue);
+  // Construir fecha en UTC para evitar desfase por timezone
+  return new Date(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+  ).toLocaleDateString("es-ES", options);
+};
+
 const fetchJson = async (url, options = {}) => {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -56,8 +70,7 @@ const fetchJson = async (url, options = {}) => {
     try {
       const error = await response.json();
       errorMessage = error?.message || errorMessage;
-    } catch {
-    }
+    } catch {}
     throw new Error(errorMessage);
   }
   return response.json();
@@ -99,7 +112,7 @@ export default function Dashboard() {
     movimientosPeriodoActual: null,
     periodo2: "",
     aprendicesPeriodo2: [],
-    periodoActual: ""
+    periodoActual: "",
   });
 
   useEffect(() => {
@@ -120,19 +133,39 @@ export default function Dashboard() {
 
     const headers = getAuthHeaders();
 
-    const [convocatoriasResult, convocatoriasArchivadasResult, estadisticasResult, seguimientoResult, pruebasResult, finalizanMesResult, prediccionesResult] =
-      await Promise.allSettled([
-        fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/convocatorias/archivadas`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/seguimiento/finalizan-mes-actual`, { method: "GET", headers }),
-        fetchJson(`${API_URL}/api/seguimiento/predicciones-cuota`, { method: "GET", headers })
-      ]);
+    const [
+      convocatoriasResult,
+      convocatoriasArchivadasResult,
+      estadisticasResult,
+      seguimientoResult,
+      pruebasResult,
+      finalizanMesResult,
+      prediccionesResult,
+    ] = await Promise.allSettled([
+      fetchJson(`${API_URL}/api/convocatorias`, { method: "GET", headers }),
+      fetchJson(`${API_URL}/api/convocatorias/archivadas`, {
+        method: "GET",
+        headers,
+      }),
+      fetchJson(`${API_URL}/api/seguimiento/estadisticas`, {
+        method: "GET",
+        headers,
+      }),
+      fetchJson(`${API_URL}/api/seguimiento`, { method: "GET", headers }),
+      fetchJson(`${API_URL}/api/pruebas-seleccion`, { method: "GET", headers }),
+      fetchJson(`${API_URL}/api/seguimiento/finalizan-mes-actual`, {
+        method: "GET",
+        headers,
+      }),
+      fetchJson(`${API_URL}/api/seguimiento/predicciones-cuota`, {
+        method: "GET",
+        headers,
+      }),
+    ]);
 
     const convocatorias =
-      convocatoriasResult.status === "fulfilled" && Array.isArray(convocatoriasResult.value)
+      convocatoriasResult.status === "fulfilled" &&
+      Array.isArray(convocatoriasResult.value)
         ? convocatoriasResult.value
         : [];
 
@@ -148,9 +181,14 @@ export default function Dashboard() {
         : null;
 
     const aprendicesSeguimiento =
-      seguimientoResult.status === "fulfilled" && Array.isArray(seguimientoResult.value?.value)
+      seguimientoResult.status === "fulfilled" &&
+      Array.isArray(seguimientoResult.value?.value)
         ? seguimientoResult.value.value
-        : Array.isArray(seguimientoResult.status === "fulfilled" ? seguimientoResult.value : null)
+        : Array.isArray(
+              seguimientoResult.status === "fulfilled"
+                ? seguimientoResult.value
+                : null,
+            )
           ? seguimientoResult.value
           : [];
 
@@ -186,24 +224,37 @@ export default function Dashboard() {
         ? convocatoriasArchivadas.length
         : convocatorias.filter((c) => c?.archivada === true).length;
 
-    const enLectiva = typeof estadisticas?.enLectiva === "number" ? estadisticas.enLectiva : 0;
+    const enLectiva =
+      typeof estadisticas?.enLectiva === "number" ? estadisticas.enLectiva : 0;
     const enProductiva =
-      typeof estadisticas?.enProductiva === "number" ? estadisticas.enProductiva : 0;
+      typeof estadisticas?.enProductiva === "number"
+        ? estadisticas.enProductiva
+        : 0;
     // Usar totalEnSeguimiento (igual que Seguimiento): incluye lectiva + productiva + selección2 con fechas
     const totalActivos =
-      typeof estadisticas?.totalEnSeguimiento === "number" ? estadisticas.totalEnSeguimiento :
-      typeof estadisticas?.totalActivos === "number" ? estadisticas.totalActivos :
-      enLectiva + enProductiva;
-    const enSeleccion2 = typeof estadisticas?.enSeleccion2 === "number" ? estadisticas.enSeleccion2 : 0;
+      typeof estadisticas?.totalEnSeguimiento === "number"
+        ? estadisticas.totalEnSeguimiento
+        : typeof estadisticas?.totalActivos === "number"
+          ? estadisticas.totalActivos
+          : enLectiva + enProductiva;
+    const enSeleccion2 =
+      typeof estadisticas?.enSeleccion2 === "number"
+        ? estadisticas.enSeleccion2
+        : 0;
 
-    const cuotaRaw = typeof estadisticas?.cuota === "number" ? estadisticas.cuota : null;
+    const cuotaRaw =
+      typeof estadisticas?.cuota === "number" ? estadisticas.cuota : null;
     const cuota = typeof cuotaRaw === "number" && cuotaRaw > 0 ? cuotaRaw : 150;
     const cuotaDelta = totalActivos - cuota;
-    const cuotaStatus = cuotaDelta === 0 ? "ok" : cuotaDelta < 0 ? "under" : "over";
+    const cuotaStatus =
+      cuotaDelta === 0 ? "ok" : cuotaDelta < 0 ? "under" : "over";
 
     const ciudadesMap = new Map();
     for (const a of aprendicesSeguimiento) {
-      const ciudad = typeof a?.ciudad === "string" && a.ciudad.trim() ? a.ciudad.trim() : "Sin ciudad";
+      const ciudad =
+        typeof a?.ciudad === "string" && a.ciudad.trim()
+          ? a.ciudad.trim()
+          : "Sin ciudad";
       ciudadesMap.set(ciudad, (ciudadesMap.get(ciudad) || 0) + 1);
     }
     const ciudades = Array.from(ciudadesMap.entries())
@@ -217,7 +268,11 @@ export default function Dashboard() {
     }));
 
     const proximosVencimientos = aprendicesSeguimiento
-      .filter((a) => typeof a?.diasRestantes === "number" && (a.diasRestantes >= 0 || a.diasRestantes === -1))
+      .filter(
+        (a) =>
+          typeof a?.diasRestantes === "number" &&
+          (a.diasRestantes >= 0 || a.diasRestantes === -1),
+      )
       .sort((a, b) => a.diasRestantes - b.diasRestantes)
       .slice(0, 6)
       .map((a) => ({
@@ -230,7 +285,10 @@ export default function Dashboard() {
       }));
 
     const urgentCount = aprendicesSeguimiento.filter(
-      (a) => typeof a?.diasRestantes === "number" && a.diasRestantes >= 0 && a.diasRestantes <= 7,
+      (a) =>
+        typeof a?.diasRestantes === "number" &&
+        a.diasRestantes >= 0 &&
+        a.diasRestantes <= 7,
     ).length;
 
     const normalizeEstado = (value) => {
@@ -245,7 +303,9 @@ export default function Dashboard() {
     ).length;
 
     const aprendicesIncompletos =
-      typeof estadisticas?.aprendicesIncompletos === "number" ? estadisticas.aprendicesIncompletos : 0;
+      typeof estadisticas?.aprendicesIncompletos === "number"
+        ? estadisticas.aprendicesIncompletos
+        : 0;
 
     const agg = {
       psicologica: { aprobados: 0, rechazados: 0, pendientes: 0 },
@@ -257,7 +317,12 @@ export default function Dashboard() {
       const mapState = (value) => {
         const estado = normalizeEstado(value);
         if (estado === "aprobado") return "aprobados";
-        if (estado === "rechazado" || estado === "no aprobado" || estado === "no_aprobado" || estado === "reprobado") {
+        if (
+          estado === "rechazado" ||
+          estado === "no aprobado" ||
+          estado === "no_aprobado" ||
+          estado === "reprobado"
+        ) {
           return "rechazados";
         }
         if (estado === "pendiente") return "pendientes";
@@ -292,10 +357,12 @@ export default function Dashboard() {
       mesCurrent: finalizanMesData.periodo || "",
       mesProximo: finalizanMesData.proximoPeriodo || "",
       predicciones: prediccionesData ? prediccionesData.predicciones : null,
-      movimientosPeriodoActual: prediccionesData ? prediccionesData.periodoActual : null,
+      movimientosPeriodoActual: prediccionesData
+        ? prediccionesData.periodoActual
+        : null,
       periodo2: finalizanMesData.periodo2 || "",
       aprendicesPeriodo2: finalizanMesData.aprendicesPeriodo2 || [],
-      periodoActual: estadisticas?.periodoActual || ""
+      periodoActual: estadisticas?.periodoActual || "",
     });
 
     setLastUpdatedAt(new Date());
@@ -350,9 +417,24 @@ export default function Dashboard() {
       return Math.round((obj.aprobados / total) * 100);
     };
     return [
-      { key: "psicologica", label: "Psicológica", data: data.pruebas.psicologica, pct: toPct(data.pruebas.psicologica) },
-      { key: "tecnica", label: "Técnica", data: data.pruebas.tecnica, pct: toPct(data.pruebas.tecnica) },
-      { key: "medica", label: "Médicos", data: data.pruebas.medica, pct: toPct(data.pruebas.medica) },
+      {
+        key: "psicologica",
+        label: "Psicológica",
+        data: data.pruebas.psicologica,
+        pct: toPct(data.pruebas.psicologica),
+      },
+      {
+        key: "tecnica",
+        label: "Técnica",
+        data: data.pruebas.tecnica,
+        pct: toPct(data.pruebas.tecnica),
+      },
+      {
+        key: "medica",
+        label: "Médicos",
+        data: data.pruebas.medica,
+        pct: toPct(data.pruebas.medica),
+      },
     ];
   }, [data.pruebas]);
 
@@ -369,10 +451,13 @@ export default function Dashboard() {
       return { variant: "destructive", className: "", label: "Sin reemplazo" };
     }
 
-    const isLectiva = String(etapa || "").toLowerCase().includes("lectiva");
+    const isLectiva = String(etapa || "")
+      .toLowerCase()
+      .includes("lectiva");
 
     if (isLectiva) {
-      if (dias <= 30) return { variant: "destructive", className: "", label: `${dias} días` };
+      if (dias <= 30)
+        return { variant: "destructive", className: "", label: `${dias} días` };
       if (dias <= 62) {
         return {
           variant: "secondary",
@@ -382,7 +467,8 @@ export default function Dashboard() {
       }
     }
 
-    if (dias <= 7) return { variant: "destructive", className: "", label: `${dias} días` };
+    if (dias <= 7)
+      return { variant: "destructive", className: "", label: `${dias} días` };
     if (dias <= 30) {
       return {
         variant: "secondary",
@@ -412,17 +498,17 @@ export default function Dashboard() {
       return {
         variant: "secondary",
         className: "bg-gray-100 text-gray-700 hover:bg-gray-100",
-        label: `hace ${diasAbsolutos} día${diasAbsolutos !== 1 ? 's' : ''}`,
+        label: `hace ${diasAbsolutos} día${diasAbsolutos !== 1 ? "s" : ""}`,
         borderColor: "border-gray-400",
       };
     }
-    
+
     // Por vencer (días positivos)
     if (dias <= 7) {
       return {
         variant: "destructive",
         className: "",
-        label: `en ${dias} día${dias !== 1 ? 's' : ''}`,
+        label: `en ${dias} día${dias !== 1 ? "s" : ""}`,
         borderColor: "border-red-600",
       };
     }
@@ -453,333 +539,458 @@ export default function Dashboard() {
   const detailsContent = (
     <div className="grid gap-6 md:grid-cols-2">
       {/* Movimientos del Período Actual */}
-      {mostrarPredicciones && data.movimientosPeriodoActual && 
-       (data.movimientosPeriodoActual.entran?.length > 0 || data.movimientosPeriodoActual.salen?.length > 0) && (
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
-          <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-900">
-              Período Actual: {data.movimientosPeriodoActual.periodo}
-            </CardTitle>
-            <CardDescription>
-              Cuota de este período: {data.movimientosPeriodoActual.cuotaPeriodo || 0} aprendices · 
-              Los movimientos mostrados abajo NO cuentan para este período
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Resumen visual de la cuota */}
-            <div className="mb-4 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-200">
-              <div className="text-center">
-                <p className="text-sm text-indigo-700 font-semibold mb-2">CUOTA QUE CUENTA PARA ESTE PERÍODO</p>
-                <p className="text-4xl font-bold text-indigo-900">
-                  {data.movimientosPeriodoActual.cuotaPeriodo || 0}
-                </p>
-                <p className="text-xs text-indigo-600 mt-1">aprendices</p>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              {/* Entran en período actual */}
-              {data.movimientosPeriodoActual.entran && data.movimientosPeriodoActual.entran.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h4 className="text-sm font-semibold text-emerald-800">
-                      Inician contrato ({data.movimientosPeriodoActual.entran.length})
-                    </h4>
-                    <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800">
-                      Solo cuentan en siguiente período
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                    {data.movimientosPeriodoActual.entran.map((aprendiz, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
-                      >
-                        <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                        <p className="text-xs text-gray-600 truncate">
-                          {aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Salen en período actual */}
-              {data.movimientosPeriodoActual.salen && data.movimientosPeriodoActual.salen.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h4 className="text-sm font-semibold text-red-800">
-                      Finalizan contrato ({data.movimientosPeriodoActual.salen.length})
-                    </h4>
-                    <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800">
-                      NO cuentan en este período
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                    {data.movimientosPeriodoActual.salen.map((aprendiz, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
-                      >
-                        <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                        <p className="text-xs text-gray-600 truncate">
-                          {aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Cards de Predicciones */}
-      {mostrarPredicciones && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
-        <>
-          {data.predicciones.map((prediccion, predIdx) => {
-            const porcentajeProyectado = prediccion.porcentajeCumplimiento || 0;
-            const cumpleCuota = prediccion.cumpleCuota;
-            const diferencia = prediccion.diferencia || 0;
-            
-            // Determinar estado basado en cumpleCuota
-            const estado = cumpleCuota ? "exacta" : "no_cumple";
-
-            const getMovimientoBadge = (tipo) => {
-              if (tipo === 'finaliza') {
-                return {
-                  label: 'Finaliza',
-                  className: 'bg-red-100 text-red-800 hover:bg-red-100',
-                  etapaLabel: 'Productiva'
-                };
-              }
-              if (tipo === 'pasa_productiva') {
-                return {
-                  label: 'Pasa a Productiva',
-                  className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
-                  etapaLabel: 'Lectiva'
-                };
-              }
-              if (tipo === 'inicia_contrato') {
-                return {
-                  label: 'Inicia Contrato',
-                  className: 'bg-green-100 text-green-800 hover:bg-green-100',
-                  etapaLabel: 'Selección 2'
-                };
-              }
-              if (tipo === 'se_suma') {
-                return {
-                  label: 'Se suma al período',
-                  className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
-                  etapaLabel: 'Desde anterior'
-                };
-              }
-              return {
-                label: 'N/A',
-                className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
-                etapaLabel: 'N/A'
-              };
-            };
-
-            return (
-              <Card key={predIdx} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
-                <div className={`h-1 w-full ${estado === "exacta" ? "bg-gradient-to-r from-emerald-600 to-green-500" : "bg-gradient-to-r from-red-600 to-pink-500"}`} />
-                <CardHeader className="flex flex-row items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-lg font-bold text-gray-900">
-                      Predicción: {prediccion.periodo}
-                    </CardTitle>
-                    <CardDescription>
-                      Cuota del período: {prediccion.proyeccion || 0} aprendices ({porcentajeProyectado}%) · 
-                      <Badge
-                        variant="default"
-                        className={`ml-2 text-xs ${
-                          estado === "exacta" 
-                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" 
-                            : "bg-red-100 text-red-800 hover:bg-red-100"
-                        }`}
-                      >
-                        {estado === "exacta" ? "✓ Cumple" : "✗ No cumple"}
-                      </Badge>
-                    </CardDescription>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="h-5 w-5 text-purple-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {/* Nota informativa */}
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-xs text-blue-800">
-                      <strong>Nota:</strong> Los que salen durante el período NO cuentan para la cuota. Los que entran durante el período cuentan para el siguiente.
-                    </p>
-                  </div>
-
-                  {/* Resumen de movimientos */}
-                  <div className="mb-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Cuota</p>
-                        <p className="text-lg font-bold text-gray-700">
-                          {prediccion.proyeccion || 0} / {prediccion.cuotaObjetivo || 0}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Entran</p>
-                        <p className="text-lg font-bold text-emerald-600">+{prediccion.seSuman || 0}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Salen</p>
-                        <p className="text-lg font-bold text-red-600">-{prediccion.salen || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Los que ya están en seguimiento (iniciaron en período anterior) */}
-                  {prediccion.aprendicesSeSuman && prediccion.aprendicesSeSuman.length > 0 && (
-                    <div className="mb-6">
+      {mostrarPredicciones &&
+        data.movimientosPeriodoActual &&
+        (data.movimientosPeriodoActual.entran?.length > 0 ||
+          data.movimientosPeriodoActual.salen?.length > 0) && (
+          <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+            <CardHeader>
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Período Actual: {data.movimientosPeriodoActual.periodo}
+              </CardTitle>
+              <CardDescription>
+                Cuota de este período:{" "}
+                {data.movimientosPeriodoActual.cuotaPeriodo || 0} aprendices ·
+                Los movimientos mostrados abajo no cuentan para este período
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Entran en período actual */}
+                {data.movimientosPeriodoActual.entran &&
+                  data.movimientosPeriodoActual.entran.length > 0 && (
+                    <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-blue-800">Iniciaron en período anterior ({prediccion.aprendicesSeSuman.length})</h4>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-blue-100 text-blue-700">
-                          Ya cuentan en cuota
+                        <h4 className="text-sm font-semibold text-emerald-800">
+                          Inician contrato (
+                          {data.movimientosPeriodoActual.entran.length})
+                        </h4>
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800"
+                        >
+                          Solo cuentan en siguiente período
                         </Badge>
                       </div>
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {prediccion.aprendicesSeSuman.map((aprendiz, idx) => {
-                          return (
-                            <div
-                              key={idx}
-                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 border border-blue-200"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                                  <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-blue-100 text-blue-800 hover:bg-blue-100">
-                                    Inició: {aprendiz.fechaInicioContrato ? new Date(aprendiz.fechaInicioContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Salidas */}
-                  {prediccion.aprendicesSalen && prediccion.aprendicesSalen.length > 0 && (
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-red-800">Salen durante el período ({prediccion.aprendicesSalen.length})</h4>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-red-100 text-red-700">
-                          NO cuentan aquí
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {prediccion.aprendicesSalen.map((aprendiz, idx) => {
-                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
-                          return (
-                            <div
-                              key={idx}
-                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
-                                    {movimiento.label}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Entradas */}
-                  {prediccion.aprendicesEntran && prediccion.aprendicesEntran.length > 0 && (
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-emerald-800">Entran durante el período ({prediccion.aprendicesEntran.length})</h4>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-emerald-100 text-emerald-700">
-                          Cuentan en siguiente
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {prediccion.aprendicesEntran.map((aprendiz, idx) => {
-                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
-                          return (
+                        {data.movimientosPeriodoActual.entran.map(
+                          (aprendiz, idx) => (
                             <div
                               key={idx}
                               className="flex items-start justify-between gap-4 p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
-                                    {movimiento.label}
+                                  <p className="font-semibold text-sm text-gray-900 truncate">
+                                    {aprendiz.nombre}
+                                  </p>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-2 py-0 bg-blue-100 text-blue-800 hover:bg-blue-100"
+                                  >
+                                    Inició:{" "}
+                                    {aprendiz.fechaInicioContrato
+                                      ? formatDateUTC(
+                                          aprendiz.fechaInicioContrato,
+                                        )
+                                      : "N/A"}
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
+                                {/* ← Este párrafo debe estar FUERA del div flex, no dentro */}
+                                <p className="text-xs text-gray-600 truncate">
+                                  {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                  {aprendiz.ciudad || "N/A"}
+                                </p>
                               </div>
                             </div>
-                          );
-                        })}
+                          ),
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Cambios de Etapa (solo informativo) */}
-                  {prediccion.aprendicesCambianEtapa && prediccion.aprendicesCambianEtapa.length > 0 && (
+                {/* Salen en período actual */}
+                {data.movimientosPeriodoActual.salen &&
+                  data.movimientosPeriodoActual.salen.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <h4 className="text-sm font-semibold text-purple-800">Pasan a Productiva ({prediccion.aprendicesCambianEtapa.length})</h4>
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-700">
-                          Ya cuentan en cuota
+                        <h4 className="text-sm font-semibold text-red-800">
+                          Finalizan contrato (
+                          {data.movimientosPeriodoActual.salen.length})
+                        </h4>
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-2 py-0 bg-amber-100 text-amber-800"
+                        >
+                          NO cuentan en este período
                         </Badge>
                       </div>
-                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {prediccion.aprendicesCambianEtapa.map((aprendiz, idx) => {
-                          const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
-                          return (
+                      <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                        {data.movimientosPeriodoActual.salen.map(
+                          (aprendiz, idx) => (
                             <div
                               key={idx}
-                              className="flex items-start justify-between gap-4 p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 border border-purple-200"
+                              className="p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
                             >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">{aprendiz.nombre}</p>
-                                  <Badge variant="secondary" className={`text-[10px] px-2 py-0 ${movimiento.className}`}>
-                                    {movimiento.label}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-gray-600 truncate">{aprendiz.programaFormacion || 'N/A'} · {aprendiz.ciudad || 'N/A'}</p>
-                              </div>
+                              <p className="font-semibold text-sm text-gray-900 truncate">
+                                {aprendiz.nombre}
+                              </p>
+                              <p className="text-xs text-gray-600 truncate">
+                                {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                {aprendiz.ciudad || "N/A"}
+                              </p>
                             </div>
-                          );
-                        })}
+                          ),
+                        )}
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Cards de Predicciones */}
+      {mostrarPredicciones &&
+        data.predicciones &&
+        Array.isArray(data.predicciones) &&
+        data.predicciones.length > 0 && (
+          <>
+            {data.predicciones.map((prediccion, predIdx) => {
+              const porcentajeProyectado =
+                prediccion.porcentajeCumplimiento || 0;
+              const cumpleCuota = prediccion.cumpleCuota;
+              const diferencia = prediccion.diferencia || 0;
+
+              // Determinar estado basado en cumpleCuota
+              const estado = cumpleCuota ? "exacta" : "no_cumple";
+
+              const getMovimientoBadge = (tipo) => {
+                if (tipo === "finaliza") {
+                  return {
+                    label: "Finaliza",
+                    className: "bg-red-100 text-red-800 hover:bg-red-100",
+                    etapaLabel: "Productiva",
+                  };
+                }
+                if (tipo === "pasa_productiva") {
+                  return {
+                    label: "Pasa a Productiva",
+                    className:
+                      "bg-purple-100 text-purple-800 hover:bg-purple-100",
+                    etapaLabel: "Lectiva",
+                  };
+                }
+                if (tipo === "inicia_contrato") {
+                  return {
+                    label: "Inicia Contrato",
+                    className: "bg-green-100 text-green-800 hover:bg-green-100",
+                    etapaLabel: "Selección 2",
+                  };
+                }
+                if (tipo === "se_suma") {
+                  return {
+                    label: "Se suma al período",
+                    className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+                    etapaLabel: "Desde anterior",
+                  };
+                }
+                return {
+                  label: "N/A",
+                  className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+                  etapaLabel: "N/A",
+                };
+              };
+
+              return (
+                <Card
+                  key={predIdx}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:col-span-2"
+                >
+                  <div
+                    className={`h-1 w-full ${estado === "exacta" ? "bg-gradient-to-r from-emerald-600 to-green-500" : "bg-gradient-to-r from-red-600 to-pink-500"}`}
+                  />
+                  <CardHeader className="flex flex-row items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg font-bold text-gray-900">
+                        Predicción: {prediccion.periodo}
+                      </CardTitle>
+                      <CardDescription>
+                        Cuota del período: {prediccion.proyeccion || 0}{" "}
+                        aprendices ({porcentajeProyectado}%) ·
+                        <Badge
+                          variant="default"
+                          className={`ml-2 text-xs ${
+                            estado === "exacta"
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                              : "bg-red-100 text-red-800 hover:bg-red-100"
+                          }`}
+                        >
+                          {estado === "exacta" ? "✓ Cumple" : "✗ No cumple"}
+                        </Badge>
+                      </CardDescription>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Nota informativa */}
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-xs text-blue-800">
+                        <strong>Nota:</strong> Los que salen durante el período
+                        NO cuentan para la cuota. Los que entran durante el
+                        período cuentan para el siguiente.
+                      </p>
+                    </div>
+
+                    {/* Resumen de movimientos */}
+                    <div className="mb-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 mb-1">Cuota</p>
+                          <p className="text-lg font-bold text-gray-700">
+                            {prediccion.proyeccion || 0} /{" "}
+                            {prediccion.cuotaObjetivo || 0}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 mb-1">Entran</p>
+                          <p className="text-lg font-bold text-emerald-600">
+                            +{prediccion.seSuman || 0}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 mb-1">Salen</p>
+                          <p className="text-lg font-bold text-red-600">
+                            -{prediccion.salen || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Los que ya están en seguimiento (iniciaron en período anterior) */}
+                    {prediccion.aprendicesSeSuman &&
+                      prediccion.aprendicesSeSuman.length > 0 && (
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-sm font-semibold text-blue-800">
+                              Iniciaron en período anterior (
+                              {prediccion.aprendicesSeSuman.length})
+                            </h4>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0 bg-blue-100 text-blue-700"
+                            >
+                              Ya cuentan en cuota
+                            </Badge>
+                          </div>
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {prediccion.aprendicesSeSuman.map(
+                              (aprendiz, idx) => {
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="flex items-start justify-between gap-4 p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 border border-blue-200"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <p className="font-semibold text-sm text-gray-900 truncate">
+                                          {aprendiz.nombre}
+                                        </p>
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-[10px] px-2 py-0 bg-blue-100 text-blue-800 hover:bg-blue-100"
+                                        >
+                                          Inició:{" "}
+                                          {aprendiz.fechaInicioContrato
+                                            ? formatDateUTC(
+                                                aprendiz.fechaInicioContrato,
+                                              )
+                                            : "N/A"}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-gray-600 truncate">
+                                        {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                        {aprendiz.ciudad || "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Salidas */}
+                    {prediccion.aprendicesSalen &&
+                      prediccion.aprendicesSalen.length > 0 && (
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-sm font-semibold text-red-800">
+                              Salen durante el período (
+                              {prediccion.aprendicesSalen.length})
+                            </h4>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0 bg-red-100 text-red-700"
+                            >
+                              NO cuentan aquí
+                            </Badge>
+                          </div>
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {prediccion.aprendicesSalen.map((aprendiz, idx) => {
+                              const movimiento = getMovimientoBadge(
+                                aprendiz.tipoMovimiento,
+                              );
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex items-start justify-between gap-4 p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                      <p className="font-semibold text-sm text-gray-900 truncate">
+                                        {aprendiz.nombre}
+                                      </p>
+                                      <Badge
+                                        variant="secondary"
+                                        className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                                      >
+                                        {movimiento.label}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 truncate">
+                                      {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                      {aprendiz.ciudad || "N/A"}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Entradas */}
+                    {prediccion.aprendicesEntran &&
+                      prediccion.aprendicesEntran.length > 0 && (
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-sm font-semibold text-emerald-800">
+                              Entran durante el período (
+                              {prediccion.aprendicesEntran.length})
+                            </h4>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0 bg-emerald-100 text-emerald-700"
+                            >
+                              Cuentan en siguiente
+                            </Badge>
+                          </div>
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {prediccion.aprendicesEntran.map(
+                              (aprendiz, idx) => {
+                                const movimiento = getMovimientoBadge(
+                                  aprendiz.tipoMovimiento,
+                                );
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="flex items-start justify-between gap-4 p-3 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 border border-emerald-200"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <p className="font-semibold text-sm text-gray-900 truncate">
+                                          {aprendiz.nombre}
+                                        </p>
+                                        <Badge
+                                          variant="secondary"
+                                          className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                                        >
+                                          {movimiento.label}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-gray-600 truncate">
+                                        {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                        {aprendiz.ciudad || "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Cambios de Etapa (solo informativo) */}
+                    {prediccion.aprendicesCambianEtapa &&
+                      prediccion.aprendicesCambianEtapa.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-sm font-semibold text-purple-800">
+                              Pasan a Productiva (
+                              {prediccion.aprendicesCambianEtapa.length})
+                            </h4>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0 bg-purple-100 text-purple-700"
+                            >
+                              Ya cuentan en cuota
+                            </Badge>
+                          </div>
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {prediccion.aprendicesCambianEtapa.map(
+                              (aprendiz, idx) => {
+                                const movimiento = getMovimientoBadge(
+                                  aprendiz.tipoMovimiento,
+                                );
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="flex items-start justify-between gap-4 p-3 rounded-lg bg-purple-50 border-l-4 border-purple-500 border border-purple-200"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <p className="font-semibold text-sm text-gray-900 truncate">
+                                          {aprendiz.nombre}
+                                        </p>
+                                        <Badge
+                                          variant="secondary"
+                                          className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                                        >
+                                          {movimiento.label}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-gray-600 truncate">
+                                        {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                        {aprendiz.ciudad || "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+                      )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </>
+        )}
 
       <Card className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg font-bold text-gray-900">Aprendices por ciudad</CardTitle>
+            <CardTitle className="text-lg font-bold text-gray-900">
+              Aprendices por ciudad
+            </CardTitle>
             <CardDescription>Top 5 por distribución actual</CardDescription>
           </div>
           <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -806,7 +1017,9 @@ export default function Dashboard() {
                     <div key={item.ciudad} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-semibold text-gray-900 truncate">{item.ciudad}</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate">
+                            {item.ciudad}
+                          </span>
                           <Badge
                             variant="secondary"
                             className="text-[10px] px-2 py-0 bg-gray-100 text-gray-700 hover:bg-gray-100"
@@ -814,7 +1027,9 @@ export default function Dashboard() {
                             {item.porcentaje}%
                           </Badge>
                         </div>
-                        <span className="text-sm font-bold text-blue-600">{item.cantidad}</span>
+                        <span className="text-sm font-bold text-blue-600">
+                          {item.cantidad}
+                        </span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -837,8 +1052,12 @@ export default function Dashboard() {
                     <ClipboardList className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Acciones recomendadas</p>
-                    <p className="text-xs text-gray-600">Enfocado en lo que requiere atención</p>
+                    <p className="text-sm font-bold text-gray-900">
+                      Acciones recomendadas
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Enfocado en lo que requiere atención
+                    </p>
                   </div>
                 </div>
               </div>
@@ -854,31 +1073,55 @@ export default function Dashboard() {
                   <div className="flex items-start gap-3 p-4 border-l-4 border-red-500 bg-red-50 rounded-xl">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="destructive" className="text-xs">Urgente</Badge>
-                        <span className="text-xs text-gray-600">{data.urgentCount} casos</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Urgente
+                        </Badge>
+                        <span className="text-xs text-gray-600">
+                          {data.urgentCount} casos
+                        </span>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">Contratos por vencer (≤ 7 días)</p>
-                      <p className="text-xs text-gray-600 mt-1">Revisar y gestionar reemplazos</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Contratos por vencer (≤ 7 días)
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Revisar y gestionar reemplazos
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-4 border-l-4 border-blue-600 bg-blue-50 rounded-xl">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">Importante</Badge>
-                        <span className="text-xs text-gray-600">{data.pruebasPendientes} casos</span>
+                        <Badge className="text-xs bg-blue-600 text-white hover:bg-blue-600">
+                          Importante
+                        </Badge>
+                        <span className="text-xs text-gray-600">
+                          {data.pruebasPendientes} casos
+                        </span>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">Pruebas pendientes</p>
-                      <p className="text-xs text-gray-600 mt-1">Completar evaluaciones para avanzar</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Pruebas pendientes
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Completar evaluaciones para avanzar
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-4 border-l-4 border-amber-500 bg-amber-50 rounded-xl">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">Información</Badge>
-                        <span className="text-xs text-gray-600">{data.aprendicesIncompletos} casos</span>
+                        <Badge className="text-xs bg-amber-500 text-white hover:bg-amber-500">
+                          Información
+                        </Badge>
+                        <span className="text-xs text-gray-600">
+                          {data.aprendicesIncompletos} casos
+                        </span>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">Registros incompletos</p>
-                      <p className="text-xs text-gray-600 mt-1">Completar datos faltantes en seguimiento</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Registros incompletos
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Completar datos faltantes en seguimiento
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -892,9 +1135,12 @@ export default function Dashboard() {
         <div className="h-1 w-full bg-gradient-to-r from-red-600 to-pink-500" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg font-bold text-gray-900">Movimientos del período</CardTitle>
+            <CardTitle className="text-lg font-bold text-gray-900">
+              Movimientos del período
+            </CardTitle>
             <CardDescription>
-              {data.mesCurrent || "Período actual"} · Total: {data.finalizanMesActual.length} cambios
+              {data.mesCurrent || "Período actual"} · Total:{" "}
+              {data.finalizanMesActual.length} cambios
             </CardDescription>
           </div>
           <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
@@ -904,25 +1150,40 @@ export default function Dashboard() {
         <CardContent>
           {/* Leyenda de tipos de movimientos */}
           <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Tipos de movimientos:</p>
+            <p className="text-xs font-semibold text-gray-700 mb-2">
+              Tipos de movimientos:
+            </p>
             <div className="flex flex-wrap gap-2">
               <div className="flex items-center gap-1.5">
-                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-red-100 text-red-800 hover:bg-red-100">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-2 py-0 bg-red-100 text-red-800 hover:bg-red-100"
+                >
                   Finaliza
                 </Badge>
-                <span className="text-[10px] text-gray-600">Sale de productiva</span>
+                <span className="text-[10px] text-gray-600">
+                  Sale de productiva
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-800 hover:bg-purple-100">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-2 py-0 bg-purple-100 text-purple-800 hover:bg-purple-100"
+                >
                   Pasa a Productiva
                 </Badge>
                 <span className="text-[10px] text-gray-600">Desde lectiva</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-green-100 text-green-800 hover:bg-green-100">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-2 py-0 bg-green-100 text-green-800 hover:bg-green-100"
+                >
                   Inicia Contrato
                 </Badge>
-                <span className="text-[10px] text-gray-600">Desde selección</span>
+                <span className="text-[10px] text-gray-600">
+                  Desde selección
+                </span>
               </div>
             </div>
           </div>
@@ -938,135 +1199,160 @@ export default function Dashboard() {
               <div className="flex items-center justify-center p-8 bg-green-50 rounded-xl border border-green-200">
                 <div className="text-center">
                   <div className="text-3xl mb-2">✅</div>
-                  <p className="text-sm font-semibold text-green-800">Sin movimientos este período</p>
-                  <p className="text-xs text-green-600 mt-1">No hay cambios de etapa programados en {data.mesCurrent}</p>
+                  <p className="text-sm font-semibold text-green-800">
+                    Sin movimientos este período
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    No hay cambios de etapa programados en {data.mesCurrent}
+                  </p>
                 </div>
               </div>
 
               {/* Mostrar próximo período si hay datos */}
-              {data.finalizanProximoMes && data.finalizanProximoMes.length > 0 && (
-                <div className="mt-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-px flex-1 bg-gray-200"></div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Próximo período: {data.mesProximo}
-                    </p>
-                    <div className="h-px flex-1 bg-gray-200"></div>
-                  </div>
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {data.finalizanProximoMes.slice(0, 5).map((aprendiz, index) => {
-                      const badge = getUrgenciaBadge(aprendiz.diasRestantes);
-                      
-                      const getMovimientoBadge = (tipo) => {
-                        if (tipo === 'finaliza') {
-                          return {
-                            label: 'Finaliza',
-                            className: 'bg-red-100 text-red-800 hover:bg-red-100',
-                            etapaLabel: 'Productiva'
-                          };
-                        }
-                        if (tipo === 'pasa_productiva') {
-                          return {
-                            label: 'Pasa a Productiva',
-                            className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
-                            etapaLabel: 'Lectiva'
-                          };
-                        }
-                        if (tipo === 'inicia_contrato') {
-                          return {
-                            label: 'Inicia Contrato',
-                            className: 'bg-green-100 text-green-800 hover:bg-green-100',
-                            etapaLabel: 'Selección 2'
-                          };
-                        }
-                        return {
-                          label: aprendiz.etapaActual || 'N/A',
-                          className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
-                          etapaLabel: aprendiz.etapaActual || 'N/A'
-                        };
-                      };
-                      
-                      const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento);
-                      
-                      return (
-                        <div
-                          key={aprendiz._id || index}
-                          className={`flex items-start justify-between gap-4 p-3 rounded-xl bg-gray-50 border-l-4 ${badge.borderColor} border border-gray-200 transition-all`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <p className="text-sm font-semibold text-gray-900 truncate">
-                                {aprendiz.nombre}
-                              </p>
-                              <Badge
-                                variant="secondary"
-                                className={`text-[10px] px-2 py-0 ${movimiento.className}`}
-                              >
-                                {movimiento.label}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-gray-600">
-                              {aprendiz.tipoDocumento} {aprendiz.documento}
-                            </p>
-                            <p className="text-[11px] text-gray-500 mt-1 truncate">
-                              <span className="font-semibold">Etapa:</span> {movimiento.etapaLabel}
-                              {aprendiz.programaFormacion && ` · ${aprendiz.programaFormacion}`}
-                            </p>
-                          </div>
-                          <div className="flex-shrink-0">
-                            <Badge variant={badge.variant} className={`font-semibold text-[10px] ${badge.className}`}>
-                              {badge.label}
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {data.finalizanProximoMes.length > 5 && (
-                      <p className="text-xs text-center text-gray-500 pt-2">
-                        Y {data.finalizanProximoMes.length - 5} más...
+              {data.finalizanProximoMes &&
+                data.finalizanProximoMes.length > 0 && (
+                  <div className="mt-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-gray-200"></div>
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Próximo período: {data.mesProximo}
                       </p>
-                    )}
+                      <div className="h-px flex-1 bg-gray-200"></div>
+                    </div>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                      {data.finalizanProximoMes
+                        .slice(0, 5)
+                        .map((aprendiz, index) => {
+                          const badge = getUrgenciaBadge(
+                            aprendiz.diasRestantes,
+                          );
+
+                          const getMovimientoBadge = (tipo) => {
+                            if (tipo === "finaliza") {
+                              return {
+                                label: "Finaliza",
+                                className:
+                                  "bg-red-100 text-red-800 hover:bg-red-100",
+                                etapaLabel: "Productiva",
+                              };
+                            }
+                            if (tipo === "pasa_productiva") {
+                              return {
+                                label: "Pasa a Productiva",
+                                className:
+                                  "bg-purple-100 text-purple-800 hover:bg-purple-100",
+                                etapaLabel: "Lectiva",
+                              };
+                            }
+                            if (tipo === "inicia_contrato") {
+                              return {
+                                label: "Inicia Contrato",
+                                className:
+                                  "bg-green-100 text-green-800 hover:bg-green-100",
+                                etapaLabel: "Selección 2",
+                              };
+                            }
+                            return {
+                              label: aprendiz.etapaActual || "N/A",
+                              className:
+                                "bg-gray-100 text-gray-800 hover:bg-gray-100",
+                              etapaLabel: aprendiz.etapaActual || "N/A",
+                            };
+                          };
+
+                          const movimiento = getMovimientoBadge(
+                            aprendiz.tipoMovimiento,
+                          );
+
+                          return (
+                            <div
+                              key={aprendiz._id || index}
+                              className={`flex items-start justify-between gap-4 p-3 rounded-xl bg-gray-50 border-l-4 ${badge.borderColor} border border-gray-200 transition-all`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">
+                                    {aprendiz.nombre}
+                                  </p>
+                                  <Badge
+                                    variant="secondary"
+                                    className={`text-[10px] px-2 py-0 ${movimiento.className}`}
+                                  >
+                                    {movimiento.label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600">
+                                  {aprendiz.tipoDocumento} {aprendiz.documento}
+                                </p>
+                                <p className="text-[11px] text-gray-500 mt-1 truncate">
+                                  <span className="font-semibold">Etapa:</span>{" "}
+                                  {movimiento.etapaLabel}
+                                  {aprendiz.programaFormacion &&
+                                    ` · ${aprendiz.programaFormacion}`}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <Badge
+                                  variant={badge.variant}
+                                  className={`font-semibold text-[10px] ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {data.finalizanProximoMes.length > 5 && (
+                        <p className="text-xs text-center text-gray-500 pt-2">
+                          Y {data.finalizanProximoMes.length - 5} más...
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </>
           ) : (
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
               {data.finalizanMesActual.map((aprendiz, index) => {
                 const badge = getUrgenciaBadge(aprendiz.diasRestantes);
-                
+
                 // Determinar badge de tipo de movimiento
                 const getMovimientoBadge = (tipo, etapa) => {
-                  if (tipo === 'finaliza') {
+                  if (tipo === "finaliza") {
                     return {
-                      label: 'Finaliza',
-                      className: 'bg-red-100 text-red-800 hover:bg-red-100',
-                      etapaLabel: 'Productiva'
+                      label: "Finaliza",
+                      className: "bg-red-100 text-red-800 hover:bg-red-100",
+                      etapaLabel: "Productiva",
                     };
                   }
-                  if (tipo === 'pasa_productiva') {
+                  if (tipo === "pasa_productiva") {
                     return {
-                      label: 'Pasa a Productiva',
-                      className: 'bg-purple-100 text-purple-800 hover:bg-purple-100',
-                      etapaLabel: 'Lectiva'
+                      label: "Pasa a Productiva",
+                      className:
+                        "bg-purple-100 text-purple-800 hover:bg-purple-100",
+                      etapaLabel: "Lectiva",
                     };
                   }
-                  if (tipo === 'inicia_contrato') {
+                  if (tipo === "inicia_contrato") {
                     return {
-                      label: 'Inicia Contrato',
-                      className: 'bg-green-100 text-green-800 hover:bg-green-100',
-                      etapaLabel: 'Selección 2'
+                      label: "Inicia Contrato",
+                      className:
+                        "bg-green-100 text-green-800 hover:bg-green-100",
+                      etapaLabel: "Selección 2",
                     };
                   }
                   return {
-                    label: etapa || 'N/A',
-                    className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
-                    etapaLabel: etapa || 'N/A'
+                    label: etapa || "N/A",
+                    className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+                    etapaLabel: etapa || "N/A",
                   };
                 };
-                
-                const movimiento = getMovimientoBadge(aprendiz.tipoMovimiento, aprendiz.etapaActual);
-                
+
+                const movimiento = getMovimientoBadge(
+                  aprendiz.tipoMovimiento,
+                  aprendiz.etapaActual,
+                );
+
                 return (
                   <div
                     key={aprendiz._id || index}
@@ -1096,13 +1382,18 @@ export default function Dashboard() {
                         {aprendiz.tipoDocumento} {aprendiz.documento}
                       </p>
                       <p className="text-[11px] text-gray-500 mt-1 truncate">
-                        <span className="font-semibold">Etapa actual:</span> {movimiento.etapaLabel}
-                        {aprendiz.programaFormacion && ` · ${aprendiz.programaFormacion}`}
+                        <span className="font-semibold">Etapa actual:</span>{" "}
+                        {movimiento.etapaLabel}
+                        {aprendiz.programaFormacion &&
+                          ` · ${aprendiz.programaFormacion}`}
                         {aprendiz.ciudad && ` · ${aprendiz.ciudad}`}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
+                      <Badge
+                        variant={badge.variant}
+                        className={`font-semibold ${badge.className}`}
+                      >
                         {badge.label}
                       </Badge>
                     </div>
@@ -1118,8 +1409,12 @@ export default function Dashboard() {
         <div className="h-1 w-full bg-gradient-to-r from-red-500 to-amber-500" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg font-bold text-gray-900">Próximos vencimientos</CardTitle>
-            <CardDescription>Contratos por vencer (según días restantes)</CardDescription>
+            <CardTitle className="text-lg font-bold text-gray-900">
+              Próximos vencimientos
+            </CardTitle>
+            <CardDescription>
+              Contratos por vencer (según días restantes)
+            </CardDescription>
           </div>
           <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
             <CalendarClock className="h-5 w-5 text-red-600" />
@@ -1133,12 +1428,16 @@ export default function Dashboard() {
               ))}
             </div>
           ) : data.proximosVencimientos.length === 0 ? (
-            <div className="text-sm text-gray-600">Sin vencimientos próximos</div>
+            <div className="text-sm text-gray-600">
+              Sin vencimientos próximos
+            </div>
           ) : (
             <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {data.proximosVencimientos.map((apprentice) => (
                 <div
-                  key={apprentice.id || `${apprentice.nombre}-${apprentice.dias}`}
+                  key={
+                    apprentice.id || `${apprentice.nombre}-${apprentice.dias}`
+                  }
                   className="flex items-start justify-between gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all"
                 >
                   <div className="flex-1 min-w-0">
@@ -1146,7 +1445,9 @@ export default function Dashboard() {
                       {apprentice.nombre}
                       {apprentice.documento ? ` (${apprentice.documento})` : ""}
                     </p>
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1 truncate">{apprentice.programa}</p>
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1 truncate">
+                      {apprentice.programa}
+                    </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Badge
                         variant="outline"
@@ -1166,7 +1467,9 @@ export default function Dashboard() {
                       </Badge>
                       {typeof apprentice.dias === "number" &&
                         (apprentice.dias < 0 ||
-                          (String(apprentice.etapa || "").toLowerCase().includes("lectiva") &&
+                          (String(apprentice.etapa || "")
+                            .toLowerCase()
+                            .includes("lectiva") &&
                             apprentice.dias <= 62)) && (
                           <Badge
                             className={`text-xs text-white ${
@@ -1182,9 +1485,15 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-shrink-0">
                     {(() => {
-                      const badge = getDaysBadge(apprentice.dias, apprentice.etapa);
+                      const badge = getDaysBadge(
+                        apprentice.dias,
+                        apprentice.etapa,
+                      );
                       return (
-                        <Badge variant={badge.variant} className={`font-semibold ${badge.className}`}>
+                        <Badge
+                          variant={badge.variant}
+                          className={`font-semibold ${badge.className}`}
+                        >
                           {badge.label}
                         </Badge>
                       );
@@ -1201,8 +1510,12 @@ export default function Dashboard() {
         <div className="h-1 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-lg font-bold text-gray-900">Pruebas de selección</CardTitle>
-            <CardDescription>Porcentaje de aprobación y pendientes</CardDescription>
+            <CardTitle className="text-lg font-bold text-gray-900">
+              Pruebas de selección
+            </CardTitle>
+            <CardDescription>
+              Porcentaje de aprobación y pendientes
+            </CardDescription>
           </div>
           <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
             <TestTubeDiagonal className="h-5 w-5 text-emerald-600" />
@@ -1221,12 +1534,19 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-5">
               {pruebasSummary.map((prueba) => (
-                <div key={prueba.key} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+                <div
+                  key={prueba.key}
+                  className="space-y-3 rounded-xl border border-gray-200 bg-white p-4"
+                >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <span className="text-sm font-semibold text-gray-900">{prueba.label}</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {prueba.label}
+                      </span>
                     </div>
-                    <Badge className="text-xs bg-gray-900 text-white hover:bg-gray-900">{prueba.pct}%</Badge>
+                    <Badge className="text-xs bg-gray-900 text-white hover:bg-gray-900">
+                      {prueba.pct}%
+                    </Badge>
                   </div>
                   <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -1235,13 +1555,22 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                    <Badge
+                      variant="secondary"
+                      className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                    >
                       Aprobados: {prueba.data.aprobados}
                     </Badge>
-                    <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
+                    <Badge
+                      variant="secondary"
+                      className="bg-red-100 text-red-800 hover:bg-red-100"
+                    >
                       Rechazados: {prueba.data.rechazados}
                     </Badge>
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                    <Badge
+                      variant="secondary"
+                      className="bg-amber-100 text-amber-800 hover:bg-amber-100"
+                    >
                       Pendientes: {prueba.data.pendientes}
                     </Badge>
                   </div>
@@ -1263,7 +1592,9 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Dashboard
+                </h1>
                 {!isLoading && (
                   <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
                     En vivo
@@ -1271,12 +1602,16 @@ export default function Dashboard() {
                 )}
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                {lastUpdatedAt ? `Actualizado: ${lastUpdatedAt.toLocaleString("es-ES")}` : "Cargando datos…"}
+                {lastUpdatedAt
+                  ? `Actualizado: ${lastUpdatedAt.toLocaleString("es-ES")}`
+                  : "Cargando datos…"}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={loadDashboard} disabled={busy}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`}
+                />
                 Actualizar
               </Button>
               {busy && (
@@ -1294,7 +1629,9 @@ export default function Dashboard() {
             <Link to="/convocatorias" className="block">
               <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600">Convocatorias</p>
+                  <p className="text-xs font-semibold text-gray-600">
+                    Convocatorias
+                  </p>
                   <p className="text-sm text-gray-900 mt-1">Ver y crear</p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
@@ -1305,7 +1642,9 @@ export default function Dashboard() {
             <Link to="/seleccion" className="block">
               <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600">Selección</p>
+                  <p className="text-xs font-semibold text-gray-600">
+                    Selección
+                  </p>
                   <p className="text-sm text-gray-900 mt-1">Pruebas y estado</p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
@@ -1316,7 +1655,9 @@ export default function Dashboard() {
             <Link to="/seguimiento" className="block">
               <div className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600">Seguimiento</p>
+                  <p className="text-xs font-semibold text-gray-600">
+                    Seguimiento
+                  </p>
                   <p className="text-sm text-gray-900 mt-1">Cuota y etapas</p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
@@ -1346,49 +1687,65 @@ export default function Dashboard() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 my-8">
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        {/* Card 1 - Convocatorias activas */}
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col">
           <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-purple-600" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-600">Convocatorias activas</CardTitle>
+          <div className="flex flex-row items-center justify-between p-6 pb-2">
+            <span className="text-sm font-semibold text-gray-600">
+              Convocatorias activas
+            </span>
             <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
               <Users className="h-5 w-5 text-blue-600" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.convocatoriasActivas}</div>
-            <p className="text-xs text-gray-600 mt-2">
+          </div>
+          <div className="flex flex-col flex-1 justify-between px-6 pb-6 pt-2">
+            <div className="text-3xl font-bold text-gray-900">
+              {isLoading ? "—" : data.convocatoriasActivas}
+            </div>
+            <p className="text-xs text-gray-600">
               Archivadas: {isLoading ? "—" : data.convocatoriasArchivadas}
             </p>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        {/* Card 2 - Aprendices activos */}
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col">
           <div className="h-1 w-full bg-gradient-to-r from-purple-600 to-fuchsia-600" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-600">Aprendices activos</CardTitle>
+          <div className="flex flex-row items-center justify-between p-6 pb-2">
+            <span className="text-sm font-semibold text-gray-600">
+              Aprendices activos
+            </span>
             <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center">
               <TrendingUp className="h-5 w-5 text-purple-600" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{isLoading ? "—" : data.totalActivos}</div>
-            <p className="text-xs text-gray-600 mt-2">
-              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva: {isLoading ? "—" : data.enProductiva} · Selección 2: {isLoading ? "—" : data.enSeleccion2}
+          </div>
+          <div className="flex flex-col flex-1 justify-between px-6 pb-6 pt-2">
+            <div className="text-3xl font-bold text-gray-900">
+              {isLoading ? "—" : data.totalActivos}
+            </div>
+            <p className="text-xs text-gray-600">
+              Lectiva: {isLoading ? "—" : data.enLectiva} · Productiva:{" "}
+              {isLoading ? "—" : data.enProductiva} · Selección 2:{" "}
+              {isLoading ? "—" : data.enSeleccion2}
             </p>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        {/* Card 3 - Cuota del período */}
+        <Card className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col">
           <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-emerald-600" />
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-semibold text-gray-600">
-              Cuota del período{!isLoading && data.periodoActual ? ` (${data.periodoActual})` : ""}
+              Cuota del período
+              {!isLoading && data.periodoActual
+                ? ` (${data.periodoActual})`
+                : ""}
             </CardTitle>
             <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center">
               <Target className="h-5 w-5 text-amber-600" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="flex items-center justify-between gap-2">
               <div className="text-3xl font-bold text-gray-900">
                 {isLoading ? "—" : `${data.totalActivos}/${data.cuota}`}
@@ -1396,7 +1753,7 @@ export default function Dashboard() {
               {!isLoading && cuotaBadge}
             </div>
             <p className="text-[10px] text-gray-500 mt-1 italic">
-              Excluye salidas durante el período
+              Incluye salidas durante el período
             </p>
             <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
@@ -1413,22 +1770,36 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Botón para mostrar predicciones */}
-            {!isLoading && data.predicciones && Array.isArray(data.predicciones) && data.predicciones.length > 0 && (
-              <div className="mt-4">
-                <Button
-                  
-                  size="sm"
-                  onClick={() => setMostrarPredicciones(!mostrarPredicciones)}
-                  className="w-full flex items-center justify-center gap-2 text-white hover:text-white"
-                >
-                  {mostrarPredicciones ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  <span className="text-sm font-medium">
-                    {mostrarPredicciones ? "Ocultar predicciones" : "Ver predicciones"}
-                  </span>
-                </Button>
-              </div>
-            )}
+            {/* Botón con gradiente dinámico según estado */}
+            {!isLoading &&
+              data.predicciones &&
+              Array.isArray(data.predicciones) &&
+              data.predicciones.length > 0 && (
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => setMostrarPredicciones(!mostrarPredicciones)}
+                    className={`w-full flex items-center justify-center gap-2 text-white hover:text-white border-0 transition-all duration-200 ${
+                      data.cuotaStatus === "over"
+                        ? "bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700"
+                        : data.cuotaStatus === "under"
+                          ? "bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700"
+                          : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+                    }`}
+                  >
+                    {mostrarPredicciones ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {mostrarPredicciones
+                        ? "Ocultar predicciones"
+                        : "Ver predicciones"}
+                    </span>
+                  </Button>
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>

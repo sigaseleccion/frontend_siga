@@ -225,7 +225,7 @@ const SeguimientoPage = () => {
                         : `Aprendices ${estadisticas.cuota.actual}/${estadisticas.cuota.maximo}`}
                     </p>
                     <p className="text-[10px] text-gray-500 mt-0.5 italic">
-                      Excluye salidas durante el período
+                      Incluye salidas durante el período
                     </p>
                     {/* Estado de la cuota */}
                     {estadisticas.cuota !== null &&
