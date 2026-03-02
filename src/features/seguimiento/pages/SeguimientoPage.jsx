@@ -215,7 +215,7 @@ const SeguimientoPage = () => {
             <Card variant="colorful" showTopLine>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-600 mb-1">
                       Cuota de Aprendices
                     </p>
@@ -223,6 +223,9 @@ const SeguimientoPage = () => {
                       {estadisticas.cuota === null
                         ? "Aprendices"
                         : `Aprendices ${estadisticas.cuota.actual}/${estadisticas.cuota.maximo}`}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 italic">
+                      Excluye salidas durante el período
                     </p>
                     {/* Estado de la cuota */}
                     {estadisticas.cuota !== null &&
