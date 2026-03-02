@@ -59,7 +59,7 @@ export default function ConvocatoriaDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingRecomendados, setLoadingRecomendados] = useState(false);
   const { setHeaderConfig } = useHeader();
-    const { auth } = useAuth();
+  const { auth } = useAuth();
 
   // Función para cargar los datos completos de aprendices recomendados
   const handleVerRecomendados = async (recomendadosIds) => {
@@ -89,7 +89,7 @@ export default function ConvocatoriaDetailPage() {
       iconBg: "from-blue-600 to-blue-400",
       accions: (
         <Link to="/convocatorias">
-          <Button variant="ghost" size="sm">
+          <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a Convocatorias
           </Button>
@@ -219,7 +219,7 @@ export default function ConvocatoriaDetailPage() {
         <main className="min-h-screen bg-gray-50 p-4">
           <div className="mb-6">
             <Link to="/convocatorias">
-              <Button variant="ghost" size="sm">
+              <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver a Convocatorias
               </Button>
@@ -239,7 +239,7 @@ export default function ConvocatoriaDetailPage() {
         <main className="min-h-screen bg-gray-50 p-4">
           <div className="p-4">
             <Link to="/convocatorias">
-              <Button variant="ghost" size="sm">
+              <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver a Convocatorias
               </Button>
@@ -306,10 +306,11 @@ export default function ConvocatoriaDetailPage() {
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
                     convocatoria.estado === "en proceso"
                       ? "bg-blue-600 text-white hover:bg-blue-600"
-                      : "bg-pink-500 text-white hover:bg-pink-500"
+                      : "bg-purple-600 text-white hover:bg-purple-600"
                   }`}
                 >
-                  {convocatoria.estado}
+                  {convocatoria.estado?.charAt(0).toUpperCase() +
+                    convocatoria.estado?.slice(1)}
                 </Badge>
               </div>
               <DataTable
@@ -394,7 +395,7 @@ export default function ConvocatoriaDetailPage() {
                           variant="outline"
                           className="border-gray-300 bg-gray-200 text-gray-600"
                         >
-                          seleccionado
+                          Seleccionado
                         </Badge>
                       ) : (
                         <Select

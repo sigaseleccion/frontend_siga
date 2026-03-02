@@ -238,9 +238,13 @@ export default function SeleccionConvocatoriaPage() {
                             to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}`}
                           >
                             {tienePermiso(auth, "seleccion", "ver") && (
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Ver detalle del aprendiz"
+                                className="h-9 w-9 rounded-xl text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 transition-all duration-200"
+                              >
                                 <Eye className="h-4 w-4 mr-1" />
-                                Ver
                               </Button>
                             )}
                           </Link>
@@ -248,9 +252,13 @@ export default function SeleccionConvocatoriaPage() {
                             to={`/seleccion/${convocatoriaId}/aprendiz/${row._id}/editar`}
                           >
                             {tienePermiso(auth, "seleccion", "editar") && (
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Editar aprendiz"
+                                className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                              >
                                 <Edit className="h-4 w-4 mr-1" />
-                                Editar
                               </Button>
                             )}
                           </Link>

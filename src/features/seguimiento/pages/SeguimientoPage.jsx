@@ -269,10 +269,9 @@ const SeguimientoPage = () => {
                     {tienePermiso(auth, "seguimiento", "editar") &&
                       (esPeriodoEdicionCuota ? (
                         <Button
-                          variant="ghost"
                           size="sm"
                           onClick={() => setIsEditCuotaOpen(true)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-white hover:bg-blue-600"
                         >
                           <PenBoxIcon className="h-4 w-4 mr-1" />
                           Editar
@@ -416,6 +415,7 @@ const SeguimientoPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleVerAprendiz(row)}
+                              title="Ver detalles del aprendiz"
                               className="h-9 w-9 rounded-xl text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 transition-all duration-200"
                             >
                               <Eye size={20} />
@@ -426,6 +426,7 @@ const SeguimientoPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditarAprendiz(row)}
+                              title="Editar aprendiz"
                               className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                             >
                               <PenBoxIcon size={16} />
