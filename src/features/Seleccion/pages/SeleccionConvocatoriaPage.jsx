@@ -150,14 +150,22 @@ export default function SeleccionConvocatoriaPage() {
                 Volver a Selección
               </Button>
             </Link>
-            <Link to={`/seleccion/${convocatoriaId}/reporte-tecnico`}>
-              {tienePermiso(auth, "seleccion", "gestionReporteTecnico") && (
-                <Button>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Reporte Técnico
+            <div className="flex items-center gap-2">
+              <Link to={`/seleccion/${convocatoriaId}/sala-espera`}>
+                <Button className="bg-gradient-to-r from-green-600 to-green-400 text-white hover:from-green-700 hover:to-green-500">
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Sala de espera
                 </Button>
-              )}
-            </Link>
+              </Link>
+              <Link to={`/seleccion/${convocatoriaId}/reporte-tecnico`}>
+                {tienePermiso(auth, "seleccion", "gestionReporteTecnico") && (
+                  <Button>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Reporte Técnico
+                  </Button>
+                )}
+              </Link>
+            </div>
           </div>
 
           <div className="mb-8 flex ">

@@ -24,6 +24,7 @@ import ReporteTecnicoPage from "./features/Seleccion/pages/ReporteTecnicoPage";
 import HistoricoConvocatoriasPage from "./features/Seleccion/pages/HistoricoConvocatoriasPage";
 import HistoricoConvocatoriaDetailPage from "./features/Seleccion/pages/HistoricoConvocatoriaDetailPage";
 import HistoricoAprendizDetailPage from "./features/Seleccion/pages/HistoricoAprendizDetailPage";
+import SalaEsperaPage from "./features/Seleccion/pages/SalaEsperaPage";
 
 // Seguimiento
 import SeguimientoPage from "./features/seguimiento/pages/SeguimientoPage";
@@ -140,6 +141,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute modulo="seleccion" accion="gestionReporteTecnico">
             <ReporteTecnicoPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/seleccion/:id/sala-espera"
+        element={
+          <ProtectedRoute modulo="seleccion" accion="ver">
+            <SalaEsperaPage />
           </ProtectedRoute>
         }
       />
