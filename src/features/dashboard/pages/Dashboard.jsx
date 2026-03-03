@@ -91,7 +91,7 @@ export default function Dashboard() {
     enLectiva: 0,
     enProductiva: 0,
     enSeleccion2: 0,
-    cuota: 150,
+    cuota: 0,
     cuotaStatus: "ok",
     cuotaDelta: 0,
     urgentCount: 0,
@@ -246,10 +246,11 @@ export default function Dashboard() {
     const cuotaObj = estadisticas?.cuota;
     const cuotaMaximo = cuotaObj?.maximo || cuotaObj?.cuota || null;
     const cuotaActual = cuotaObj?.actual || totalActivos;
-    
+
     // Si no hay cuota definida, usar 150 como valor por defecto (legacy)
-    const cuota = typeof cuotaMaximo === "number" && cuotaMaximo > 0 ? cuotaMaximo : 150;
-    
+    const cuota =
+      typeof cuotaMaximo === "number" && cuotaMaximo > 0 ? cuotaMaximo : 150;
+
     // Calcular delta usando el valor actual de la cuota o totalActivos
     const totalParaCuota = cuotaObj ? cuotaActual : totalActivos;
     const cuotaDelta = totalParaCuota - cuota;
@@ -580,7 +581,7 @@ export default function Dashboard() {
                           Solo cuentan en siguiente período
                         </Badge>
                       </div>
-                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      <div className="space-y-2 max-h-[250px] overflow-y-auto">
                         {data.movimientosPeriodoActual.entran.map(
                           (aprendiz, idx) => (
                             <div
@@ -638,15 +639,28 @@ export default function Dashboard() {
                           (aprendiz, idx) => (
                             <div
                               key={idx}
-                              className="p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
+                              className="flex items-start justify-between gap-1 p-3 rounded-lg bg-red-50 border-l-4 border-red-500 border border-red-200"
                             >
-                              <p className="font-semibold text-sm text-gray-900 truncate">
-                                {aprendiz.nombre}
-                              </p>
-                              <p className="text-xs text-gray-600 truncate">
-                                {aprendiz.programaFormacion || "N/A"} ·{" "}
-                                {aprendiz.ciudad || "N/A"}
-                              </p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">
+                                    {aprendiz.nombre}
+                                  </p>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-2 py-0 bg-blue-100 text-blue-800 hover:bg-blue-100"
+                                  >
+                                    Finaliza:{" "}
+                                    {aprendiz.fechaFinContrato
+                                      ? formatDateUTC(aprendiz.fechaFinContrato)
+                                      : "N/A"}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate">
+                                  {aprendiz.programaFormacion || "N/A"} ·{" "}
+                                  {aprendiz.ciudad || "N/A"}
+                                </p>
+                              </div>
                             </div>
                           ),
                         )}

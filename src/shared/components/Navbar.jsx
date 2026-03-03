@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/auth/AuthContext";
 import { tienePermiso } from "../utils/auth/permissions";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 const navItems = [
   {
@@ -40,19 +42,27 @@ const navItems = [
     modulo: "seguimiento",
     accion: "ver",
   },
+
+  // ✅ SUBMENÚ
   {
-    title: "Usuarios",
-    href: "/usuarios",
-    icon: UserCog,
-    modulo: "usuarios",
-    accion: "ver",
-  },
-  {
-    title: "Roles",
-    href: "/roles",
+    title: "Configuración",
     icon: Shield,
-    modulo: "roles",
-    accion: "ver",
+    children: [
+      {
+        title: "Usuarios",
+        href: "/usuarios",
+        icon: UserCog,
+        modulo: "usuarios",
+        accion: "ver",
+      },
+      {
+        title: "Roles",
+        href: "/roles",
+        icon: Shield,
+        modulo: "roles",
+        accion: "ver",
+      },
+    ],
   },
 ];
 
@@ -65,6 +75,7 @@ export function Navbar({
   const location = useLocation();
   const { auth } = useAuth();
   const isExpanded = isMobile || !collapsed;
+  const [openMenu, setOpenMenu] = useState(null);
 
   return (
     <>
@@ -118,38 +129,114 @@ export function Navbar({
 
         {/* Nav items */}
         <nav className="flex-1 px-2.5 py-1 flex flex-col gap-0.5 overflow-y-auto">
-          {navItems
-            .filter((item) => tienePermiso(auth, item.modulo, item.accion))
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                location.pathname === item.href ||
-                location.pathname.startsWith(item.href + "/");
+          {navItems.map((item) => {
+            // ---------- ITEM CON SUBMENU ----------
+            if (item.children) {
+              const visibleChildren = item.children.filter((child) =>
+                tienePermiso(auth, child.modulo, child.accion),
+              );
+
+              if (visibleChildren.length === 0) return null;
+
+              const isOpen = openMenu === item.title;
+              const ParentIcon = item.icon;
 
               return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => isMobile && setMobileOpen(false)}
-                  title={!isExpanded ? item.title : ""}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl text-[15px] font-medium transition-all duration-150",
-                    isExpanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
-                    isActive
-                      ? "bg-white text-blue-700 shadow-md font-semibold"
-                      : "text-white/80 hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  <Icon
+                <div key={item.title}>
+                  <button
+                    onClick={() => setOpenMenu(isOpen ? null : item.title)}
                     className={cn(
-                      "h-[18px] w-[18px] flex-shrink-0",
-                      isActive ? "text-blue-600" : "text-white/50",
+                      "w-full flex items-center gap-3 rounded-xl text-[15px] font-medium transition-all",
+                      isExpanded ? "px-3 py-2.5" : "justify-center py-2.5",
+                      "text-white/80 hover:bg-white/10 hover:text-white",
                     )}
-                  />
-                  {isExpanded && <span>{item.title}</span>}
-                </Link>
+                  >
+                    <ParentIcon className="h-[18px] w-[18px] text-white/50" />
+
+                    {isExpanded && (
+                      <>
+                        <span className="flex-1 text-left">{item.title}</span>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform",
+                            isOpen && "rotate-180",
+                          )}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {/* SUBITEMS */}
+                  {isOpen && isExpanded && (
+                    <div className="ml-6 mt-1 flex flex-col gap-1">
+                      {visibleChildren.map((child) => {
+                        const Icon = child.icon;
+
+                        const isActive =
+                          location.pathname === child.href ||
+                          location.pathname.startsWith(child.href + "/");
+
+                        return (
+                          <Link
+                            key={child.href}
+                            to={child.href}
+                            onClick={() => isMobile && setMobileOpen(false)}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg font-medium px-3 py-2 text-[15px] transition",
+                              isActive
+                                ? "bg-white text-blue-700 shadow-md font-semibold"
+                                : "text-white/80 hover:bg-white/10",
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "h-4 w-4",
+                                isActive ? "text-blue-600" : "text-white/50",
+                              )}
+                            />
+                            <span>{child.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
-            })}
+            }
+
+            // ---------- ITEM NORMAL ----------
+            if (!tienePermiso(auth, item.modulo, item.accion)) return null;
+
+            const Icon = item.icon;
+
+            const isActive =
+              location.pathname === item.href ||
+              location.pathname.startsWith(item.href + "/");
+
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                onClick={() => isMobile && setMobileOpen(false)}
+                title={!isExpanded ? item.title : ""}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl text-[15px] font-medium transition-all duration-150",
+                  isExpanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
+                  isActive
+                    ? "bg-white text-blue-700 shadow-md font-semibold"
+                    : "text-white/80 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px] flex-shrink-0",
+                    isActive ? "text-blue-600" : "text-white/50",
+                  )}
+                />
+                {isExpanded && <span>{item.title}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Footer */}

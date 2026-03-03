@@ -279,15 +279,29 @@ export default function SeleccionPage() {
           </div>
         )}
 
-        {!loading && filteredConvocatorias.length === 0 && (
+        {/* No existen convocatorias */}
+        {!loading && convocatorias.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
-                No se encontraron convocatorias con ese nombre
+                No hay convocatorias registradas
               </p>
             </CardContent>
           </Card>
         )}
+
+        {/* El filtro no encontró resultados */}
+        {!loading &&
+          convocatorias.length > 0 &&
+          filteredConvocatorias.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No se encontraron convocatorias en selección
+                </p>
+              </CardContent>
+            </Card>
+          )}
       </div>
     </main>
   );

@@ -901,7 +901,7 @@ function NotificationsBell({ onNavigate }) {
         </div>
         <div className="p-3 border-t border-gray-200 bg-muted/30">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="w-full text-xs text-primary hover:text-primary/80"
             onClick={() => {
