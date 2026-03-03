@@ -177,6 +177,7 @@ const getDotClassName = (type) => {
   if (type === 'urgent_warning') return 'bg-amber-500'
   if (type === 'important') return 'bg-primary'
   if (type === 'quota_ok') return 'bg-emerald-600'
+  if (type === 'quota_prediction') return 'bg-red-500'
   if (type === 'quota_under') return 'bg-amber-500'
   if (type === 'quota_over') return 'bg-fuchsia-600'
   return 'bg-secondary'
@@ -186,6 +187,7 @@ const getToastClassName = (type) => {
   if (type === 'urgent') return 'bg-red-600 text-white border-red-700'
   if (type === 'urgent_warning') return 'bg-amber-500 text-white border-amber-600'
   if (type === 'quota_ok') return 'bg-emerald-600 text-white border-emerald-700'
+  if (type === 'quota_prediction') return 'bg-red-600 text-white border-red-700'
   if (type === 'quota_under') return 'bg-amber-500 text-white border-amber-600'
   if (type === 'quota_over') return 'bg-fuchsia-600 text-white border-fuchsia-700'
   if (type === 'important') return 'bg-blue-600 text-white border-blue-700'
@@ -225,6 +227,8 @@ function NotificationsBell({ onNavigate }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [allOpen, setAllOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsNotification, setDetailsNotification] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
   const [notifications, setNotifications] = useState([])
@@ -253,7 +257,7 @@ function NotificationsBell({ onNavigate }) {
 
     for (const n of notifications) {
       if (String(n.id).startsWith('quota:')) cuota.push(n)
-      else if (String(n.id).startsWith('proyeccion:')) proyeccion.push(n)
+      else if (String(n.id).startsWith('proyeccion:') || String(n.id).startsWith('quota_forecast:')) proyeccion.push(n)
       else if (String(n.id).startsWith('salientes:')) salientes.push(n)
     }
 
@@ -417,6 +421,98 @@ function NotificationsBell({ onNavigate }) {
       ]
     })()
 
+    const prediccionesContratacion2PeriodosNotifications = (() => {
+      if (!Array.isArray(aprendicesSeguimiento)) return []
+
+      const formatShortDate = (date) => {
+        try {
+          return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short' }).format(date)
+        } catch (e) {
+          return getDateKey(date)
+        }
+      }
+
+      const getPeriodWindow = (periodStart) => {
+        const start = new Date(periodStart.getFullYear(), periodStart.getMonth(), 15, 0, 0, 0, 0)
+        const endExclusive = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 15, 0, 0, 0, 0)
+        return { start, endExclusive }
+      }
+
+      const buildOne = (offsetMonths) => {
+        const targetStart = new Date(periodoCuota.inicio)
+        targetStart.setMonth(targetStart.getMonth() + offsetMonths)
+        targetStart.setDate(15)
+        targetStart.setHours(0, 0, 0, 0)
+
+        const { start: periodStart, endExclusive: periodEndExclusive } = getPeriodWindow(targetStart)
+
+        if (nowDate.getTime() >= periodEndExclusive.getTime()) return null
+
+        const hiringStart = new Date(periodStart)
+        hiringStart.setMonth(hiringStart.getMonth() - 1)
+        const hiringEnd = new Date(periodStart)
+        hiringEnd.setDate(hiringEnd.getDate() - 1)
+
+        const periodLabel = `${formatShortDate(periodStart)} - ${formatShortDate(periodEndExclusive)}`
+        const hiringLabel = `${formatShortDate(hiringStart)} - ${formatShortDate(hiringEnd)}`
+
+        const salidasPeriodo = aprendicesSeguimiento
+          .filter((a) => {
+            const dias = a?.diasRestantes
+            if (typeof dias !== 'number' || dias < 0) return false
+            const endAt = new Date(nowDate)
+            endAt.setDate(endAt.getDate() + dias)
+            return endAt.getTime() >= periodStart.getTime() && endAt.getTime() < periodEndExclusive.getTime()
+          })
+          .map((a) => {
+            const dias = a?.diasRestantes
+            const endAt = new Date(nowDate)
+            endAt.setDate(endAt.getDate() + dias)
+            return { a, endAt }
+          })
+          .sort((x, y) => x.endAt.getTime() - y.endAt.getTime())
+
+        const projected = cuotaActual - salidasPeriodo.length
+        const faltan = cuotaMaxima - projected
+        if (faltan <= 0) return null
+
+        const salidasAll = salidasPeriodo.map(({ a, endAt }) => ({
+          nombre: a?.nombre || 'Aprendiz',
+          documento: a?.documento || '',
+          fechaLabel: formatShortDate(endAt),
+        }))
+        const preview = salidasAll.slice(0, 5).map((s) => `${s.nombre} (${s.fechaLabel})`)
+        const remaining = salidasAll.length - preview.length
+        const suffix = remaining > 0 ? ` y ${remaining} más` : ''
+
+        const idKey = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}-15`
+
+        return {
+          id: `quota_forecast:${idKey}`,
+          type: 'quota_prediction',
+          badge: 'Predicción',
+          badgeVariant: 'destructive',
+          badgeClassName: 'bg-red-600 text-white hover:bg-red-600',
+          title: `Contratación urgente · ${periodLabel}`,
+          description: `Proyección ${projected} / ${cuotaMaxima}`,
+          meta: {
+            kind: 'quota_forecast',
+            periodLabel,
+            projected,
+            faltan,
+            cuotaMaxima,
+            hiringLabel,
+            salidas: salidasAll,
+            previewText: `${preview.join(', ')}${suffix}`,
+          },
+          href: '/seguimiento',
+          priority: 2,
+        }
+      }
+
+      return [buildOne(1), buildOne(2)].filter(Boolean)
+    })()
+
     const contratacionPredictivaNotifications = (() => {
       if (!Array.isArray(aprendicesSeguimiento)) return []
 
@@ -511,6 +607,7 @@ function NotificationsBell({ onNavigate }) {
     const nextNotifications = [
       ...cuotaNotifications,
       ...contratacionPredictivaNotifications,
+      ...prediccionesContratacion2PeriodosNotifications,
       ...proyeccionNotifications,
       ...salientesMesNotifications,
     ]
@@ -680,8 +777,31 @@ function NotificationsBell({ onNavigate }) {
                       {notification.badge}
                     </Badge>
                   </div>
-                  <p className="text-sm font-semibold text-foreground mb-1">{notification.title}</p>
-                  <p className="text-xs text-muted-foreground">{notification.description}</p>
+                  {notification.type === 'quota_prediction' ? (
+                    <>
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <p className="text-sm font-semibold text-foreground">{notification.title}</p>
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:text-primary/80 flex-shrink-0"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setDetailsNotification(notification)
+                            setDetailsOpen(true)
+                          }}
+                        >
+                          {typeof notification?.meta?.faltan === 'number' ? `Ver más (${notification.meta.faltan})` : 'Ver más'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{notification.description}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-foreground mb-1">{notification.title}</p>
+                      <p className="text-xs text-muted-foreground">{notification.description}</p>
+                    </>
+                  )}
                 </div>
               </div>
             </button>
@@ -726,11 +846,12 @@ function NotificationsBell({ onNavigate }) {
           ) : (
             previewNotifications.map((notification, index) => (
               <div key={notification.id}>
-                <DropdownMenuItem
-                  className="p-0 cursor-pointer hover:bg-muted focus:bg-muted"
-                  onSelect={() => handleNavigate(notification)}
-                >
-                  <div className="w-full p-4">
+                <DropdownMenuItem className="p-0" asChild>
+                  <button
+                    type="button"
+                    className="w-full text-left p-4 hover:bg-muted focus:bg-muted outline-none"
+                    onClick={() => handleNavigate(notification)}
+                  >
                     <div className="flex items-start gap-3">
                       <div
                         className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClassName(notification.type)}`}
@@ -744,11 +865,34 @@ function NotificationsBell({ onNavigate }) {
                             {notification.badge}
                           </Badge>
                         </div>
-                        <p className="text-sm font-semibold text-foreground mb-1">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">{notification.description}</p>
+                        {notification.type === 'quota_prediction' ? (
+                          <>
+                            <div className="flex items-start justify-between gap-3 mb-1">
+                              <p className="text-sm font-semibold text-foreground flex-1 min-w-0 pr-2">{notification.title}</p>
+                              <button
+                                type="button"
+                                className="text-xs text-primary hover:text-primary/80 flex-shrink-0 ml-auto"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setDetailsNotification(notification)
+                                  setDetailsOpen(true)
+                                }}
+                              >
+                                Ver más
+                              </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{notification.description}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold text-foreground mb-1">{notification.title}</p>
+                            <p className="text-xs text-muted-foreground">{notification.description}</p>
+                          </>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </DropdownMenuItem>
                 {index < previewNotifications.length - 1 && <DropdownMenuSeparator />}
               </div>
@@ -816,6 +960,73 @@ function NotificationsBell({ onNavigate }) {
               items={groupedNotifications.salientes}
               emptyText="Sin contratos finalizando este período"
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={(value) => {
+          setDetailsOpen(value)
+          if (!value) setDetailsNotification(null)
+        }}
+      >
+        <DialogContent className="max-w-md p-0">
+          <div className="p-5 border-b border-gray-200">
+            <DialogHeader className="space-y-2">
+              <DialogTitle>Contratación urgente</DialogTitle>
+              <DialogDescription>
+                {detailsNotification?.meta?.periodLabel
+                  ? `Predicción de cuota · ${detailsNotification.meta.periodLabel}`
+                  : 'Detalle de predicción'}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-5 max-h-[60vh] overflow-y-auto">
+            {detailsNotification?.meta?.kind === 'quota_forecast' ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Proyección</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {detailsNotification.meta.projected} / {detailsNotification.meta.cuotaMaxima}
+                    </p>
+                    {typeof detailsNotification?.meta?.faltan === 'number' && (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-2">A contratar</p>
+                        <p className="text-sm font-semibold text-foreground">{detailsNotification.meta.faltan}</p>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Contratar entre</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {detailsNotification.meta.hiringLabel}
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-white">
+                  <div className="px-4 py-3 border-b border-gray-200">
+                    <p className="text-xs font-semibold text-muted-foreground">Salidas del período</p>
+                  </div>
+                  <div className="px-4 py-3 space-y-2">
+                    {(detailsNotification.meta.salidas || []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sin salidas registradas</p>
+                    ) : (
+                      detailsNotification.meta.salidas.map((s, idx) => (
+                        <div key={`${s.nombre}-${idx}`} className="flex items-center justify-between gap-3">
+                          <p className="text-sm text-foreground truncate">
+                            {s.nombre}{s.documento ? ` (${s.documento})` : ''}
+                          </p>
+                          <p className="text-xs text-muted-foreground flex-shrink-0">{s.fechaLabel}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sin detalle disponible.</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
