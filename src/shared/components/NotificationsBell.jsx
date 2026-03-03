@@ -295,13 +295,15 @@ function NotificationsBell({ onNavigate }) {
 
     const headers = getAuthHeaders()
 
-    const [seguimientoResult, estadisticasResult] = await Promise.allSettled([
+    const [seguimientoResult, estadisticasResult, prediccionesResult] = await Promise.allSettled([
       fetchJson(`${API_URL}/api/seguimiento`, { method: 'GET', headers }),
       fetchJson(`${API_URL}/api/seguimiento/estadisticas`, { method: 'GET', headers }),
+      fetchJson(`${API_URL}/api/seguimiento/predicciones-cuota`, { method: 'GET', headers }),
     ])
 
     const aprendicesSeguimiento = seguimientoResult.status === 'fulfilled' ? seguimientoResult.value : []
     const estadisticas = estadisticasResult.status === 'fulfilled' ? (estadisticasResult.value?.data || estadisticasResult.value) : null
+    const prediccionesData = prediccionesResult.status === 'fulfilled' ? prediccionesResult.value : null
 
     if (seguimientoResult.status === 'rejected' && estadisticasResult.status === 'rejected') {
       setErrorMessage('No se pudieron cargar notificaciones')
@@ -325,6 +327,70 @@ function NotificationsBell({ onNavigate }) {
       if (typeof value === 'string') return value
       if (typeof value === 'object' && typeof value._id === 'string') return value._id
       return null
+    }
+    const parseDiasRestantes = (aprendiz) => {
+      const raw = aprendiz?.diasRestantes
+      if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
+      if (typeof raw === 'string') {
+        const trimmed = raw.trim()
+        if (!trimmed) return null
+        const n = Number(trimmed)
+        return Number.isFinite(n) ? n : null
+      }
+      return null
+    }
+    const MS_PER_DAY = 24 * 60 * 60 * 1000
+    const parseDateSafe = (value) => {
+      if (!value) return null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed)
+        if (m) {
+          const y = Number(m[1])
+          const mo = Number(m[2])
+          const d0 = Number(m[3])
+          const d = new Date(y, mo - 1, d0, 0, 0, 0, 0)
+          return Number.isFinite(d.getTime()) ? d : null
+        }
+      }
+      const d = value instanceof Date ? value : new Date(value)
+      return Number.isFinite(d.getTime()) ? d : null
+    }
+    const addDays = (base, days) => {
+      const d = new Date(base)
+      d.setDate(d.getDate() + days)
+      return d
+    }
+    const getFinContratoDate = (aprendiz) => {
+      const direct = parseDateSafe(aprendiz?.fechaFinContrato)
+      if (direct) return direct
+      const dias = parseDiasRestantes(aprendiz)
+      if (typeof dias !== 'number' || dias < 0) return null
+      return addDays(nowDate, dias)
+    }
+    const getSalidaDate = (aprendiz) => {
+      const etapa = String(aprendiz?.etapaActual || '').toLowerCase()
+      const direct = etapa.includes('lectiva')
+        ? parseDateSafe(aprendiz?.fechaInicioProductiva)
+        : parseDateSafe(aprendiz?.fechaFinContrato)
+      if (direct) return direct
+      const dias = parseDiasRestantes(aprendiz)
+      if (typeof dias !== 'number' || dias < 0) return null
+      return addDays(nowDate, dias)
+    }
+    const getDiasHasta = (targetDate) => Math.ceil((targetDate.getTime() - nowDate.getTime()) / MS_PER_DAY)
+    const getDiasFinContrato = (aprendiz) => {
+      const endAt = getFinContratoDate(aprendiz)
+      return endAt ? getDiasHasta(endAt) : null
+    }
+    const getDiasInicioProductiva = (aprendiz) => {
+      const direct = parseDateSafe(aprendiz?.fechaInicioProductiva)
+      if (!direct) {
+        const fallback = parseDiasRestantes(aprendiz)
+        return typeof fallback === 'number' ? fallback : -1
+      }
+      const dias = getDiasHasta(direct)
+      return dias >= 0 ? dias : -1
     }
     const contratacionCuentaMesKey = dayOfMonth <= 15
       ? monthKey
@@ -354,10 +420,8 @@ function NotificationsBell({ onNavigate }) {
       if (!Array.isArray(aprendicesSeguimiento)) return []
 
       const terminanEsteMes = aprendicesSeguimiento.filter((a) => {
-        const dias = a?.diasRestantes
-        if (typeof dias !== 'number' || dias < 0) return false
-        const endAt = new Date(nowDate)
-        endAt.setDate(endAt.getDate() + dias)
+        const endAt = getFinContratoDate(a)
+        if (!endAt) return false
         return getMonthKey(endAt) === monthKey
       })
 
@@ -389,19 +453,17 @@ function NotificationsBell({ onNavigate }) {
 
       const terminanEsteMes = aprendicesSeguimiento
         .filter((a) => {
-          const dias = a?.diasRestantes
-          if (typeof dias !== 'number' || dias < 0) return false
-          const endAt = new Date(nowDate)
-          endAt.setDate(endAt.getDate() + dias)
+          const endAt = getFinContratoDate(a)
+          if (!endAt) return false
           return getMonthKey(endAt) === monthKey
         })
-        .sort((a, b) => (a?.diasRestantes ?? 999999) - (b?.diasRestantes ?? 999999))
+        .sort((a, b) => (getDiasFinContrato(a) ?? 999999) - (getDiasFinContrato(b) ?? 999999))
 
       if (terminanEsteMes.length === 0) return []
 
       const preview = terminanEsteMes.slice(0, 5).map((a) => {
         const name = a?.nombre || 'Aprendiz'
-        const dias = a?.diasRestantes
+        const dias = getDiasFinContrato(a)
         return dias === 0 ? `${name} (hoy)` : `${name} (${dias}d)`
       })
       const remaining = terminanEsteMes.length - preview.length
@@ -424,6 +486,9 @@ function NotificationsBell({ onNavigate }) {
     const prediccionesContratacion2PeriodosNotifications = (() => {
       if (!Array.isArray(aprendicesSeguimiento)) return []
 
+      const prediccionesListRaw = prediccionesData?.predicciones || prediccionesData?.data?.predicciones
+      const prediccionesList = Array.isArray(prediccionesListRaw) ? prediccionesListRaw : []
+
       const formatShortDate = (date) => {
         try {
           return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short' }).format(date)
@@ -438,7 +503,32 @@ function NotificationsBell({ onNavigate }) {
         return { start, endExclusive }
       }
 
-      const buildOne = (offsetMonths) => {
+      const normalizePeriodLabel = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+      const buildPeriodLabel = (periodStart, periodEndExclusive) => {
+        return `${formatShortDate(periodStart)} - ${formatShortDate(periodEndExclusive)}`
+      }
+
+      const backendLabel0 = typeof prediccionesList?.[0]?.periodo === 'string' ? prediccionesList[0].periodo : null
+      let baseOffset = 1
+      if (backendLabel0) {
+        const normalizedBackend = normalizePeriodLabel(backendLabel0)
+        for (let off = 0; off <= 4; off += 1) {
+          const tmpStart = new Date(periodoCuota.inicio)
+          tmpStart.setMonth(tmpStart.getMonth() + off)
+          tmpStart.setDate(15)
+          tmpStart.setHours(0, 0, 0, 0)
+          const { start, endExclusive } = getPeriodWindow(tmpStart)
+          const candidate = buildPeriodLabel(start, endExclusive)
+          if (normalizePeriodLabel(candidate) === normalizedBackend) {
+            baseOffset = off
+            break
+          }
+        }
+      }
+
+      const buildOne = (idx) => {
+        const offsetMonths = baseOffset + idx
         const targetStart = new Date(periodoCuota.inicio)
         targetStart.setMonth(targetStart.getMonth() + offsetMonths)
         targetStart.setDate(15)
@@ -453,28 +543,30 @@ function NotificationsBell({ onNavigate }) {
         const hiringEnd = new Date(periodStart)
         hiringEnd.setDate(hiringEnd.getDate() - 1)
 
-        const periodLabel = `${formatShortDate(periodStart)} - ${formatShortDate(periodEndExclusive)}`
+        const pred = prediccionesList[idx] || null
+        const periodLabel = typeof pred?.periodo === 'string'
+          ? pred.periodo
+          : buildPeriodLabel(periodStart, periodEndExclusive)
         const hiringLabel = `${formatShortDate(hiringStart)} - ${formatShortDate(hiringEnd)}`
 
         const salidasPeriodo = aprendicesSeguimiento
           .filter((a) => {
-            const dias = a?.diasRestantes
-            if (typeof dias !== 'number' || dias < 0) return false
-            const endAt = new Date(nowDate)
-            endAt.setDate(endAt.getDate() + dias)
+            const endAt = getSalidaDate(a)
+            if (!endAt) return false
             return endAt.getTime() >= periodStart.getTime() && endAt.getTime() < periodEndExclusive.getTime()
           })
           .map((a) => {
-            const dias = a?.diasRestantes
-            const endAt = new Date(nowDate)
-            endAt.setDate(endAt.getDate() + dias)
+            const endAt = getSalidaDate(a)
             return { a, endAt }
           })
+          .filter((x) => Boolean(x.endAt))
           .sort((x, y) => x.endAt.getTime() - y.endAt.getTime())
 
-        const projected = cuotaActual - salidasPeriodo.length
-        const faltan = cuotaMaxima - projected
-        if (faltan <= 0) return null
+        const cuotaObjetivo = typeof pred?.cuotaObjetivo === 'number' && pred.cuotaObjetivo > 0 ? pred.cuotaObjetivo : cuotaMaxima
+        const projected = typeof pred?.proyeccion === 'number' ? pred.proyeccion : cuotaActual - salidasPeriodo.length
+        const faltan = cuotaObjetivo - projected
+        const cumpleCuota = faltan <= 0
+        const faltanParaCumplir = Math.max(faltan, 0)
 
         const salidasAll = salidasPeriodo.map(({ a, endAt }) => ({
           nombre: a?.nombre || 'Aprendiz',
@@ -489,18 +581,22 @@ function NotificationsBell({ onNavigate }) {
 
         return {
           id: `quota_forecast:${idKey}`,
-          type: 'quota_prediction',
+          type: cumpleCuota ? 'quota_ok' : 'quota_prediction',
           badge: 'Predicción',
-          badgeVariant: 'destructive',
-          badgeClassName: 'bg-red-600 text-white hover:bg-red-600',
-          title: `Contratación urgente · ${periodLabel}`,
-          description: `Proyección ${projected} / ${cuotaMaxima}`,
+          badgeVariant: cumpleCuota ? 'secondary' : 'destructive',
+          badgeClassName: cumpleCuota
+            ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+            : 'bg-red-600 text-white hover:bg-red-600',
+          title: cumpleCuota ? `Predicción · ${periodLabel}` : `Contratación urgente · ${periodLabel}`,
+          description: cumpleCuota
+            ? `Proyección ${projected} / ${cuotaObjetivo} · ✓ Cumple cuota`
+            : `Proyección ${projected} / ${cuotaObjetivo} · Faltan ${faltanParaCumplir}`,
           meta: {
             kind: 'quota_forecast',
             periodLabel,
             projected,
-            faltan,
-            cuotaMaxima,
+            faltan: faltanParaCumplir,
+            cuotaObjetivo,
             hiringLabel,
             salidas: salidasAll,
             previewText: `${preview.join(', ')}${suffix}`,
@@ -510,7 +606,7 @@ function NotificationsBell({ onNavigate }) {
         }
       }
 
-      return [buildOne(1), buildOne(2)].filter(Boolean)
+      return [buildOne(0), buildOne(1)].filter(Boolean)
     })()
 
     const contratacionPredictivaNotifications = (() => {
@@ -527,7 +623,7 @@ function NotificationsBell({ onNavigate }) {
         const etapaA = String(a?.etapaActual || '').toLowerCase()
         if (!etapaA.includes('lectiva')) continue
 
-        const dias = a?.diasRestantes
+        const dias = getDiasInicioProductiva(a)
         if (typeof dias !== 'number') continue
         if (!(dias === -1 || (dias >= 0 && dias <= thresholdDays))) continue
 
@@ -777,7 +873,7 @@ function NotificationsBell({ onNavigate }) {
                       {notification.badge}
                     </Badge>
                   </div>
-                  {notification.type === 'quota_prediction' ? (
+                  {notification?.meta?.kind === 'quota_forecast' ? (
                     <>
                       <div className="flex items-start justify-between gap-3 mb-1">
                         <p className="text-sm font-semibold text-foreground">{notification.title}</p>
@@ -791,7 +887,9 @@ function NotificationsBell({ onNavigate }) {
                             setDetailsOpen(true)
                           }}
                         >
-                          {typeof notification?.meta?.faltan === 'number' ? `Ver más (${notification.meta.faltan})` : 'Ver más'}
+                          {typeof notification?.meta?.faltan === 'number' && notification.meta.faltan > 0
+                            ? `Ver más (${notification.meta.faltan})`
+                            : 'Ver detalle'}
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground">{notification.description}</p>
@@ -865,7 +963,7 @@ function NotificationsBell({ onNavigate }) {
                             {notification.badge}
                           </Badge>
                         </div>
-                        {notification.type === 'quota_prediction' ? (
+                        {notification?.meta?.kind === 'quota_forecast' ? (
                           <>
                             <div className="flex items-start justify-between gap-3 mb-1">
                               <p className="text-sm font-semibold text-foreground flex-1 min-w-0 pr-2">{notification.title}</p>
@@ -879,7 +977,9 @@ function NotificationsBell({ onNavigate }) {
                                   setDetailsOpen(true)
                                 }}
                               >
-                                Ver más
+                                {typeof notification?.meta?.faltan === 'number' && notification.meta.faltan > 0
+                                  ? `Ver más (${notification.meta.faltan})`
+                                  : 'Ver detalle'}
                               </button>
                             </div>
                             <p className="text-xs text-muted-foreground">{notification.description}</p>
@@ -973,7 +1073,13 @@ function NotificationsBell({ onNavigate }) {
         <DialogContent className="max-w-md p-0">
           <div className="p-5 border-b border-gray-200">
             <DialogHeader className="space-y-2">
-              <DialogTitle>Contratación urgente</DialogTitle>
+              <DialogTitle>
+                {detailsNotification?.meta?.kind === 'quota_forecast'
+                  ? (detailsNotification?.meta?.faltan ?? 0) > 0
+                    ? 'Contratación urgente'
+                    : 'Predicción de cuota'
+                  : 'Detalle'}
+              </DialogTitle>
               <DialogDescription>
                 {detailsNotification?.meta?.periodLabel
                   ? `Predicción de cuota · ${detailsNotification.meta.periodLabel}`
@@ -988,9 +1094,9 @@ function NotificationsBell({ onNavigate }) {
                   <div>
                     <p className="text-xs text-muted-foreground">Proyección</p>
                     <p className="text-sm font-semibold text-foreground">
-                      {detailsNotification.meta.projected} / {detailsNotification.meta.cuotaMaxima}
+                      {detailsNotification.meta.projected} / {detailsNotification.meta.cuotaObjetivo ?? detailsNotification.meta.cuotaMaxima}
                     </p>
-                    {typeof detailsNotification?.meta?.faltan === 'number' && (
+                    {typeof detailsNotification?.meta?.faltan === 'number' && detailsNotification.meta.faltan > 0 && (
                       <>
                         <p className="text-xs text-muted-foreground mt-2">A contratar</p>
                         <p className="text-sm font-semibold text-foreground">{detailsNotification.meta.faltan}</p>
