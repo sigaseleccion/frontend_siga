@@ -47,7 +47,7 @@ import { getNivelFormacionLabel } from "@/shared/utils/nivelFormacion";
 import { DataTable } from "@/shared/components/DataTable";
 import Spinner from "../../../shared/components/ui/Spinner";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export default function ReporteTecnicoPage() {
   const { id: convocatoriaId } = useParams();

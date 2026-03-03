@@ -35,15 +35,15 @@ export const useSeguimiento = (filtrosIniciales = {}) => {
   const cargarEstadisticas = useCallback(async () => {
     try {
       const response = await seguimientoService.obtenerEstadisticas();
-      // El backend devuelve: { enLectiva, enProductiva, totalEnSeguimiento, cuota (numero), aprendicesIncompletos }
-      // El frontend espera: { enEtapaLectiva, enEtapaProductiva, cuota: { actual, maximo }, aprendicesIncompletos }
+      // El backend devuelve: { enLectiva, enProductiva, totalEnSeguimiento, cuota (numero o null), aprendicesIncompletos }
+      // El frontend espera: { enEtapaLectiva, enEtapaProductiva, cuota: { actual, maximo } o null, aprendicesIncompletos }
       const stats = response.data || response;
       setEstadisticas({
         enEtapaLectiva: stats.enLectiva ?? stats.enEtapaLectiva ?? 0,
         enEtapaProductiva: stats.enProductiva ?? stats.enEtapaProductiva ?? 0,
         cuota: typeof stats.cuota === 'number'
           ? { actual: stats.totalEnSeguimiento || 0, maximo: stats.cuota }
-          : (stats.cuota || { actual: 0, maximo: 150 }),
+          : (stats.cuota || null),  // 🔄 Si no hay cuota, devolver null (sin fallback)
         aprendicesIncompletos: stats.aprendicesIncompletos ?? 0,
       });
     } catch (err) {

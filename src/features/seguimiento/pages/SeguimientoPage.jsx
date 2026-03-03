@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useSeguimiento } from "../hooks/useSeguimiento";
 import {
-  EditCuotaModal,
+  GestionarCuotasModal,
   AprendicesIncompletosModal,
   AprendizDetailModal,
   EditAprendizModal,
@@ -51,7 +51,7 @@ const SeguimientoPage = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [etapaFilter, setEtapaFilter] = useState("todas");
-  const [isEditCuotaOpen, setIsEditCuotaOpen] = useState(false);
+  const [isGestionarCuotasOpen, setIsGestionarCuotasOpen] = useState(false);
   const [isIncompletosOpen, setIsIncompletosOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -59,8 +59,8 @@ const SeguimientoPage = () => {
   const { setHeaderConfig } = useHeader();
   const { auth } = useAuth();
 
-  // La cuota solo se puede editar en los primeros 15 días del mes
-  const esPeriodoEdicionCuota = new Date().getDate() <= 15;
+  // Ya no hay restricción de período - las cuotas solo se crean para períodos futuros
+  // La cuota del período actual no se puede editar
 
   useEffect(() => {
     setHeaderConfig({
@@ -221,12 +221,18 @@ const SeguimientoPage = () => {
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
                       {estadisticas.cuota === null
-                        ? "Aprendices"
+                        ? "Sin cuota definida"
                         : `Aprendices ${estadisticas.cuota.actual}/${estadisticas.cuota.maximo}`}
                     </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5 italic">
-                      Incluye salidas durante el período
-                    </p>
+                    {estadisticas.cuota === null ? (
+                      <p className="text-xs text-gray-500 mt-1">
+                        No hay cuota configurada para el período actual
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-gray-500 mt-0.5 italic">
+                        Incluye salidas durante el período
+                      </p>
+                    )}
                     {/* Estado de la cuota */}
                     {estadisticas.cuota !== null &&
                       (() => {
@@ -269,28 +275,16 @@ const SeguimientoPage = () => {
                     <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
                       <Users className="text-purple-600" size={24} />
                     </div>
-                    {tienePermiso(auth, "seguimiento", "editar") &&
-                      (esPeriodoEdicionCuota ? (
-                        <Button
-                          size="sm"
-                          onClick={() => setIsEditCuotaOpen(true)}
-                          className="text-white hover:bg-blue-600"
-                        >
-                          <PenBoxIcon className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled
-                          title="La cuota solo puede editarse durante los primeros 15 días del mes"
-                          className="text-gray-600 cursor-not-allowed"
-                        >
-                          <PenBoxIcon className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                      ))}
+                    {tienePermiso(auth, "seguimiento", "editar") && (
+                      <Button
+                        size="sm"
+                        onClick={() => setIsGestionarCuotasOpen(true)}
+                        className="text-white hover:bg-blue-600"
+                      >
+                        <PenBoxIcon className="h-4 w-4 mr-1" />
+                        Gestionar Cuotas
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -450,10 +444,9 @@ const SeguimientoPage = () => {
       </main>
 
       {/* Modals */}
-      <EditCuotaModal
-        open={isEditCuotaOpen}
-        onOpenChange={setIsEditCuotaOpen}
-        cuotaActual={estadisticas.cuota}
+      <GestionarCuotasModal
+        open={isGestionarCuotasOpen}
+        onOpenChange={setIsGestionarCuotasOpen}
         onSuccess={refetchEstadisticas}
       />
 

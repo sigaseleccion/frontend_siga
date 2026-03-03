@@ -242,10 +242,17 @@ export default function Dashboard() {
         ? estadisticas.enSeleccion2
         : 0;
 
-    const cuotaRaw =
-      typeof estadisticas?.cuota === "number" ? estadisticas.cuota : null;
-    const cuota = typeof cuotaRaw === "number" && cuotaRaw > 0 ? cuotaRaw : 150;
-    const cuotaDelta = totalActivos - cuota;
+    // Manejar la nueva estructura de cuota (objeto con actual/maximo o null)
+    const cuotaObj = estadisticas?.cuota;
+    const cuotaMaximo = cuotaObj?.maximo || cuotaObj?.cuota || null;
+    const cuotaActual = cuotaObj?.actual || totalActivos;
+    
+    // Si no hay cuota definida, usar 150 como valor por defecto (legacy)
+    const cuota = typeof cuotaMaximo === "number" && cuotaMaximo > 0 ? cuotaMaximo : 150;
+    
+    // Calcular delta usando el valor actual de la cuota o totalActivos
+    const totalParaCuota = cuotaObj ? cuotaActual : totalActivos;
+    const cuotaDelta = totalParaCuota - cuota;
     const cuotaStatus =
       cuotaDelta === 0 ? "ok" : cuotaDelta < 0 ? "under" : "over";
 
