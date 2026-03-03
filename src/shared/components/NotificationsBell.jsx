@@ -56,6 +56,10 @@ const DISMISSED_NOTIFICATIONS_KEY = 'siga.notifications.dismissed'
 const DISMISSED_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DISMISSED_MAX_ITEMS = 500
 
+const SEEN_NOTIFICATIONS_KEY = 'siga.notifications.seen'
+const SEEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+const SEEN_MAX_ITEMS = 1000
+
 const SENT_SLOTS_KEY = 'siga.notifications.sentSlots'
 const SENT_SLOTS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const SENT_SLOTS_MAX_ITEMS = 200
@@ -85,6 +89,35 @@ const pruneDismissedMap = (map) => {
 const writeDismissedMap = (map) => {
   try {
     localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(map))
+  } catch (e) {
+  }
+}
+
+const readSeenMap = () => {
+  try {
+    const raw = localStorage.getItem(SEEN_NOTIFICATIONS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return parsed
+  } catch (e) {
+    return {}
+  }
+}
+
+const pruneSeenMap = (map) => {
+  const now = Date.now()
+  const entries = Object.entries(map)
+    .filter(([, ts]) => typeof ts === 'number' && now - ts <= SEEN_MAX_AGE_MS)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, SEEN_MAX_ITEMS)
+
+  return Object.fromEntries(entries)
+}
+
+const writeSeenMap = (map) => {
+  try {
+    localStorage.setItem(SEEN_NOTIFICATIONS_KEY, JSON.stringify(map))
   } catch (e) {
   }
 }
@@ -237,13 +270,33 @@ function NotificationsBell({ onNavigate }) {
     writeDismissedMap(initial)
     return initial
   })
+  const [seenMap, setSeenMap] = useState(() => {
+    const initial = pruneSeenMap(readSeenMap())
+    writeSeenMap(initial)
+    return initial
+  })
   const lastLoadedAtRef = useRef(0)
   const sendTimerRef = useRef(null)
   const pollTimerRef = useRef(null)
 
   const previewLimit = 8
 
-  const totalNotifications = notifications.length
+  const totalNotifications = useMemo(() => {
+    if (!Array.isArray(notifications) || notifications.length === 0) return 0
+    const todayKey = getDateKey(new Date())
+    let count = 0
+    for (const n of notifications) {
+      if (n?.meta?.kind === 'quota_forecast') {
+        const seenAt = seenMap?.[n.id]
+        if (typeof seenAt === 'number' && Number.isFinite(seenAt)) {
+          const seenKey = getDateKey(new Date(seenAt))
+          if (seenKey === todayKey) continue
+        }
+      }
+      count += 1
+    }
+    return count
+  }, [notifications, seenMap])
 
   const previewNotifications = useMemo(
     () => notifications.slice(0, previewLimit),
@@ -276,9 +329,19 @@ function NotificationsBell({ onNavigate }) {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
+  const markNotificationSeen = (id) => {
+    if (!id) return
+    setSeenMap((prev) => {
+      const next = pruneSeenMap({ ...prev, [id]: Date.now() })
+      writeSeenMap(next)
+      return next
+    })
+  }
+
   const handleNavigate = (notification) => {
     if (!notification?.href) return
-    dismissNotification(notification.id)
+    if (notification?.meta?.kind === 'quota_forecast') markNotificationSeen(notification.id)
+    else dismissNotification(notification.id)
     setOpen(false)
     setAllOpen(false)
     if (typeof onNavigate === 'function') onNavigate(notification.href)
@@ -568,6 +631,8 @@ function NotificationsBell({ onNavigate }) {
         const cumpleCuota = faltan <= 0
         const faltanParaCumplir = Math.max(faltan, 0)
 
+        if (cumpleCuota) return null
+
         const salidasAll = salidasPeriodo.map(({ a, endAt }) => ({
           nombre: a?.nombre || 'Aprendiz',
           documento: a?.documento || '',
@@ -581,16 +646,12 @@ function NotificationsBell({ onNavigate }) {
 
         return {
           id: `quota_forecast:${idKey}`,
-          type: cumpleCuota ? 'quota_ok' : 'quota_prediction',
+          type: 'quota_prediction',
           badge: 'Predicción',
-          badgeVariant: cumpleCuota ? 'secondary' : 'destructive',
-          badgeClassName: cumpleCuota
-            ? 'bg-emerald-600 text-white hover:bg-emerald-600'
-            : 'bg-red-600 text-white hover:bg-red-600',
-          title: cumpleCuota ? `Predicción · ${periodLabel}` : `Contratación urgente · ${periodLabel}`,
-          description: cumpleCuota
-            ? `Proyección ${projected} / ${cuotaObjetivo} · ✓ Cumple cuota`
-            : `Proyección ${projected} / ${cuotaObjetivo} · Faltan ${faltanParaCumplir}`,
+          badgeVariant: 'destructive',
+          badgeClassName: 'bg-red-600 text-white hover:bg-red-600',
+          title: `Contratación urgente · ${periodLabel}`,
+          description: `Proyección ${projected} / ${cuotaObjetivo} · Faltan ${faltanParaCumplir}`,
           meta: {
             kind: 'quota_forecast',
             periodLabel,
@@ -707,7 +768,7 @@ function NotificationsBell({ onNavigate }) {
       ...proyeccionNotifications,
       ...salientesMesNotifications,
     ]
-      .filter((n) => !dismissedSet.has(n.id))
+      .filter((n) => n?.meta?.kind === 'quota_forecast' || !dismissedSet.has(n.id))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority - b.priority
         return String(a.title).localeCompare(String(b.title), 'es')
@@ -833,6 +894,14 @@ function NotificationsBell({ onNavigate }) {
   }, [])
 
   useEffect(() => {
+    setSeenMap((prev) => {
+      const next = pruneSeenMap(prev)
+      if (Object.keys(next).length !== Object.keys(prev).length) writeSeenMap(next)
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
     if (!open) return
     loadNotifications({ force: true, reason: 'ui' })
   }, [open])
@@ -883,6 +952,7 @@ function NotificationsBell({ onNavigate }) {
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
+                            markNotificationSeen(notification.id)
                             setDetailsNotification(notification)
                             setDetailsOpen(true)
                           }}
@@ -973,6 +1043,7 @@ function NotificationsBell({ onNavigate }) {
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
+                                  markNotificationSeen(notification.id)
                                   setDetailsNotification(notification)
                                   setDetailsOpen(true)
                                 }}
