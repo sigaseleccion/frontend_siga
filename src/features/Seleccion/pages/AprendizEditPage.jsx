@@ -179,11 +179,26 @@ export default function AprendizEditPage() {
   const todasPruebasAprobadas = backendPruebasAprobadas;
   const lectivaInicioInput = toBogotaInput(aprendiz?.fechaInicioLectiva);
 
+  const addMonthsToDateStr = (dateStr, months) => {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    const dt = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    dt.setMonth(dt.getMonth() + months);
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
+  };
+
   const validateInicioContrato = (value) => {
     let msg = "";
     if (lectivaInicioInput && value && value < lectivaInicioInput) {
       msg =
         "La fecha de inicio de contrato no puede ser menor a la fecha de inicio lectiva.";
+    }
+    if (fechaFinContrato && value && value > fechaFinContrato) {
+      msg =
+        "La fecha de inicio de contrato no puede exceder la fecha de fin de contrato.";
     }
     setErrorsContrato((prev) => ({ ...prev, inicio: msg }));
     return !msg;
@@ -194,6 +209,10 @@ export default function AprendizEditPage() {
     if (value && inicio && value < inicio) {
       msg =
         "La fecha de fin de contrato no puede ser menor a la fecha de inicio de contrato.";
+    }
+    if (value && lectivaInicioInput && value < lectivaInicioInput) {
+      msg =
+        "La fecha de fin de contrato no puede ser menor a la fecha de inicio lectiva.";
     }
     setErrorsContrato((prev) => ({ ...prev, fin: msg }));
     return !msg;
@@ -611,9 +630,12 @@ export default function AprendizEditPage() {
                         const v = e.target.value;
                         setFechaInicioContrato(v);
                         validateInicioContrato(v);
-                        if (fechaFinContrato) {
-                          validateFinContrato(fechaFinContrato, v);
-                        }
+                        const finAuto = addMonthsToDateStr(v, 6);
+                        setFechaFinContrato((prev) => {
+                          const next = prev && prev >= v ? prev : finAuto;
+                          return next;
+                        });
+                        validateFinContrato(finAuto || fechaFinContrato, v);
                       }}
                       onBlur={async (e) => {
                         const v = e.target.value;
