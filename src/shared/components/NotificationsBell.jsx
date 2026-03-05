@@ -372,6 +372,16 @@ function NotificationsBell({ onNavigate }) {
       setErrorMessage('No se pudieron cargar notificaciones')
     }
 
+    const parseNumberSafe = (value) => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed) return null
+        const n = Number(trimmed)
+        return Number.isFinite(n) ? n : null
+      }
+      return null
+    }
     const cuotaMaximaRaw = parseNumberSafe(estadisticas?.cuota)
     const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
     const totalActivos = parseNumberSafe(estadisticas?.totalActivos)
@@ -397,16 +407,6 @@ function NotificationsBell({ onNavigate }) {
       if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
       if (typeof raw === 'string') {
         const trimmed = raw.trim()
-        if (!trimmed) return null
-        const n = Number(trimmed)
-        return Number.isFinite(n) ? n : null
-      }
-      return null
-    }
-    const parseNumberSafe = (value) => {
-      if (typeof value === 'number') return Number.isFinite(value) ? value : null
-      if (typeof value === 'string') {
-        const trimmed = value.trim()
         if (!trimmed) return null
         const n = Number(trimmed)
         return Number.isFinite(n) ? n : null
