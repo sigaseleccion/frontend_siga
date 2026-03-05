@@ -372,14 +372,15 @@ function NotificationsBell({ onNavigate }) {
       setErrorMessage('No se pudieron cargar notificaciones')
     }
 
-    const cuotaMaximaRaw = typeof estadisticas?.cuota === 'number' ? estadisticas.cuota : null
+    const cuotaMaximaRaw = parseNumberSafe(estadisticas?.cuota)
     const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
-    const cuotaActual =
-      typeof estadisticas?.totalActivos === 'number'
-        ? estadisticas.totalActivos
-        : typeof estadisticas?.totalEnSeguimiento === 'number'
-          ? estadisticas.totalEnSeguimiento
-          : 0
+    const totalActivos = parseNumberSafe(estadisticas?.totalActivos)
+    const totalEnSeguimiento = parseNumberSafe(estadisticas?.totalEnSeguimiento)
+    const cuotaActual = typeof totalActivos === 'number'
+      ? totalActivos
+      : typeof totalEnSeguimiento === 'number'
+        ? totalEnSeguimiento
+        : 0
     const nowDate = new Date()
     const monthLabel = getMonthLabelWithDate(nowDate)
     const monthKey = getMonthKey()
@@ -396,6 +397,16 @@ function NotificationsBell({ onNavigate }) {
       if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
       if (typeof raw === 'string') {
         const trimmed = raw.trim()
+        if (!trimmed) return null
+        const n = Number(trimmed)
+        return Number.isFinite(n) ? n : null
+      }
+      return null
+    }
+    const parseNumberSafe = (value) => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
         if (!trimmed) return null
         const n = Number(trimmed)
         return Number.isFinite(n) ? n : null
