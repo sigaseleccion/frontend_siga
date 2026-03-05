@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { clearUserNotifications } from '../../components/NotificationsBell'
 
 const AuthContext = createContext()
 
@@ -33,6 +34,10 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setManualLogout(true)
     sessionStorage.removeItem("session-warning-shown");
+    
+    // Limpiar las notificaciones del usuario antes de cerrar sesión
+    clearUserNotifications()
+    
     localStorage.removeItem('auth')
     setAuth(null)
     navigate('/login')

@@ -52,21 +52,61 @@ const fetchJson = async (url, options = {}) => {
   return response.json()
 }
 
-const DISMISSED_NOTIFICATIONS_KEY = 'siga.notifications.dismissed'
 const DISMISSED_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DISMISSED_MAX_ITEMS = 500
 
-const SEEN_NOTIFICATIONS_KEY = 'siga.notifications.seen'
 const SEEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const SEEN_MAX_ITEMS = 1000
 
-const SENT_SLOTS_KEY = 'siga.notifications.sentSlots'
 const SENT_SLOTS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const SENT_SLOTS_MAX_ITEMS = 200
 
+// Obtener el ID del usuario actual para hacer las notificaciones específicas por usuario
+const getUserId = () => {
+  try {
+    const auth = localStorage.getItem('auth')
+    if (!auth) return null
+    const authData = JSON.parse(auth)
+    return authData?.usuario?._id || authData?.usuario?.id || null
+  } catch (e) {
+    return null
+  }
+}
+
+// Generar claves de localStorage específicas por usuario
+const getDismissedKey = () => {
+  const userId = getUserId()
+  return userId ? `siga.notifications.dismissed.${userId}` : 'siga.notifications.dismissed'
+}
+
+const getSeenKey = () => {
+  const userId = getUserId()
+  return userId ? `siga.notifications.seen.${userId}` : 'siga.notifications.seen'
+}
+
+const getSentSlotsKey = () => {
+  const userId = getUserId()
+  return userId ? `siga.notifications.sentSlots.${userId}` : 'siga.notifications.sentSlots'
+}
+
+// Función para limpiar las notificaciones del usuario actual (usar al cerrar sesión)
+export const clearUserNotifications = () => {
+  try {
+    const dismissedKey = getDismissedKey()
+    const seenKey = getSeenKey()
+    const sentSlotsKey = getSentSlotsKey()
+    
+    if (dismissedKey) localStorage.removeItem(dismissedKey)
+    if (seenKey) localStorage.removeItem(seenKey)
+    if (sentSlotsKey) localStorage.removeItem(sentSlotsKey)
+  } catch (e) {
+    console.error('Error clearing user notifications:', e)
+  }
+}
+
 const readDismissedMap = () => {
   try {
-    const raw = localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY)
+    const raw = localStorage.getItem(getDismissedKey())
     if (!raw) return {}
     const parsed = JSON.parse(raw)
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
@@ -88,14 +128,14 @@ const pruneDismissedMap = (map) => {
 
 const writeDismissedMap = (map) => {
   try {
-    localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(map))
+    localStorage.setItem(getDismissedKey(), JSON.stringify(map))
   } catch (e) {
   }
 }
 
 const readSeenMap = () => {
   try {
-    const raw = localStorage.getItem(SEEN_NOTIFICATIONS_KEY)
+    const raw = localStorage.getItem(getSeenKey())
     if (!raw) return {}
     const parsed = JSON.parse(raw)
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
@@ -117,14 +157,14 @@ const pruneSeenMap = (map) => {
 
 const writeSeenMap = (map) => {
   try {
-    localStorage.setItem(SEEN_NOTIFICATIONS_KEY, JSON.stringify(map))
+    localStorage.setItem(getSeenKey(), JSON.stringify(map))
   } catch (e) {
   }
 }
 
 const readSentSlotsMap = () => {
   try {
-    const raw = localStorage.getItem(SENT_SLOTS_KEY)
+    const raw = localStorage.getItem(getSentSlotsKey())
     if (!raw) return {}
     const parsed = JSON.parse(raw)
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
@@ -156,7 +196,7 @@ const pruneSentSlotsMap = (map) => {
 
 const writeSentSlotsMap = (map) => {
   try {
-    localStorage.setItem(SENT_SLOTS_KEY, JSON.stringify(map))
+    localStorage.setItem(getSentSlotsKey(), JSON.stringify(map))
   } catch (e) {
   }
 }
@@ -265,6 +305,9 @@ function NotificationsBell({ onNavigate }) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
   const [notifications, setNotifications] = useState([])
+  const [allNotificationsUnfiltered, setAllNotificationsUnfiltered] = useState([])
+  const [showAllNotifications, setShowAllNotifications] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState(() => getUserId())
   const [dismissedMap, setDismissedMap] = useState(() => {
     const initial = pruneDismissedMap(readDismissedMap())
     writeDismissedMap(initial)
@@ -280,6 +323,34 @@ function NotificationsBell({ onNavigate }) {
   const pollTimerRef = useRef(null)
 
   const previewLimit = 8
+
+  // Detectar cambios de usuario y resetear notificaciones
+  useEffect(() => {
+    const checkUserId = () => {
+      const newUserId = getUserId()
+      if (newUserId !== currentUserId) {
+        setCurrentUserId(newUserId)
+        setDismissedMap(() => {
+          const initial = pruneDismissedMap(readDismissedMap())
+          writeDismissedMap(initial)
+          return initial
+        })
+        setSeenMap(() => {
+          const initial = pruneSeenMap(readSeenMap())
+          writeSeenMap(initial)
+          return initial
+        })
+        setNotifications([])
+        setAllNotificationsUnfiltered([])
+        setShowAllNotifications(false)
+        lastLoadedAtRef.current = 0
+      }
+    }
+
+    // Verificar cambios cada segundo
+    const interval = setInterval(checkUserId, 1000)
+    return () => clearInterval(interval)
+  }, [currentUserId])
 
   const totalNotifications = useMemo(() => {
     if (!Array.isArray(notifications) || notifications.length === 0) return 0
@@ -307,15 +378,31 @@ function NotificationsBell({ onNavigate }) {
     const cuota = []
     const proyeccion = []
     const salientes = []
+    const contratacionPredictiva = []
+    const otros = []
+    
+    // Usar notificaciones filtradas o sin filtrar según el modo
+    const notificationsToGroup = showAllNotifications 
+      ? allNotificationsUnfiltered 
+      : notifications
 
-    for (const n of notifications) {
-      if (String(n.id).startsWith('quota:')) cuota.push(n)
-      else if (String(n.id).startsWith('proyeccion:') || String(n.id).startsWith('quota_forecast:')) proyeccion.push(n)
-      else if (String(n.id).startsWith('salientes:')) salientes.push(n)
+    for (const n of notificationsToGroup) {
+      if (String(n.id).startsWith('quota:')) {
+        cuota.push(n)
+      } else if (String(n.id).startsWith('proyeccion:') || String(n.id).startsWith('quota_forecast:')) {
+        proyeccion.push(n)
+      } else if (String(n.id).startsWith('salientes:')) {
+        salientes.push(n)
+      } else if (String(n.id).startsWith('hiring_predictive:')) {
+        contratacionPredictiva.push(n)
+      } else {
+        // Cualquier otra notificación no categorizada
+        otros.push(n)
+      }
     }
 
-    return { cuota, proyeccion, salientes }
-  }, [notifications])
+    return { cuota, proyeccion, salientes, contratacionPredictiva, otros }
+  }, [notifications, allNotificationsUnfiltered, showAllNotifications])
 
   const dismissNotification = (id) => {
     if (!id) return
@@ -327,6 +414,18 @@ function NotificationsBell({ onNavigate }) {
     })
 
     setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const clearAllDismissed = () => {
+    setDismissedMap({})
+    writeDismissedMap({})
+    loadNotifications({ force: true })
+  }
+
+  const clearAllSeen = () => {
+    setSeenMap({})
+    writeSeenMap({})
+    loadNotifications({ force: true })
   }
 
   const markNotificationSeen = (id) => {
@@ -382,15 +481,22 @@ function NotificationsBell({ onNavigate }) {
       }
       return null
     }
-    const cuotaMaximaRaw = parseNumberSafe(estadisticas?.cuota)
+    
+    // Leer la cuota máxima del período actual
+    // El backend devuelve { cuota: { actual: X, maximo: Y } }
+    const cuotaMaximaRaw = parseNumberSafe(estadisticas?.cuota?.maximo)
     const cuotaMaxima = typeof cuotaMaximaRaw === 'number' && cuotaMaximaRaw > 0 ? cuotaMaximaRaw : 150
-    const totalActivos = parseNumberSafe(estadisticas?.totalActivos)
-    const totalEnSeguimiento = parseNumberSafe(estadisticas?.totalEnSeguimiento)
-    const cuotaActual = typeof totalActivos === 'number'
-      ? totalActivos
-      : typeof totalEnSeguimiento === 'number'
-        ? totalEnSeguimiento
+    
+    // Leer la cuota actual del período
+    // Priorizar cuota.actual (calculado por backend) sobre totalEnSeguimiento
+    const cuotaActualRaw = parseNumberSafe(estadisticas?.cuota?.actual)
+    const totalEnSeguimientoRaw = parseNumberSafe(estadisticas?.totalEnSeguimiento)
+    const cuotaActual = typeof cuotaActualRaw === 'number'
+      ? cuotaActualRaw
+      : typeof totalEnSeguimientoRaw === 'number'
+        ? totalEnSeguimientoRaw
         : 0
+    
     const nowDate = new Date()
     const monthLabel = getMonthLabelWithDate(nowDate)
     const monthKey = getMonthKey()
@@ -435,6 +541,8 @@ function NotificationsBell({ onNavigate }) {
       d.setDate(d.getDate() + days)
       return d
     }
+    // Obtiene la fecha de FINALIZACIÓN DE CONTRATO (salida definitiva de la cuota)
+    // Solo considera fechaFinContrato, no fechaInicioProductiva
     const getFinContratoDate = (aprendiz) => {
       const direct = parseDateSafe(aprendiz?.fechaFinContrato)
       if (direct) return direct
@@ -442,11 +550,15 @@ function NotificationsBell({ onNavigate }) {
       if (typeof dias !== 'number' || dias < 0) return null
       return addDays(nowDate, dias)
     }
+    
+    // Obtiene la fecha de "salida" de la ETAPA ACTUAL (puede ser paso a productiva o fin de contrato)
+    // ⚠️ NO usar esta función para predicciones, usar getFinContratoDate
+    // Esta función se usa para mostrar semáforos y alertas de cambio de etapa
     const getSalidaDate = (aprendiz) => {
       const etapa = String(aprendiz?.etapaActual || '').toLowerCase()
       const direct = etapa.includes('lectiva')
-        ? parseDateSafe(aprendiz?.fechaInicioProductiva)
-        : parseDateSafe(aprendiz?.fechaFinContrato)
+        ? parseDateSafe(aprendiz?.fechaInicioProductiva)  // Fecha de paso a productiva
+        : parseDateSafe(aprendiz?.fechaFinContrato)       // Fecha de fin de contrato
       if (direct) return direct
       const dias = parseDiasRestantes(aprendiz)
       if (typeof dias !== 'number' || dias < 0) return null
@@ -489,17 +601,20 @@ function NotificationsBell({ onNavigate }) {
       : []
 
     // Alerta 2: Proyección de cuota a fin de mes (solo días 1 al 15)
+    // Usar datos del backend de predicciones
     const proyeccionNotifications = (() => {
       if (dayOfMonth < 1 || dayOfMonth > 15) return []
-      if (!Array.isArray(aprendicesSeguimiento)) return []
-
-      const terminanEsteMes = aprendicesSeguimiento.filter((a) => {
-        const endAt = getFinContratoDate(a)
-        if (!endAt) return false
-        return getMonthKey(endAt) === monthKey
-      })
-
-      const proyeccion = cuotaActual - terminanEsteMes.length
+      
+      // Leer datos del período actual desde el backend de predicciones
+      const periodoActualData = prediccionesData?.periodoActual
+      if (!periodoActualData) return []
+      
+      const salenPeriodoActual = periodoActualData.salen || []
+      const cantidadSalen = salenPeriodoActual.length
+      
+      // La proyección ya viene calculada del backend
+      const cuotaPeriodo = periodoActualData.cuotaPeriodo || cuotaActual
+      const proyeccion = cuotaPeriodo  // Ya está restado lo que sale
       const cumple = proyeccion >= cuotaMaxima
 
       return [
@@ -513,8 +628,8 @@ function NotificationsBell({ onNavigate }) {
             : 'bg-amber-500 text-white hover:bg-amber-500',
           title: cumple ? 'La cuota se mantendrá este mes' : 'La cuota no se cumplirá a fin de mes',
           description: cumple
-            ? `${terminanEsteMes.length} aprendiz(es) terminan este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima}`
-            : `${terminanEsteMes.length} aprendiz(es) terminan contrato este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima} · Faltan ${cuotaMaxima - proyeccion} adicionales`,
+            ? `${cantidadSalen} aprendiz(es) terminan este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima}`
+            : `${cantidadSalen} aprendiz(es) terminan contrato este mes · Proyección: ${proyeccion} / Meta: ${cuotaMaxima} · Faltan ${cuotaMaxima - proyeccion} adicionales`,
           href: '/seguimiento',
           priority: 2,
         },
@@ -558,102 +673,70 @@ function NotificationsBell({ onNavigate }) {
     })()
 
     const prediccionesContratacion2PeriodosNotifications = (() => {
-      if (!Array.isArray(aprendicesSeguimiento)) return []
-
+      // Solo usar datos del backend, no recalcular nada en el frontend
       const prediccionesListRaw = prediccionesData?.predicciones || prediccionesData?.data?.predicciones
       const prediccionesList = Array.isArray(prediccionesListRaw) ? prediccionesListRaw : []
+      
+      if (prediccionesList.length === 0) return []
 
       const formatShortDate = (date) => {
         try {
           return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short' }).format(date)
         } catch (e) {
-          return getDateKey(date)
+          const d = new Date(date)
+          if (isNaN(d.getTime())) return '-'
+          return `${d.getDate()} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]}`
         }
       }
 
-      const getPeriodWindow = (periodStart) => {
-        const start = new Date(periodStart.getFullYear(), periodStart.getMonth(), 15, 0, 0, 0, 0)
-        const endExclusive = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 15, 0, 0, 0, 0)
-        return { start, endExclusive }
-      }
-
-      const normalizePeriodLabel = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
-
-      const buildPeriodLabel = (periodStart, periodEndExclusive) => {
-        return `${formatShortDate(periodStart)} - ${formatShortDate(periodEndExclusive)}`
-      }
-
-      const backendLabel0 = typeof prediccionesList?.[0]?.periodo === 'string' ? prediccionesList[0].periodo : null
-      let baseOffset = 1
-      if (backendLabel0) {
-        const normalizedBackend = normalizePeriodLabel(backendLabel0)
-        for (let off = 0; off <= 4; off += 1) {
-          const tmpStart = new Date(periodoCuota.inicio)
-          tmpStart.setMonth(tmpStart.getMonth() + off)
-          tmpStart.setDate(15)
-          tmpStart.setHours(0, 0, 0, 0)
-          const { start, endExclusive } = getPeriodWindow(tmpStart)
-          const candidate = buildPeriodLabel(start, endExclusive)
-          if (normalizePeriodLabel(candidate) === normalizedBackend) {
-            baseOffset = off
-            break
-          }
-        }
-      }
-
-      const buildOne = (idx) => {
-        const offsetMonths = baseOffset + idx
-        const targetStart = new Date(periodoCuota.inicio)
-        targetStart.setMonth(targetStart.getMonth() + offsetMonths)
-        targetStart.setDate(15)
-        targetStart.setHours(0, 0, 0, 0)
-
-        const { start: periodStart, endExclusive: periodEndExclusive } = getPeriodWindow(targetStart)
-
-        if (nowDate.getTime() >= periodEndExclusive.getTime()) return null
-
-        const hiringStart = new Date(periodStart)
-        hiringStart.setMonth(hiringStart.getMonth() - 1)
-        const hiringEnd = new Date(periodStart)
-        hiringEnd.setDate(hiringEnd.getDate() - 1)
-
-        const pred = prediccionesList[idx] || null
-        const periodLabel = typeof pred?.periodo === 'string'
-          ? pred.periodo
-          : buildPeriodLabel(periodStart, periodEndExclusive)
-        const hiringLabel = `${formatShortDate(hiringStart)} - ${formatShortDate(hiringEnd)}`
-
-        const salidasPeriodo = aprendicesSeguimiento
-          .filter((a) => {
-            const endAt = getSalidaDate(a)
-            if (!endAt) return false
-            return endAt.getTime() >= periodStart.getTime() && endAt.getTime() < periodEndExclusive.getTime()
-          })
-          .map((a) => {
-            const endAt = getSalidaDate(a)
-            return { a, endAt }
-          })
-          .filter((x) => Boolean(x.endAt))
-          .sort((x, y) => x.endAt.getTime() - y.endAt.getTime())
-
-        const cuotaObjetivo = typeof pred?.cuotaObjetivo === 'number' && pred.cuotaObjetivo > 0 ? pred.cuotaObjetivo : cuotaMaxima
-        const projected = typeof pred?.proyeccion === 'number' ? pred.proyeccion : cuotaActual - salidasPeriodo.length
+      // Procesar cada predicción del backend
+      const buildNotification = (pred, idx) => {
+        if (!pred) return null
+        
+        // Leer datos directamente del backend
+        const periodLabel = pred.periodo || `Período ${idx + 1}`
+        const projected = pred.proyeccion
+        const cuotaObjetivo = pred.cuotaObjetivo
         const faltan = cuotaObjetivo - projected
         const cumpleCuota = faltan <= 0
-        const faltanParaCumplir = Math.max(faltan, 0)
-
+        
+        // Solo mostrar si NO se cumple la cuota
         if (cumpleCuota) return null
-
-        const salidasAll = salidasPeriodo.map(({ a, endAt }) => ({
+        
+        const faltanParaCumplir = Math.max(faltan, 0)
+        
+        // Calcular ventana de contratación (mes anterior al período)
+        // Intentar extraer fecha del período (ej: "15 mar - 15 abr")
+        let hiringLabel = 'Mes anterior al período'
+        try {
+          const match = periodLabel.match(/(\d+)\s+(\w+)/)
+          if (match) {
+            const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+            const mesIdx = meses.indexOf(match[2])
+            if (mesIdx >= 0) {
+              const mesAnteriorIdx = (mesIdx - 1 + 12) % 12
+              const mesAnterior = meses[mesAnteriorIdx]
+              hiringLabel = `15 ${mesAnterior} - 14 ${match[2]}`
+            }
+          }
+        } catch (e) {
+          // Usar valor por defecto
+        }
+        
+        // Leer lista de salidas del backend
+        const salidasBackend = pred.aprendicesSalen || []
+        const salidasAll = salidasBackend.map((a) => ({
           nombre: a?.nombre || 'Aprendiz',
-          documento: a?.documento || '',
-          fechaLabel: formatShortDate(endAt),
+          documento: a?.documento || a?.tipoDocumento || '',
+          fechaLabel: formatShortDate(a?.fechaReferencia || a?.fechaFinContrato || new Date()),
         }))
+        
         const preview = salidasAll.slice(0, 5).map((s) => `${s.nombre} (${s.fechaLabel})`)
         const remaining = salidasAll.length - preview.length
         const suffix = remaining > 0 ? ` y ${remaining} más` : ''
-
-        const idKey = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}-15`
+        
+        // Generar ID único basado en el período
+        const idKey = `${pred.periodoNumero || idx}`
 
         return {
           id: `quota_forecast:${idKey}`,
@@ -678,7 +761,11 @@ function NotificationsBell({ onNavigate }) {
         }
       }
 
-      return [buildOne(0), buildOne(1)].filter(Boolean)
+      // Generar notificaciones para las predicciones (máximo 2)
+      return prediccionesList
+        .map((pred, idx) => buildNotification(pred, idx))
+        .filter(Boolean)
+        .slice(0, 2)
     })()
 
     const contratacionPredictivaNotifications = (() => {
@@ -772,18 +859,20 @@ function NotificationsBell({ onNavigate }) {
 
     const dismissedSet = new Set(Object.keys(dismissedMap))
 
-    const nextNotifications = [
+    const allNotificationsRaw = [
       ...cuotaNotifications,
       ...contratacionPredictivaNotifications,
       ...prediccionesContratacion2PeriodosNotifications,
       ...proyeccionNotifications,
       ...salientesMesNotifications,
     ]
-      .filter((n) => n?.meta?.kind === 'quota_forecast' || !dismissedSet.has(n.id))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority - b.priority
         return String(a.title).localeCompare(String(b.title), 'es')
       })
+
+    const nextNotifications = allNotificationsRaw
+      .filter((n) => n?.meta?.kind === 'quota_forecast' || !dismissedSet.has(n.id))
 
     // Sistema de toasts: al iniciar sesión O en slots programados (8 AM, 4 PM)
     const sendScheduled = reason === 'schedule' && (slot === '08' || slot === '16')
@@ -847,6 +936,7 @@ function NotificationsBell({ onNavigate }) {
     }
 
     setNotifications(nextNotifications)
+    setAllNotificationsUnfiltered(allNotificationsRaw)
     lastLoadedAtRef.current = now
     setIsLoading(false)
 
@@ -922,6 +1012,13 @@ function NotificationsBell({ onNavigate }) {
     loadNotifications({ force: true, reason: 'ui' })
   }, [allOpen])
 
+  // Resetear el modo "mostrar todas" cuando se cierra el modal
+  useEffect(() => {
+    if (!allOpen && showAllNotifications) {
+      setShowAllNotifications(false)
+    }
+  }, [allOpen])
+
   const NotificationsList = ({ items, emptyText }) => {
     if (items.length === 0) {
       return (
@@ -933,44 +1030,54 @@ function NotificationsBell({ onNavigate }) {
 
     return (
       <div>
-        {items.map((notification, index) => (
-          <div key={notification.id}>
-            <button
-              type="button"
-              onClick={() => handleNavigate(notification)}
-              className="w-full text-left p-4 hover:bg-muted focus:bg-muted outline-none"
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClassName(notification.type)}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge
-                      variant={notification.badgeVariant}
-                      className={`text-xs ${notification.badgeClassName || ''}`}
-                    >
-                      {notification.badge}
-                    </Badge>
-                  </div>
-                  {notification?.meta?.kind === 'quota_forecast' ? (
-                    <>
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <p className="text-sm font-semibold text-foreground">{notification.title}</p>
-                        <button
-                          type="button"
-                          className="text-xs text-primary hover:text-primary/80 flex-shrink-0"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            markNotificationSeen(notification.id)
-                            setDetailsNotification(notification)
-                            setDetailsOpen(true)
-                          }}
-                        >
-                          {typeof notification?.meta?.faltan === 'number' && notification.meta.faltan > 0
-                            ? `Ver más (${notification.meta.faltan})`
-                            : 'Ver detalle'}
+        {items.map((notification, index) => {
+          const isDismissed = dismissedMap[notification.id]
+          const isSeen = seenMap[notification.id]
+          const isInactive = (isDismissed || (notification?.meta?.kind === 'quota_forecast' && isSeen)) && showAllNotifications
+          
+          return (
+            <div key={notification.id}>
+              <button
+                type="button"
+                onClick={() => handleNavigate(notification)}
+                className={`w-full text-left p-4 hover:bg-muted focus:bg-muted outline-none ${isInactive ? 'opacity-50' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClassName(notification.type)}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge
+                        variant={notification.badgeVariant}
+                        className={`text-xs ${notification.badgeClassName || ''}`}
+                      >
+                        {notification.badge}
+                      </Badge>
+                      {isInactive && (
+                        <Badge variant="outline" className="text-xs">
+                          {isDismissed ? 'Descartada' : 'Vista'}
+                        </Badge>
+                      )}
+                    </div>
+                    {notification?.meta?.kind === 'quota_forecast' ? (
+                      <>
+                        <div className="flex items-start justify-between gap-3 mb-1">
+                          <p className="text-sm font-semibold text-foreground">{notification.title}</p>
+                          <button
+                            type="button"
+                            className="text-xs text-primary hover:text-primary/80 flex-shrink-0"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              markNotificationSeen(notification.id)
+                              setDetailsNotification(notification)
+                              setDetailsOpen(true)
+                            }}
+                          >
+                            {typeof notification?.meta?.faltan === 'number' && notification.meta.faltan > 0
+                              ? `Ver más (${notification.meta.faltan})`
+                              : 'Ver detalle'}
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground">{notification.description}</p>
@@ -986,7 +1093,7 @@ function NotificationsBell({ onNavigate }) {
             </button>
             {index < items.length - 1 && <DropdownMenuSeparator />}
           </div>
-        ))}
+        )})}
       </div>
     )
   }
@@ -1105,12 +1212,14 @@ function NotificationsBell({ onNavigate }) {
                   ? errorMessage
                   : isLoading
                     ? 'Cargando…'
-                    : totalNotifications > 0
-                      ? `Total: ${totalNotifications}`
-                      : 'No hay notificaciones'}
+                    : showAllNotifications
+                      ? `Mostrando todas (${allNotificationsUnfiltered.length})`
+                      : totalNotifications > 0
+                        ? `Total: ${totalNotifications}`
+                        : 'No hay notificaciones'}
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -1118,6 +1227,29 @@ function NotificationsBell({ onNavigate }) {
               >
                 Actualizar
               </Button>
+              <Button
+                variant={showAllNotifications ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowAllNotifications(!showAllNotifications)}
+              >
+                {showAllNotifications ? 'Mostrar solo activas' : 'Mostrar todas'}
+              </Button>
+              {(Object.keys(dismissedMap).length > 0 || Object.keys(seenMap).length > 0) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                  onClick={() => {
+                    if (confirm('¿Reiniciar todas las notificaciones vistas y descartadas?')) {
+                      clearAllDismissed()
+                      clearAllSeen()
+                      setShowAllNotifications(false)
+                    }
+                  }}
+                >
+                  Reiniciar todo
+                </Button>
+              )}
             </div>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
@@ -1135,6 +1267,17 @@ function NotificationsBell({ onNavigate }) {
               items={groupedNotifications.proyeccion}
               emptyText="Sin proyección disponible (solo días 15-22 o 1-8)"
             />
+            {groupedNotifications.contratacionPredictiva.length > 0 && (
+              <>
+                <div className="px-6 pt-5 pb-2">
+                  <p className="text-xs font-semibold text-muted-foreground">Contratación predictiva</p>
+                </div>
+                <NotificationsList
+                  items={groupedNotifications.contratacionPredictiva}
+                  emptyText="Sin alertas de contratación predictiva"
+                />
+              </>
+            )}
             <div className="px-6 pt-5 pb-2">
               <p className="text-xs font-semibold text-muted-foreground">Fin de contrato este período</p>
             </div>
@@ -1142,6 +1285,17 @@ function NotificationsBell({ onNavigate }) {
               items={groupedNotifications.salientes}
               emptyText="Sin contratos finalizando este período"
             />
+            {groupedNotifications.otros.length > 0 && (
+              <>
+                <div className="px-6 pt-5 pb-2">
+                  <p className="text-xs font-semibold text-muted-foreground">Otras notificaciones</p>
+                </div>
+                <NotificationsList
+                  items={groupedNotifications.otros}
+                  emptyText=""
+                />
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
